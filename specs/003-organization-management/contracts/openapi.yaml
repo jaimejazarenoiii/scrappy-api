@@ -1,0 +1,380 @@
+openapi: 3.0.3
+info:
+  title: Scrappy API - Organization Management
+  version: 1.0.0
+  description: P002 contracts for Branches, Warehouses, and Vehicles.
+
+servers:
+  - url: /api/v1
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ApiSuccessEnvelope:
+      type: object
+      required: [success, data, meta, error]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { type: object }
+        meta: { type: object, additionalProperties: true }
+        error: { nullable: true, type: 'null' }
+
+    ApiErrorEnvelope:
+      type: object
+      required: [success, data, meta, error]
+      properties:
+        success: { type: boolean, enum: [false] }
+        data: { nullable: true, type: 'null' }
+        meta: { type: object, additionalProperties: true }
+        error: { $ref: '#/components/schemas/ErrorBody' }
+
+    ErrorBody:
+      type: object
+      required: [code, message, details]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        details:
+          type: array
+          items: { type: object, additionalProperties: true }
+
+    Branch:
+      type: object
+      required: [id, companyId, name, address, contactNumber, status]
+      properties:
+        id: { type: string, format: uuid }
+        companyId: { type: string, format: uuid }
+        name: { type: string }
+        address: { type: string }
+        contactNumber: { type: string }
+        status: { type: string, enum: [ACTIVE, INACTIVE] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        deletedAt: { type: string, format: date-time, nullable: true }
+
+    Warehouse:
+      type: object
+      required: [id, companyId, name, address, contactNumber, status]
+      properties:
+        id: { type: string, format: uuid }
+        companyId: { type: string, format: uuid }
+        name: { type: string }
+        address: { type: string }
+        contactNumber: { type: string }
+        status: { type: string, enum: [ACTIVE, INACTIVE] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        deletedAt: { type: string, format: date-time, nullable: true }
+
+    Vehicle:
+      type: object
+      required: [id, companyId, plateNumber, description, status]
+      properties:
+        id: { type: string, format: uuid }
+        companyId: { type: string, format: uuid }
+        plateNumber: { type: string }
+        description: { type: string }
+        status: { type: string, enum: [AVAILABLE, IN_USE, MAINTENANCE, INACTIVE] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        deletedAt: { type: string, format: date-time, nullable: true }
+
+    CreateBranchRequest:
+      type: object
+      required: [name, address, contactNumber, status]
+      properties:
+        name: { type: string, minLength: 1 }
+        address: { type: string, minLength: 1 }
+        contactNumber: { type: string, minLength: 1 }
+        status: { type: string, enum: [ACTIVE, INACTIVE], default: ACTIVE }
+
+    UpdateBranchRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1 }
+        address: { type: string, minLength: 1 }
+        contactNumber: { type: string, minLength: 1 }
+        status: { type: string, enum: [ACTIVE, INACTIVE] }
+
+    CreateWarehouseRequest:
+      type: object
+      required: [name, address, contactNumber, status]
+      properties:
+        name: { type: string, minLength: 1 }
+        address: { type: string, minLength: 1 }
+        contactNumber: { type: string, minLength: 1 }
+        status: { type: string, enum: [ACTIVE, INACTIVE], default: ACTIVE }
+
+    UpdateWarehouseRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1 }
+        address: { type: string, minLength: 1 }
+        contactNumber: { type: string, minLength: 1 }
+        status: { type: string, enum: [ACTIVE, INACTIVE] }
+
+    CreateVehicleRequest:
+      type: object
+      required: [plateNumber, description, status]
+      properties:
+        plateNumber: { type: string, minLength: 1 }
+        description: { type: string, minLength: 1 }
+        status:
+          type: string
+          enum: [AVAILABLE, IN_USE, MAINTENANCE, INACTIVE]
+          default: AVAILABLE
+
+    UpdateVehicleRequest:
+      type: object
+      minProperties: 1
+      properties:
+        plateNumber: { type: string, minLength: 1 }
+        description: { type: string, minLength: 1 }
+        status: { type: string, enum: [AVAILABLE, IN_USE, MAINTENANCE, INACTIVE] }
+
+    PaginationMeta:
+      type: object
+      properties:
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+        totalPages: { type: integer }
+
+paths:
+  /branches:
+    get:
+      tags: [Branches]
+      summary: List operational branches
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 20, maximum: 100 } }
+        - { name: sortBy, in: query, schema: { type: string, enum: [name, createdAt, status] } }
+        - { name: sortOrder, in: query, schema: { type: string, enum: [asc, desc], default: asc } }
+        - { name: search, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [ACTIVE, INACTIVE] } }
+      responses:
+        '200': { description: Branch list }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+    post:
+      tags: [Branches]
+      summary: Create branch
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateBranchRequest' }
+      responses:
+        '201': { description: Branch created }
+        '400': { description: Validation error }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+        '409': { description: Duplicate branch name }
+
+  /branches/{branchId}:
+    get:
+      tags: [Branches]
+      summary: Get branch by ID
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: branchId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Branch details }
+        '401': { description: Unauthenticated }
+        '403': { description: Cross-company or forbidden }
+        '404': { description: Not found }
+    patch:
+      tags: [Branches]
+      summary: Update branch
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: branchId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateBranchRequest' }
+      responses:
+        '200': { description: Branch updated }
+        '400': { description: Validation error }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+        '404': { description: Not found }
+        '409': { description: Duplicate branch name }
+
+  /branches/{branchId}/archive:
+    post:
+      tags: [Branches]
+      summary: Archive branch
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: branchId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Branch archived }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+        '404': { description: Not found }
+        '409': { description: Already archived }
+
+  /warehouses:
+    get:
+      tags: [Warehouses]
+      summary: List operational warehouses
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 20, maximum: 100 } }
+        - { name: sortBy, in: query, schema: { type: string, enum: [name, createdAt, status] } }
+        - { name: sortOrder, in: query, schema: { type: string, enum: [asc, desc], default: asc } }
+        - { name: search, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [ACTIVE, INACTIVE] } }
+      responses:
+        '200': { description: Warehouse list }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+    post:
+      tags: [Warehouses]
+      summary: Create warehouse
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateWarehouseRequest' }
+      responses:
+        '201': { description: Warehouse created }
+        '400': { description: Validation error }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+        '409': { description: Duplicate warehouse name }
+
+  /warehouses/{warehouseId}:
+    get:
+      tags: [Warehouses]
+      summary: Get warehouse by ID
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: warehouseId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Warehouse details }
+        '401': { description: Unauthenticated }
+        '403': { description: Cross-company or forbidden }
+        '404': { description: Not found }
+    patch:
+      tags: [Warehouses]
+      summary: Update warehouse
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: warehouseId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateWarehouseRequest' }
+      responses:
+        '200': { description: Warehouse updated }
+        '400': { description: Validation error }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+        '404': { description: Not found }
+        '409': { description: Duplicate warehouse name }
+
+  /warehouses/{warehouseId}/archive:
+    post:
+      tags: [Warehouses]
+      summary: Archive warehouse
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: warehouseId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Warehouse archived }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+        '404': { description: Not found }
+        '409': { description: Already archived }
+
+  /vehicles:
+    get:
+      tags: [Vehicles]
+      summary: List operational vehicles
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 20, maximum: 100 } }
+        - { name: sortBy, in: query, schema: { type: string, enum: [plateNumber, createdAt, status] } }
+        - { name: sortOrder, in: query, schema: { type: string, enum: [asc, desc], default: asc } }
+        - { name: search, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [AVAILABLE, IN_USE, MAINTENANCE, INACTIVE] } }
+      responses:
+        '200': { description: Vehicle list }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+    post:
+      tags: [Vehicles]
+      summary: Create vehicle
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateVehicleRequest' }
+      responses:
+        '201': { description: Vehicle created }
+        '400': { description: Validation error }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+        '409': { description: Duplicate plate number }
+
+  /vehicles/{vehicleId}:
+    get:
+      tags: [Vehicles]
+      summary: Get vehicle by ID
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: vehicleId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Vehicle details }
+        '401': { description: Unauthenticated }
+        '403': { description: Cross-company or forbidden }
+        '404': { description: Not found }
+    patch:
+      tags: [Vehicles]
+      summary: Update vehicle
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: vehicleId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateVehicleRequest' }
+      responses:
+        '200': { description: Vehicle updated }
+        '400': { description: Validation error }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+        '404': { description: Not found }
+        '409': { description: Duplicate plate number }
+
+  /vehicles/{vehicleId}/archive:
+    post:
+      tags: [Vehicles]
+      summary: Archive vehicle
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: vehicleId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Vehicle archived }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+        '404': { description: Not found }
+        '409': { description: Already archived }

@@ -25,6 +25,48 @@ import type {
   UserRepository,
 } from '../../src/modules/user/domain/user.repository.js';
 import type { PasswordHasher } from '../../src/shared/auth/password-hasher.interface.js';
+import type { BranchEntity } from '../../src/modules/branch/domain/branch.entity.js';
+import { BranchEntity as BranchModel } from '../../src/modules/branch/domain/branch.entity.js';
+import type {
+  BranchRepository,
+  CreateBranchInput,
+  ListBranchesQuery,
+  UpdateBranchInput,
+} from '../../src/modules/branch/domain/branch.repository.js';
+import type { WarehouseEntity } from '../../src/modules/warehouse/domain/warehouse.entity.js';
+import { WarehouseEntity as WarehouseModel } from '../../src/modules/warehouse/domain/warehouse.entity.js';
+import type {
+  CreateWarehouseInput,
+  ListWarehousesQuery,
+  UpdateWarehouseInput,
+  WarehouseRepository,
+} from '../../src/modules/warehouse/domain/warehouse.repository.js';
+import type { VehicleEntity } from '../../src/modules/vehicle/domain/vehicle.entity.js';
+import { VehicleEntity as VehicleModel } from '../../src/modules/vehicle/domain/vehicle.entity.js';
+import type {
+  CreateVehicleInput,
+  ListVehiclesQuery,
+  UpdateVehicleInput,
+  VehicleRepository,
+} from '../../src/modules/vehicle/domain/vehicle.repository.js';
+
+function paginateAndSort<T>(
+  items: T[],
+  query: { page: number; limit: number; sortBy?: string; sortOrder?: 'asc' | 'desc' },
+  getField: (item: T, field: string) => string | number | Date,
+): { items: T[]; total: number } {
+  const sorted = [...items].sort((left, right) => {
+    const field = query.sortBy ?? 'createdAt';
+    const leftValue = getField(left, field);
+    const rightValue = getField(right, field);
+    const order = query.sortOrder === 'desc' ? -1 : 1;
+    if (leftValue < rightValue) return -1 * order;
+    if (leftValue > rightValue) return 1 * order;
+    return 0;
+  });
+  const start = (query.page - 1) * query.limit;
+  return { items: sorted.slice(start, start + query.limit), total: items.length };
+}
 
 export class FakePasswordHasher implements PasswordHasher {
   async hash(plainText: string): Promise<string> {
@@ -219,5 +261,275 @@ export class InMemorySessionRepository implements SessionRepository {
       sessionId,
       RefreshSessionModel.create({ ...session.toPrimitives(), revokedAt: new Date() }),
     );
+  }
+}
+
+export class InMemoryBranchRepository implements BranchRepository {
+  public branches = new Map<string, BranchEntity>();
+
+  async create(input: CreateBranchInput): Promise<BranchEntity> {
+    const now = new Date();
+    const branch = BranchModel.create({
+      id: input.id,
+      companyId: input.companyId,
+      name: input.name,
+      address: input.address,
+      contactNumber: input.contactNumber,
+      status: input.status ?? 'ACTIVE',
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+      createdByUserId: input.createdByUserId ?? null,
+      updatedByUserId: null,
+    });
+    this.branches.set(branch.id, branch);
+    return branch;
+  }
+
+  async findById(branchId: string, companyId: string): Promise<BranchEntity | null> {
+    const branch = this.branches.get(branchId);
+    if (!branch || branch.companyId !== companyId || branch.isDeleted()) return null;
+    return branch;
+  }
+
+  async findByIdIncludingArchived(
+    branchId: string,
+    companyId: string,
+  ): Promise<BranchEntity | null> {
+    const branch = this.branches.get(branchId);
+    if (!branch || branch.companyId !== companyId) return null;
+    return branch;
+  }
+
+  async findByName(name: string, companyId: string): Promise<BranchEntity | null> {
+    return (
+      [...this.branches.values()].find(
+        (branch) => branch.companyId === companyId && branch.name === name && !branch.isDeleted(),
+      ) ?? null
+    );
+  }
+
+  async update(
+    branchId: string,
+    companyId: string,
+    input: UpdateBranchInput,
+  ): Promise<BranchEntity> {
+    const current = await this.findById(branchId, companyId);
+    if (!current) throw new Error('Branch not found');
+    const updated = BranchModel.create({
+      ...current.toPrimitives(),
+      ...input,
+      updatedAt: new Date(),
+    });
+    this.branches.set(branchId, updated);
+    return updated;
+  }
+
+  async softDelete(branchId: string, companyId: string): Promise<BranchEntity> {
+    const current = await this.findById(branchId, companyId);
+    if (!current) throw new Error('Branch not found');
+    const updated = BranchModel.create({
+      ...current.toPrimitives(),
+      status: 'INACTIVE',
+      deletedAt: new Date(),
+      updatedAt: new Date(),
+    });
+    this.branches.set(branchId, updated);
+    return updated;
+  }
+
+  async list(companyId: string, query: ListBranchesQuery) {
+    let items = [...this.branches.values()].filter(
+      (branch) => branch.companyId === companyId && !branch.isDeleted(),
+    );
+    if (query.status) items = items.filter((branch) => branch.status === query.status);
+    if (query.search) {
+      const search = query.search.toLowerCase();
+      items = items.filter(
+        (branch) =>
+          branch.name.toLowerCase().includes(search) ||
+          branch.toPrimitives().address.toLowerCase().includes(search) ||
+          branch.toPrimitives().contactNumber.toLowerCase().includes(search),
+      );
+    }
+    return paginateAndSort(items, query, (branch, field) => {
+      const value = branch.toPrimitives()[field as keyof ReturnType<typeof branch.toPrimitives>];
+      return value instanceof Date ? value.getTime() : String(value);
+    });
+  }
+}
+
+export class InMemoryWarehouseRepository implements WarehouseRepository {
+  public warehouses = new Map<string, WarehouseEntity>();
+
+  async create(input: CreateWarehouseInput): Promise<WarehouseEntity> {
+    const now = new Date();
+    const warehouse = WarehouseModel.create({
+      id: input.id,
+      companyId: input.companyId,
+      name: input.name,
+      address: input.address,
+      contactNumber: input.contactNumber,
+      status: input.status ?? 'ACTIVE',
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+      createdByUserId: input.createdByUserId ?? null,
+      updatedByUserId: null,
+    });
+    this.warehouses.set(warehouse.id, warehouse);
+    return warehouse;
+  }
+
+  async findById(warehouseId: string, companyId: string): Promise<WarehouseEntity | null> {
+    const warehouse = this.warehouses.get(warehouseId);
+    if (!warehouse || warehouse.companyId !== companyId || warehouse.isDeleted()) return null;
+    return warehouse;
+  }
+
+  async findByName(name: string, companyId: string): Promise<WarehouseEntity | null> {
+    return (
+      [...this.warehouses.values()].find(
+        (warehouse) =>
+          warehouse.companyId === companyId && warehouse.name === name && !warehouse.isDeleted(),
+      ) ?? null
+    );
+  }
+
+  async update(
+    warehouseId: string,
+    companyId: string,
+    input: UpdateWarehouseInput,
+  ): Promise<WarehouseEntity> {
+    const current = await this.findById(warehouseId, companyId);
+    if (!current) throw new Error('Warehouse not found');
+    const updated = WarehouseModel.create({
+      ...current.toPrimitives(),
+      ...input,
+      updatedAt: new Date(),
+    });
+    this.warehouses.set(warehouseId, updated);
+    return updated;
+  }
+
+  async softDelete(warehouseId: string, companyId: string): Promise<WarehouseEntity> {
+    const current = await this.findById(warehouseId, companyId);
+    if (!current) throw new Error('Warehouse not found');
+    const updated = WarehouseModel.create({
+      ...current.toPrimitives(),
+      status: 'INACTIVE',
+      deletedAt: new Date(),
+      updatedAt: new Date(),
+    });
+    this.warehouses.set(warehouseId, updated);
+    return updated;
+  }
+
+  async list(companyId: string, query: ListWarehousesQuery) {
+    let items = [...this.warehouses.values()].filter(
+      (warehouse) => warehouse.companyId === companyId && !warehouse.isDeleted(),
+    );
+    if (query.status) items = items.filter((warehouse) => warehouse.status === query.status);
+    if (query.search) {
+      const search = query.search.toLowerCase();
+      items = items.filter(
+        (warehouse) =>
+          warehouse.name.toLowerCase().includes(search) ||
+          warehouse.toPrimitives().address.toLowerCase().includes(search) ||
+          warehouse.toPrimitives().contactNumber.toLowerCase().includes(search),
+      );
+    }
+    return paginateAndSort(items, query, (warehouse, field) => {
+      const value =
+        warehouse.toPrimitives()[field as keyof ReturnType<typeof warehouse.toPrimitives>];
+      return value instanceof Date ? value.getTime() : String(value);
+    });
+  }
+}
+
+export class InMemoryVehicleRepository implements VehicleRepository {
+  public vehicles = new Map<string, VehicleEntity>();
+
+  async create(input: CreateVehicleInput): Promise<VehicleEntity> {
+    const now = new Date();
+    const vehicle = VehicleModel.create({
+      id: input.id,
+      companyId: input.companyId,
+      plateNumber: input.plateNumber,
+      description: input.description,
+      status: input.status ?? 'AVAILABLE',
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+      createdByUserId: input.createdByUserId ?? null,
+      updatedByUserId: null,
+    });
+    this.vehicles.set(vehicle.id, vehicle);
+    return vehicle;
+  }
+
+  async findById(vehicleId: string, companyId: string): Promise<VehicleEntity | null> {
+    const vehicle = this.vehicles.get(vehicleId);
+    if (!vehicle || vehicle.companyId !== companyId || vehicle.isDeleted()) return null;
+    return vehicle;
+  }
+
+  async findByPlateNumber(plateNumber: string, companyId: string): Promise<VehicleEntity | null> {
+    return (
+      [...this.vehicles.values()].find(
+        (vehicle) =>
+          vehicle.companyId === companyId &&
+          vehicle.toPrimitives().plateNumber === plateNumber &&
+          !vehicle.isDeleted(),
+      ) ?? null
+    );
+  }
+
+  async update(
+    vehicleId: string,
+    companyId: string,
+    input: UpdateVehicleInput,
+  ): Promise<VehicleEntity> {
+    const current = await this.findById(vehicleId, companyId);
+    if (!current) throw new Error('Vehicle not found');
+    const updated = VehicleModel.create({
+      ...current.toPrimitives(),
+      ...input,
+      updatedAt: new Date(),
+    });
+    this.vehicles.set(vehicleId, updated);
+    return updated;
+  }
+
+  async softDelete(vehicleId: string, companyId: string): Promise<VehicleEntity> {
+    const current = await this.findById(vehicleId, companyId);
+    if (!current) throw new Error('Vehicle not found');
+    const updated = VehicleModel.create({
+      ...current.toPrimitives(),
+      status: 'INACTIVE',
+      deletedAt: new Date(),
+      updatedAt: new Date(),
+    });
+    this.vehicles.set(vehicleId, updated);
+    return updated;
+  }
+
+  async list(companyId: string, query: ListVehiclesQuery) {
+    let items = [...this.vehicles.values()].filter(
+      (vehicle) => vehicle.companyId === companyId && !vehicle.isDeleted(),
+    );
+    if (query.status) items = items.filter((vehicle) => vehicle.status === query.status);
+    if (query.search) {
+      const search = query.search.toLowerCase();
+      items = items.filter(
+        (vehicle) =>
+          vehicle.toPrimitives().plateNumber.toLowerCase().includes(search) ||
+          vehicle.toPrimitives().description.toLowerCase().includes(search),
+      );
+    }
+    return paginateAndSort(items, query, (vehicle, field) => {
+      const value = vehicle.toPrimitives()[field as keyof ReturnType<typeof vehicle.toPrimitives>];
+      return value instanceof Date ? value.getTime() : String(value);
+    });
   }
 }

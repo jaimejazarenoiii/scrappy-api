@@ -20,7 +20,11 @@ export function validate(
       );
       return;
     }
-    req[part] = result.data;
+    if (part === 'query') {
+      req.validatedQuery = result.data;
+    } else {
+      req[part] = result.data;
+    }
     next();
   };
 }

@@ -14,6 +14,7 @@ declare global {
       companyContext?: {
         companyId: string;
       };
+      validatedQuery?: unknown;
     }
   }
 }

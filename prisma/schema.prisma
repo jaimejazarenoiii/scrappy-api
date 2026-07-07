@@ -28,6 +28,23 @@ enum EmployeeStatus {
   INACTIVE
 }
 
+enum BranchStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum WarehouseStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  IN_USE
+  MAINTENANCE
+  INACTIVE
+}
+
 model Company {
   id            String          @id @default(uuid())
   name          String          @unique
@@ -41,6 +58,9 @@ model Company {
   deletedAt     DateTime?
   users         User[]
   employees     Employee[]
+  branches      Branch[]
+  warehouses    Warehouse[]
+  vehicles      Vehicle[]
 }
 
 model User {
@@ -91,4 +111,54 @@ model RefreshSession {
   createdAt  DateTime @default(now())
   user       User     @relation(fields: [userId], references: [id])
   @@index([userId])
+}
+
+model Branch {
+  id              String       @id @default(uuid())
+  companyId       String
+  name            String
+  address         String
+  contactNumber   String
+  status          BranchStatus @default(ACTIVE)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  deletedAt       DateTime?
+  createdByUserId String?
+  updatedByUserId String?
+  company         Company      @relation(fields: [companyId], references: [id])
+  @@index([companyId, status])
+  @@index([companyId, deletedAt])
+}
+
+model Warehouse {
+  id              String          @id @default(uuid())
+  companyId       String
+  name            String
+  address         String
+  contactNumber   String
+  status          WarehouseStatus @default(ACTIVE)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  deletedAt       DateTime?
+  createdByUserId String?
+  updatedByUserId String?
+  company         Company         @relation(fields: [companyId], references: [id])
+  @@index([companyId, status])
+  @@index([companyId, deletedAt])
+}
+
+model Vehicle {
+  id              String        @id @default(uuid())
+  companyId       String
+  plateNumber     String
+  description     String
+  status          VehicleStatus @default(AVAILABLE)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  deletedAt       DateTime?
+  createdByUserId String?
+  updatedByUserId String?
+  company         Company       @relation(fields: [companyId], references: [id])
+  @@index([companyId, status])
+  @@index([companyId, deletedAt])
 }

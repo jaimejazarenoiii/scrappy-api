@@ -7,3 +7,20 @@ export const paginationQuerySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('asc'),
   search: z.string().optional(),
 });
+
+export const locationStatusFilterSchema = z.enum(['ACTIVE', 'INACTIVE']).optional();
+
+export const branchListQuerySchema = paginationQuerySchema.extend({
+  status: locationStatusFilterSchema,
+  sortBy: z.enum(['name', 'createdAt', 'status']).optional(),
+});
+
+export const warehouseListQuerySchema = paginationQuerySchema.extend({
+  status: locationStatusFilterSchema,
+  sortBy: z.enum(['name', 'createdAt', 'status']).optional(),
+});
+
+export const vehicleListQuerySchema = paginationQuerySchema.extend({
+  status: z.enum(['AVAILABLE', 'IN_USE', 'MAINTENANCE', 'INACTIVE']).optional(),
+  sortBy: z.enum(['plateNumber', 'createdAt', 'status']).optional(),
+});

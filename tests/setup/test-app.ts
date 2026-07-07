@@ -5,10 +5,13 @@ import { resetConfigForTests } from '../../src/config/index.js';
 import { resetLoggerForTests } from '../../src/config/logger.js';
 import {
   FakePasswordHasher,
+  InMemoryBranchRepository,
   InMemoryCompanyRepository,
   InMemoryEmployeeRepository,
   InMemorySessionRepository,
   InMemoryUserRepository,
+  InMemoryVehicleRepository,
+  InMemoryWarehouseRepository,
 } from './in-memory-repositories.js';
 
 export function setupTestEnv(): void {
@@ -33,6 +36,9 @@ export function createTestContext() {
   const companyRepository = new InMemoryCompanyRepository();
   const userRepository = new InMemoryUserRepository();
   const employeeRepository = new InMemoryEmployeeRepository();
+  const branchRepository = new InMemoryBranchRepository();
+  const warehouseRepository = new InMemoryWarehouseRepository();
+  const vehicleRepository = new InMemoryVehicleRepository();
   const sessionRepository = new InMemorySessionRepository();
   const passwordHasher = new FakePasswordHasher();
   const tokenProvider = new JwtTokenProvider();
@@ -40,6 +46,9 @@ export function createTestContext() {
     companyRepository,
     userRepository,
     employeeRepository,
+    branchRepository,
+    warehouseRepository,
+    vehicleRepository,
     sessionRepository,
     passwordHasher,
     tokenProvider,
@@ -50,6 +59,9 @@ export function createTestContext() {
     companyRepository,
     userRepository,
     employeeRepository,
+    branchRepository,
+    warehouseRepository,
+    vehicleRepository,
     sessionRepository,
     passwordHasher,
     tokenProvider,

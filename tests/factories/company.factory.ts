@@ -1,4 +1,4 @@
-export function makeCompanyPayload() {
+export function makeCompanyPayload(overrides: Record<string, unknown> = {}) {
   return {
     name: 'scrappy-demo',
     contactNumber: '09171234567',
@@ -7,5 +7,6 @@ export function makeCompanyPayload() {
     ownerFullName: 'Owner Demo',
     ownerEmail: 'owner@scrappy.test',
     ownerPassword: 'password123',
+    ...overrides,
   };
 }

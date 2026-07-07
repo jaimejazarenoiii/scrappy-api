@@ -1,6 +1,6 @@
 # Scrappy API
 
-**Scrappy** is a multi-tenant junkshop and recycling operations API. The backend now includes both the bootstrap foundation and the **Company & Identity Foundation** for tenant onboarding, authentication, and employee administration.
+**Scrappy** is a multi-tenant junkshop and recycling operations API. The backend includes the Company & Identity Foundation (P001) and Organization Management (P002) for branches, warehouses, and vehicles.
 
 ## Current API Surface
 
@@ -14,6 +14,9 @@ The repository currently exposes:
 - `POST /api/v1/auth/login|logout|refresh|forgot-password` - authentication lifecycle
 - `GET /api/v1/users/me` - current authenticated user
 - `POST|GET|PATCH /api/v1/employees...` - employee create, view, update, archive, and user-link flows
+- `POST|GET|PATCH /api/v1/branches...` - branch create, list, view, update, and archive (Owner/Manager write; Employee read)
+- `POST|GET|PATCH /api/v1/warehouses...` - warehouse create, list, view, update, and archive
+- `POST|GET|PATCH /api/v1/vehicles...` - vehicle create, list, view, update, and archive
 
 ## Architecture
 
@@ -53,4 +56,4 @@ pnpm test
 pnpm lint
 ```
 
-The suite covers the legacy bootstrap routes plus Company creation, authentication, protected identity access, and employee lifecycle flows.
+The suite covers bootstrap routes, Company creation, authentication, protected identity access, employee lifecycle flows, and organization resource management (branches, warehouses, vehicles).
