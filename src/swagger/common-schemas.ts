@@ -319,4 +319,204 @@ export const commonSchemas = {
       },
     },
   },
+
+  CashAdvance: {
+    type: 'object',
+    required: [
+      'id',
+      'companyId',
+      'employeeId',
+      'amount',
+      'deductedAmount',
+      'remainingAmount',
+      'status',
+      'createdAt',
+      'updatedAt',
+    ],
+    properties: {
+      id: uuid,
+      companyId: uuid,
+      employeeId: uuid,
+      amount: { type: 'number', format: 'decimal' },
+      deductedAmount: { type: 'number', format: 'decimal' },
+      remainingAmount: { type: 'number', format: 'decimal' },
+      status: { type: 'string', enum: ['OUTSTANDING', 'SETTLED'] },
+      reason: { type: 'string', nullable: true },
+      createdAt: dateTime,
+      updatedAt: dateTime,
+    },
+  },
+
+  CreateCashAdvanceRequest: {
+    type: 'object',
+    required: ['employeeId', 'amount'],
+    properties: {
+      employeeId: uuid,
+      amount: { type: 'number', format: 'decimal', minimum: 0.01 },
+      reason: { type: 'string', maxLength: 500 },
+    },
+  },
+
+  LeaveRecord: {
+    type: 'object',
+    required: ['id', 'companyId', 'employeeId', 'leaveType', 'leaveDate', 'status'],
+    properties: {
+      id: uuid,
+      companyId: uuid,
+      employeeId: uuid,
+      leaveType: { type: 'string', enum: ['HALF_DAY', 'FULL_DAY'] },
+      leaveDate: { type: 'string', format: 'date' },
+      status: { type: 'string', enum: ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'] },
+      reason: { type: 'string', nullable: true },
+      managerNote: { type: 'string', nullable: true },
+      createdAt: dateTime,
+      updatedAt: dateTime,
+    },
+  },
+
+  RequestLeaveBody: {
+    type: 'object',
+    required: ['leaveType', 'leaveDate'],
+    properties: {
+      leaveType: { type: 'string', enum: ['HALF_DAY', 'FULL_DAY'] },
+      leaveDate: { type: 'string', format: 'date' },
+      reason: { type: 'string', maxLength: 500 },
+    },
+  },
+
+  ManageLeaveRequest: {
+    type: 'object',
+    minProperties: 1,
+    properties: {
+      status: { type: 'string', enum: ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'] },
+      managerNote: { type: 'string', maxLength: 1000 },
+    },
+  },
+
+  PayrollRecord: {
+    type: 'object',
+    required: [
+      'id',
+      'companyId',
+      'employeeId',
+      'payPeriodStart',
+      'payPeriodEnd',
+      'grossSalary',
+      'cashAdvanceDeductions',
+      'netPay',
+      'status',
+      'createdAt',
+      'updatedAt',
+    ],
+    properties: {
+      id: uuid,
+      companyId: uuid,
+      employeeId: uuid,
+      payPeriodStart: { type: 'string', format: 'date' },
+      payPeriodEnd: { type: 'string', format: 'date' },
+      grossSalary: { type: 'number', format: 'decimal' },
+      cashAdvanceDeductions: { type: 'number', format: 'decimal' },
+      netPay: { type: 'number', format: 'decimal' },
+      status: { type: 'string', enum: ['PAYABLE', 'PAID'] },
+      paidAt: { ...dateTime, nullable: true },
+      paymentReference: { type: 'string', nullable: true },
+      createdAt: dateTime,
+      updatedAt: dateTime,
+    },
+  },
+
+  GeneratePayrollRequest: {
+    type: 'object',
+    required: ['payPeriodStart', 'payPeriodEnd'],
+    properties: {
+      payPeriodStart: { type: 'string', format: 'date' },
+      payPeriodEnd: { type: 'string', format: 'date' },
+      employeeIds: { type: 'array', items: uuid },
+    },
+  },
+
+  GeneratePayrollResponse: {
+    type: 'object',
+    required: ['payPeriodStart', 'payPeriodEnd', 'items'],
+    properties: {
+      payPeriodStart: { type: 'string', format: 'date' },
+      payPeriodEnd: { type: 'string', format: 'date' },
+      items: { type: 'array', items: { $ref: '#/components/schemas/PayrollRecord' } },
+    },
+  },
+
+  MarkPayrollPaidRequest: {
+    type: 'object',
+    properties: {
+      paymentReference: { type: 'string', maxLength: 200 },
+    },
+  },
+
+  AttendanceSession: {
+    type: 'object',
+    required: ['id', 'companyId', 'employeeId', 'status', 'timeInAt'],
+    properties: {
+      id: uuid,
+      companyId: uuid,
+      employeeId: uuid,
+      status: { type: 'string', enum: ['OPEN', 'CLOSED'] },
+      timeInAt: dateTime,
+      timeOutAt: { ...dateTime, nullable: true },
+      note: { type: 'string', nullable: true },
+      correctionNote: { type: 'string', nullable: true },
+      adjustedTimeInAt: { ...dateTime, nullable: true },
+      adjustedTimeOutAt: { ...dateTime, nullable: true },
+      createdAt: dateTime,
+      updatedAt: dateTime,
+    },
+  },
+
+  AttendanceStatus: {
+    type: 'object',
+    required: ['isTimedIn'],
+    properties: {
+      isTimedIn: { type: 'boolean' },
+      openSession: { ...{ $ref: '#/components/schemas/AttendanceSession' }, nullable: true },
+    },
+  },
+
+  TimeInRequest: {
+    type: 'object',
+    properties: {
+      note: { type: 'string', maxLength: 500 },
+    },
+  },
+
+  TimeOutRequest: {
+    type: 'object',
+    properties: {
+      note: { type: 'string', maxLength: 500 },
+    },
+  },
+
+  WorkforceDashboard: {
+    type: 'object',
+    required: ['attendanceStatus', 'visibility'],
+    properties: {
+      attendanceStatus: { $ref: '#/components/schemas/AttendanceStatus' },
+      attendanceSummary: {
+        type: 'array',
+        items: { $ref: '#/components/schemas/AttendanceSession' },
+      },
+      leaveSummary: { type: 'array', items: { $ref: '#/components/schemas/LeaveRecord' } },
+      cashAdvanceSummary: { type: 'object' },
+      payrollSummary: { type: 'array', items: { $ref: '#/components/schemas/PayrollRecord' } },
+      tripsSummary: { type: 'array', items: { type: 'object' } },
+      transactionsSummary: { type: 'array', items: { type: 'object' } },
+      visibility: {
+        type: 'object',
+        properties: {
+          canTimeIn: { type: 'boolean' },
+          canTimeOut: { type: 'boolean' },
+          canCreateTransaction: { type: 'boolean' },
+          canCreateExpense: { type: 'boolean' },
+        },
+      },
+    },
+  },
 };

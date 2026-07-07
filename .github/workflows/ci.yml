@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, master, '001-initial-project-setup', '003-organization-management']
+    branches: [main, master, '001-initial-project-setup', '003-organization-management', '004-workforce-management']
   pull_request:
     branches: [main, master]
 

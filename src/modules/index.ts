@@ -8,7 +8,12 @@ import { createEmployeeRoutes } from './employee/presentation/employee.routes.js
 import { createBranchRoutes } from './branch/presentation/branch.routes.js';
 import { createWarehouseRoutes } from './warehouse/presentation/warehouse.routes.js';
 import { createVehicleRoutes } from './vehicle/presentation/vehicle.routes.js';
+import { createLeaveRoutes } from './leave/presentation/leave.routes.js';
 import { createUserRoutes } from './user/presentation/user.routes.js';
+import { createCashAdvanceRoutes } from './cash-advance/presentation/cash-advance.routes.js';
+import { createPayrollRoutes } from './payroll/presentation/payroll.routes.js';
+import { createAttendanceRoutes } from './attendance/presentation/attendance.routes.js';
+import { createWorkforceDashboardRoutes } from './workforce-dashboard/presentation/workforce-dashboard.routes.js';
 
 export function registerModuleRoutes(app: Express, container: Container): void {
   const authn = createAuthenticationMiddleware(container.tokenProvider);
@@ -43,5 +48,35 @@ export function registerModuleRoutes(app: Express, container: Container): void {
     authn,
     companyResolutionMiddleware,
     createVehicleRoutes(container.vehicleController),
+  );
+  app.use(
+    '/api/v1',
+    authn,
+    companyResolutionMiddleware,
+    createCashAdvanceRoutes(container.cashAdvanceController),
+  );
+  app.use(
+    '/api/v1',
+    authn,
+    companyResolutionMiddleware,
+    createPayrollRoutes(container.payrollController),
+  );
+  app.use(
+    '/api/v1',
+    authn,
+    companyResolutionMiddleware,
+    createLeaveRoutes(container.leaveController),
+  );
+  app.use(
+    '/api/v1',
+    authn,
+    companyResolutionMiddleware,
+    createAttendanceRoutes(container.attendanceController),
+  );
+  app.use(
+    '/api/v1',
+    authn,
+    companyResolutionMiddleware,
+    createWorkforceDashboardRoutes(container.workforceDashboardController),
   );
 }

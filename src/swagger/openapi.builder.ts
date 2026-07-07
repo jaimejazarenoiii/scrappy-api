@@ -4,7 +4,12 @@ import { employeeOpenApiPaths } from '../modules/employee/presentation/employee.
 import { branchOpenApiPaths } from '../modules/branch/presentation/branch.openapi.js';
 import { warehouseOpenApiPaths } from '../modules/warehouse/presentation/warehouse.openapi.js';
 import { vehicleOpenApiPaths } from '../modules/vehicle/presentation/vehicle.openapi.js';
+import { leaveOpenApiPaths } from '../modules/leave/presentation/leave.openapi.js';
 import { userOpenApiPaths } from '../modules/user/presentation/user.openapi.js';
+import { cashAdvanceOpenApiPaths } from '../modules/cash-advance/presentation/cash-advance.openapi.js';
+import { attendanceOpenApiPaths } from '../modules/attendance/presentation/attendance.openapi.js';
+import { workforceDashboardOpenApiPaths } from '../modules/workforce-dashboard/presentation/workforce-dashboard.openapi.js';
+import { payrollOpenApiPaths } from '../modules/payroll/presentation/payroll.openapi.js';
 import { commonSchemas } from './common-schemas.js';
 import { commonResponses } from './common-responses.js';
 
@@ -14,7 +19,7 @@ export function buildOpenApiDocument(): object {
     info: {
       title: 'Scrappy API',
       version: '1.0.0',
-      description: 'Scrappy API — Company, Identity, and Organization Management',
+      description: 'Scrappy API — Company, Identity, Organization, and Workforce Management',
     },
     servers: [{ url: '/', description: 'API root' }],
     components: {
@@ -32,6 +37,11 @@ export function buildOpenApiDocument(): object {
       ...branchOpenApiPaths,
       ...warehouseOpenApiPaths,
       ...vehicleOpenApiPaths,
+      ...cashAdvanceOpenApiPaths,
+      ...payrollOpenApiPaths,
+      ...leaveOpenApiPaths,
+      ...attendanceOpenApiPaths,
+      ...workforceDashboardOpenApiPaths,
     },
   };
 }

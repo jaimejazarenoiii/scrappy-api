@@ -1,0 +1,489 @@
+openapi: 3.0.3
+info:
+  title: Scrappy API - Workforce Management
+  version: 1.0.0
+  description: P003 contracts for Attendance, Leave, Cash Advances, Payroll, and Dashboard.
+
+servers:
+  - url: /api/v1
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ApiSuccessEnvelope:
+      type: object
+      required: [success, data, meta, error]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { type: object }
+        meta: { type: object, additionalProperties: true }
+        error: { nullable: true, type: 'null' }
+
+    ApiErrorEnvelope:
+      type: object
+      required: [success, data, meta, error]
+      properties:
+        success: { type: boolean, enum: [false] }
+        data: { nullable: true, type: 'null' }
+        meta: { type: object, additionalProperties: true }
+        error: { $ref: '#/components/schemas/ErrorBody' }
+
+    ErrorBody:
+      type: object
+      required: [code, message, details]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        details:
+          type: array
+          items: { type: object, additionalProperties: true }
+
+    PaginationMeta:
+      type: object
+      properties:
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+        totalPages: { type: integer }
+
+    AttendanceSession:
+      type: object
+      required: [id, companyId, employeeId, status, timeInAt]
+      properties:
+        id: { type: string, format: uuid }
+        companyId: { type: string, format: uuid }
+        employeeId: { type: string, format: uuid }
+        status: { type: string, enum: [OPEN, CLOSED] }
+        timeInAt: { type: string, format: date-time }
+        timeOutAt: { type: string, format: date-time, nullable: true }
+        note: { type: string, nullable: true }
+        correctionNote: { type: string, nullable: true }
+        adjustedTimeInAt: { type: string, format: date-time, nullable: true }
+        adjustedTimeOutAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    AttendanceStatus:
+      type: object
+      required: [isTimedIn]
+      properties:
+        isTimedIn: { type: boolean }
+        openSession: { $ref: '#/components/schemas/AttendanceSession', nullable: true }
+
+    TimeInRequest:
+      type: object
+      properties:
+        note: { type: string, maxLength: 500 }
+
+    TimeOutRequest:
+      type: object
+      properties:
+        note: { type: string, maxLength: 500 }
+
+    ManageAttendanceRequest:
+      type: object
+      minProperties: 1
+      properties:
+        correctionNote: { type: string, maxLength: 1000 }
+        adjustedTimeInAt: { type: string, format: date-time }
+        adjustedTimeOutAt: { type: string, format: date-time }
+
+    LeaveRecord:
+      type: object
+      required: [id, companyId, employeeId, leaveType, leaveDate, status]
+      properties:
+        id: { type: string, format: uuid }
+        companyId: { type: string, format: uuid }
+        employeeId: { type: string, format: uuid }
+        leaveType: { type: string, enum: [HALF_DAY, FULL_DAY] }
+        leaveDate: { type: string, format: date }
+        status: { type: string, enum: [PENDING, APPROVED, REJECTED, CANCELLED] }
+        reason: { type: string, nullable: true }
+        managerNote: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    RequestLeaveBody:
+      type: object
+      required: [leaveType, leaveDate]
+      properties:
+        leaveType: { type: string, enum: [HALF_DAY, FULL_DAY] }
+        leaveDate: { type: string, format: date }
+        reason: { type: string, maxLength: 500 }
+
+    ManageLeaveRequest:
+      type: object
+      minProperties: 1
+      properties:
+        status: { type: string, enum: [PENDING, APPROVED, REJECTED, CANCELLED] }
+        managerNote: { type: string, maxLength: 1000 }
+
+    CashAdvance:
+      type: object
+      required: [id, companyId, employeeId, amount, deductedAmount, remainingAmount, status]
+      properties:
+        id: { type: string, format: uuid }
+        companyId: { type: string, format: uuid }
+        employeeId: { type: string, format: uuid }
+        amount: { type: number, format: decimal }
+        deductedAmount: { type: number, format: decimal }
+        remainingAmount: { type: number, format: decimal }
+        status: { type: string, enum: [OUTSTANDING, SETTLED] }
+        reason: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    CreateCashAdvanceRequest:
+      type: object
+      required: [employeeId, amount]
+      properties:
+        employeeId: { type: string, format: uuid }
+        amount: { type: number, format: decimal, minimum: 0.01 }
+        reason: { type: string, maxLength: 500 }
+
+    PayrollRecord:
+      type: object
+      required:
+        [id, companyId, employeeId, payPeriodStart, payPeriodEnd, grossSalary, cashAdvanceDeductions, netPay, status]
+      properties:
+        id: { type: string, format: uuid }
+        companyId: { type: string, format: uuid }
+        employeeId: { type: string, format: uuid }
+        payPeriodStart: { type: string, format: date }
+        payPeriodEnd: { type: string, format: date }
+        grossSalary: { type: number, format: decimal }
+        cashAdvanceDeductions: { type: number, format: decimal }
+        netPay: { type: number, format: decimal }
+        status: { type: string, enum: [PAYABLE, PAID] }
+        paidAt: { type: string, format: date-time, nullable: true }
+        paymentReference: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    GeneratePayrollRequest:
+      type: object
+      required: [payPeriodStart, payPeriodEnd]
+      properties:
+        payPeriodStart: { type: string, format: date }
+        payPeriodEnd: { type: string, format: date }
+        employeeIds:
+          type: array
+          items: { type: string, format: uuid }
+
+    MarkPayrollPaidRequest:
+      type: object
+      properties:
+        paymentReference: { type: string, maxLength: 200 }
+
+    WorkforceDashboard:
+      type: object
+      required: [attendanceStatus, visibility]
+      properties:
+        attendanceStatus: { $ref: '#/components/schemas/AttendanceStatus' }
+        attendanceSummary:
+          type: array
+          items: { $ref: '#/components/schemas/AttendanceSession' }
+        leaveSummary:
+          type: array
+          items: { $ref: '#/components/schemas/LeaveRecord' }
+        cashAdvanceSummary:
+          type: object
+          properties:
+            outstandingBalance: { type: number, format: decimal }
+            recentAdvances:
+              type: array
+              items: { $ref: '#/components/schemas/CashAdvance' }
+        payrollSummary:
+          type: array
+          items: { $ref: '#/components/schemas/PayrollRecord' }
+        tripsSummary:
+          type: array
+          items: { type: object }
+        transactionsSummary:
+          type: array
+          items: { type: object }
+        visibility:
+          type: object
+          required: [canTimeIn, canTimeOut, canCreateTransaction, canCreateExpense]
+          properties:
+            canTimeIn: { type: boolean }
+            canTimeOut: { type: boolean }
+            canCreateTransaction: { type: boolean }
+            canCreateExpense: { type: boolean }
+
+paths:
+  /workforce/attendance/time-in:
+    post:
+      tags: [Attendance]
+      summary: Time In
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TimeInRequest' }
+      responses:
+        '200':
+          description: Attendance session opened
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/ApiSuccessEnvelope' }
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/AttendanceSession' }
+
+  /workforce/attendance/time-out:
+    post:
+      tags: [Attendance]
+      summary: Time Out
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TimeOutRequest' }
+      responses:
+        '200':
+          description: Attendance session closed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/ApiSuccessEnvelope' }
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/AttendanceSession' }
+
+  /workforce/attendance/status:
+    get:
+      tags: [Attendance]
+      summary: Current attendance status
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Operational attendance status
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/ApiSuccessEnvelope' }
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/AttendanceStatus' }
+
+  /workforce/attendance:
+    get:
+      tags: [Attendance]
+      summary: My attendance history
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 20 } }
+        - { name: sortBy, in: query, schema: { type: string, enum: [timeInAt, createdAt] } }
+        - { name: sortOrder, in: query, schema: { type: string, enum: [asc, desc] } }
+        - { name: fromDate, in: query, schema: { type: string, format: date } }
+        - { name: toDate, in: query, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: Paginated attendance history
+
+  /workforce/attendance/company:
+    get:
+      tags: [Attendance]
+      summary: Company attendance records
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: employeeId, in: query, schema: { type: string, format: uuid } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 20 } }
+        - { name: fromDate, in: query, schema: { type: string, format: date } }
+        - { name: toDate, in: query, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: Paginated company attendance
+
+  /workforce/attendance/{attendanceId}:
+    patch:
+      tags: [Attendance]
+      summary: Manage attendance record
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: attendanceId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ManageAttendanceRequest' }
+      responses:
+        '200':
+          description: Updated attendance record
+
+  /workforce/leave:
+    post:
+      tags: [Leave]
+      summary: Request leave
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RequestLeaveBody' }
+      responses:
+        '201':
+          description: Leave record created
+    get:
+      tags: [Leave]
+      summary: My leave history
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 20 } }
+        - { name: status, in: query, schema: { type: string, enum: [PENDING, APPROVED, REJECTED, CANCELLED] } }
+        - { name: fromDate, in: query, schema: { type: string, format: date } }
+        - { name: toDate, in: query, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: Paginated leave history
+
+  /workforce/leave/company:
+    get:
+      tags: [Leave]
+      summary: Company leave records
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: employeeId, in: query, schema: { type: string, format: uuid } }
+        - { name: status, in: query, schema: { type: string, enum: [PENDING, APPROVED, REJECTED, CANCELLED] } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        '200':
+          description: Paginated company leave records
+
+  /workforce/leave/{leaveId}:
+    patch:
+      tags: [Leave]
+      summary: Manage leave record
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: leaveId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ManageLeaveRequest' }
+      responses:
+        '200':
+          description: Updated leave record
+
+  /workforce/cash-advances:
+    post:
+      tags: [Cash Advances]
+      summary: Create cash advance
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCashAdvanceRequest' }
+      responses:
+        '201':
+          description: Cash advance created
+    get:
+      tags: [Cash Advances]
+      summary: My cash advance history
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 20 } }
+        - { name: status, in: query, schema: { type: string, enum: [OUTSTANDING, SETTLED] } }
+      responses:
+        '200':
+          description: Paginated cash advances
+
+  /workforce/cash-advances/company:
+    get:
+      tags: [Cash Advances]
+      summary: Company cash advances
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: employeeId, in: query, schema: { type: string, format: uuid } }
+        - { name: status, in: query, schema: { type: string, enum: [OUTSTANDING, SETTLED] } }
+        - { name: page, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        '200':
+          description: Paginated company cash advances
+
+  /workforce/payroll:
+    post:
+      tags: [Payroll]
+      summary: Generate weekly payroll
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GeneratePayrollRequest' }
+      responses:
+        '201':
+          description: Payroll batch generated
+    get:
+      tags: [Payroll]
+      summary: Payroll history
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: employeeId, in: query, schema: { type: string, format: uuid } }
+        - { name: payPeriodStart, in: query, schema: { type: string, format: date } }
+        - { name: payPeriodEnd, in: query, schema: { type: string, format: date } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        '200':
+          description: Paginated payroll history
+
+  /workforce/payroll/{payrollId}:
+    get:
+      tags: [Payroll]
+      summary: View payroll record
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: payrollId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Payroll record details
+
+  /workforce/payroll/{payrollId}/mark-paid:
+    post:
+      tags: [Payroll]
+      summary: Mark payroll as paid
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: payrollId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MarkPayrollPaidRequest' }
+      responses:
+        '200':
+          description: Payroll marked paid
+
+  /workforce/dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Employee operational dashboard
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Workforce dashboard payload
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/ApiSuccessEnvelope' }
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/WorkforceDashboard' }

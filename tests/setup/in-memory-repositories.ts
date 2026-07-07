@@ -241,6 +241,12 @@ export class InMemoryEmployeeRepository implements EmployeeRepository {
     this.employees.set(employeeId, updated);
     return updated;
   }
+
+  async listActiveByCompany(companyId: string): Promise<EmployeeEntity[]> {
+    return [...this.employees.values()].filter(
+      (employee) => employee.companyId === companyId && employee.isActive(),
+    );
+  }
 }
 
 export class InMemorySessionRepository implements SessionRepository {
@@ -531,5 +537,389 @@ export class InMemoryVehicleRepository implements VehicleRepository {
       const value = vehicle.toPrimitives()[field as keyof ReturnType<typeof vehicle.toPrimitives>];
       return value instanceof Date ? value.getTime() : String(value);
     });
+  }
+}
+
+import type { AttendanceSessionEntity } from '../../src/modules/attendance/domain/attendance-session.entity.js';
+import { AttendanceSessionEntity as AttendanceSessionModel } from '../../src/modules/attendance/domain/attendance-session.entity.js';
+import type {
+  AttendanceSessionRepository,
+  CreateAttendanceSessionInput,
+  ListAttendanceQuery,
+  ManageAttendanceInput,
+} from '../../src/modules/attendance/domain/attendance-session.repository.js';
+import type { LeaveRecordEntity } from '../../src/modules/leave/domain/leave-record.entity.js';
+import { LeaveRecordEntity as LeaveRecordModel } from '../../src/modules/leave/domain/leave-record.entity.js';
+import type {
+  CreateLeaveRecordInput,
+  LeaveRecordRepository,
+  ListLeaveQuery,
+  ManageLeaveInput,
+} from '../../src/modules/leave/domain/leave-record.repository.js';
+import type { CashAdvanceEntity } from '../../src/modules/cash-advance/domain/cash-advance.entity.js';
+import { CashAdvanceEntity as CashAdvanceModel } from '../../src/modules/cash-advance/domain/cash-advance.entity.js';
+import type {
+  CashAdvanceRepository,
+  CreateCashAdvanceInput,
+  ListCashAdvanceQuery,
+} from '../../src/modules/cash-advance/domain/cash-advance.repository.js';
+import type { PayrollRecordEntity } from '../../src/modules/payroll/domain/payroll-record.entity.js';
+import { PayrollRecordEntity as PayrollRecordModel } from '../../src/modules/payroll/domain/payroll-record.entity.js';
+import type {
+  CreatePayrollRecordInput,
+  ListPayrollQuery,
+  MarkPayrollPaidInput,
+  PayrollRecordRepository,
+} from '../../src/modules/payroll/domain/payroll-record.repository.js';
+
+function filterByDateRange<T>(
+  items: T[],
+  query: { fromDate?: Date; toDate?: Date },
+  getDate: (item: T) => Date,
+): T[] {
+  return items.filter((item) => {
+    const date = getDate(item);
+    if (query.fromDate && date < query.fromDate) return false;
+    if (query.toDate && date > query.toDate) return false;
+    return true;
+  });
+}
+
+export class InMemoryAttendanceRepository implements AttendanceSessionRepository {
+  public sessions = new Map<string, AttendanceSessionEntity>();
+
+  async create(input: CreateAttendanceSessionInput) {
+    const now = new Date();
+    const session = AttendanceSessionModel.create({
+      id: input.id,
+      companyId: input.companyId,
+      employeeId: input.employeeId,
+      status: 'OPEN',
+      timeInAt: input.timeInAt ?? now,
+      timeOutAt: null,
+      note: input.note ?? null,
+      correctionNote: null,
+      adjustedTimeInAt: null,
+      adjustedTimeOutAt: null,
+      createdByUserId: input.createdByUserId ?? null,
+      updatedByUserId: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    this.sessions.set(session.id, session);
+    return session;
+  }
+
+  async findOpenSession(employeeId: string, companyId: string) {
+    return (
+      [...this.sessions.values()].find(
+        (session) =>
+          session.employeeId === employeeId && session.companyId === companyId && session.isOpen(),
+      ) ?? null
+    );
+  }
+
+  async findById(attendanceId: string, companyId: string) {
+    const session = this.sessions.get(attendanceId);
+    if (!session || session.companyId !== companyId) return null;
+    return session;
+  }
+
+  async update(attendanceId: string, companyId: string, input: ManageAttendanceInput) {
+    const current = await this.findById(attendanceId, companyId);
+    if (!current) throw new Error('Attendance not found');
+    const updated = AttendanceSessionModel.create({
+      ...current.toPrimitives(),
+      ...input,
+      updatedAt: new Date(),
+    });
+    this.sessions.set(attendanceId, updated);
+    return updated;
+  }
+
+  async close(attendanceId: string, companyId: string, timeOutAt: Date, note?: string | null) {
+    const current = await this.findById(attendanceId, companyId);
+    if (!current) throw new Error('Attendance not found');
+    const updated = current.close(timeOutAt, note);
+    this.sessions.set(attendanceId, updated);
+    return updated;
+  }
+
+  async listByEmployee(employeeId: string, companyId: string, query: ListAttendanceQuery) {
+    let items = [...this.sessions.values()].filter(
+      (session) => session.employeeId === employeeId && session.companyId === companyId,
+    );
+    items = filterByDateRange(items, query, (session) => session.timeInAt);
+    return paginateAndSort(items, query, (session, field) => {
+      const value = session.toPrimitives()[field as keyof ReturnType<typeof session.toPrimitives>];
+      return value instanceof Date ? value.getTime() : String(value);
+    });
+  }
+
+  async listByCompany(companyId: string, query: ListAttendanceQuery) {
+    let items = [...this.sessions.values()].filter((session) => session.companyId === companyId);
+    if (query.employeeId) {
+      items = items.filter((session) => session.employeeId === query.employeeId);
+    }
+    items = filterByDateRange(items, query, (session) => session.timeInAt);
+    return paginateAndSort(items, query, (session, field) => {
+      const value = session.toPrimitives()[field as keyof ReturnType<typeof session.toPrimitives>];
+      return value instanceof Date ? value.getTime() : String(value);
+    });
+  }
+}
+
+export class InMemoryLeaveRepository implements LeaveRecordRepository {
+  public records = new Map<string, LeaveRecordEntity>();
+
+  async create(input: CreateLeaveRecordInput) {
+    const now = new Date();
+    const record = LeaveRecordModel.create({
+      id: input.id,
+      companyId: input.companyId,
+      employeeId: input.employeeId,
+      leaveType: input.leaveType,
+      leaveDate: input.leaveDate,
+      status: 'PENDING',
+      reason: input.reason ?? null,
+      managerNote: null,
+      createdByUserId: input.createdByUserId ?? null,
+      updatedByUserId: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    this.records.set(record.id, record);
+    return record;
+  }
+
+  async findById(leaveId: string, companyId: string) {
+    const record = this.records.get(leaveId);
+    if (!record || record.companyId !== companyId) return null;
+    return record;
+  }
+
+  async findOverlapping(employeeId: string, companyId: string, leaveDate: Date) {
+    const target = leaveDate.toISOString().slice(0, 10);
+    return (
+      [...this.records.values()].find((record) => {
+        if (record.employeeId !== employeeId || record.companyId !== companyId) return false;
+        if (record.toPrimitives().status === 'CANCELLED') return false;
+        return record.toPrimitives().leaveDate.toISOString().slice(0, 10) === target;
+      }) ?? null
+    );
+  }
+
+  async update(leaveId: string, companyId: string, input: ManageLeaveInput) {
+    const current = await this.findById(leaveId, companyId);
+    if (!current) throw new Error('Leave not found');
+    const updated = LeaveRecordModel.create({
+      ...current.toPrimitives(),
+      ...input,
+      updatedAt: new Date(),
+    });
+    this.records.set(leaveId, updated);
+    return updated;
+  }
+
+  async listByEmployee(employeeId: string, companyId: string, query: ListLeaveQuery) {
+    let items = [...this.records.values()].filter(
+      (record) => record.employeeId === employeeId && record.companyId === companyId,
+    );
+    if (query.status)
+      items = items.filter((record) => record.toPrimitives().status === query.status);
+    items = filterByDateRange(items, query, (record) => record.toPrimitives().leaveDate);
+    return paginateAndSort(items, query, (record, field) => {
+      const value = record.toPrimitives()[field as keyof ReturnType<typeof record.toPrimitives>];
+      return value instanceof Date ? value.getTime() : String(value);
+    });
+  }
+
+  async listByCompany(companyId: string, query: ListLeaveQuery) {
+    let items = [...this.records.values()].filter((record) => record.companyId === companyId);
+    if (query.employeeId) items = items.filter((record) => record.employeeId === query.employeeId);
+    if (query.status)
+      items = items.filter((record) => record.toPrimitives().status === query.status);
+    items = filterByDateRange(items, query, (record) => record.toPrimitives().leaveDate);
+    return paginateAndSort(items, query, (record, field) => {
+      const value = record.toPrimitives()[field as keyof ReturnType<typeof record.toPrimitives>];
+      return value instanceof Date ? value.getTime() : String(value);
+    });
+  }
+}
+
+export class InMemoryCashAdvanceRepository implements CashAdvanceRepository {
+  public advances = new Map<string, CashAdvanceEntity>();
+
+  async create(input: CreateCashAdvanceInput) {
+    const now = new Date();
+    const advance = CashAdvanceModel.create({
+      id: input.id,
+      companyId: input.companyId,
+      employeeId: input.employeeId,
+      amount: input.amount,
+      deductedAmount: 0,
+      remainingAmount: input.amount,
+      status: 'OUTSTANDING',
+      reason: input.reason ?? null,
+      createdByUserId: input.createdByUserId ?? null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    this.advances.set(advance.id, advance);
+    return advance;
+  }
+
+  async findById(cashAdvanceId: string, companyId: string) {
+    const advance = this.advances.get(cashAdvanceId);
+    if (!advance || advance.companyId !== companyId) return null;
+    return advance;
+  }
+
+  async listByEmployee(employeeId: string, companyId: string, query: ListCashAdvanceQuery) {
+    let items = [...this.advances.values()].filter(
+      (advance) => advance.employeeId === employeeId && advance.companyId === companyId,
+    );
+    if (query.status) {
+      items = items.filter((advance) => advance.toPrimitives().status === query.status);
+    }
+    items = filterByDateRange(items, query, (advance) => advance.toPrimitives().createdAt);
+    return paginateAndSort(items, query, (advance, field) => {
+      const value = advance.toPrimitives()[field as keyof ReturnType<typeof advance.toPrimitives>];
+      return value instanceof Date ? value.getTime() : String(value);
+    });
+  }
+
+  async listByCompany(companyId: string, query: ListCashAdvanceQuery) {
+    let items = [...this.advances.values()].filter((advance) => advance.companyId === companyId);
+    if (query.employeeId) {
+      items = items.filter((advance) => advance.employeeId === query.employeeId);
+    }
+    if (query.status) {
+      items = items.filter((advance) => advance.toPrimitives().status === query.status);
+    }
+    return paginateAndSort(items, query, (advance, field) => {
+      const value = advance.toPrimitives()[field as keyof ReturnType<typeof advance.toPrimitives>];
+      return value instanceof Date ? value.getTime() : String(value);
+    });
+  }
+
+  async sumOutstandingBalance(employeeId: string, companyId: string) {
+    return [...this.advances.values()]
+      .filter(
+        (advance) =>
+          advance.employeeId === employeeId &&
+          advance.companyId === companyId &&
+          advance.toPrimitives().status === 'OUTSTANDING',
+      )
+      .reduce((sum, advance) => sum + advance.toPrimitives().remainingAmount, 0);
+  }
+
+  async listOutstandingByEmployee(employeeId: string, companyId: string) {
+    return [...this.advances.values()]
+      .filter(
+        (advance) =>
+          advance.employeeId === employeeId &&
+          advance.companyId === companyId &&
+          advance.toPrimitives().status === 'OUTSTANDING',
+      )
+      .sort((a, b) => a.toPrimitives().createdAt.getTime() - b.toPrimitives().createdAt.getTime());
+  }
+
+  async applyDeduction(cashAdvanceId: string, companyId: string, amount: number) {
+    const current = await this.findById(cashAdvanceId, companyId);
+    if (!current) throw new Error('Cash advance not found');
+    const props = current.toPrimitives();
+    const deductedAmount = props.deductedAmount + amount;
+    const remainingAmount = props.amount - deductedAmount;
+    const updated = CashAdvanceModel.create({
+      ...props,
+      deductedAmount,
+      remainingAmount,
+      status: remainingAmount <= 0 ? 'SETTLED' : 'OUTSTANDING',
+      updatedAt: new Date(),
+    });
+    this.advances.set(cashAdvanceId, updated);
+    return updated;
+  }
+}
+
+export class InMemoryPayrollRepository implements PayrollRecordRepository {
+  public records = new Map<string, PayrollRecordEntity>();
+
+  async create(input: CreatePayrollRecordInput) {
+    const now = new Date();
+    const record = PayrollRecordModel.create({
+      id: input.id,
+      companyId: input.companyId,
+      employeeId: input.employeeId,
+      payPeriodStart: input.payPeriodStart,
+      payPeriodEnd: input.payPeriodEnd,
+      grossSalary: input.grossSalary,
+      cashAdvanceDeductions: input.cashAdvanceDeductions,
+      netPay: input.netPay,
+      status: 'PAYABLE',
+      paidAt: null,
+      paymentReference: null,
+      createdByUserId: input.createdByUserId ?? null,
+      updatedByUserId: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    this.records.set(record.id, record);
+    return record;
+  }
+
+  async findById(payrollId: string, companyId: string) {
+    const record = this.records.get(payrollId);
+    if (!record || record.companyId !== companyId) return null;
+    return record;
+  }
+
+  async findByEmployeeAndPayPeriod(employeeId: string, companyId: string, payPeriodStart: Date) {
+    const target = payPeriodStart.toISOString().slice(0, 10);
+    return (
+      [...this.records.values()].find((record) => {
+        if (record.employeeId !== employeeId || record.companyId !== companyId) return false;
+        return record.toPrimitives().payPeriodStart.toISOString().slice(0, 10) === target;
+      }) ?? null
+    );
+  }
+
+  async listByEmployee(employeeId: string, companyId: string, query: ListPayrollQuery) {
+    let items = [...this.records.values()].filter(
+      (record) => record.employeeId === employeeId && record.companyId === companyId,
+    );
+    if (query.status)
+      items = items.filter((record) => record.toPrimitives().status === query.status);
+    return paginateAndSort(items, query, (record, field) => {
+      const value = record.toPrimitives()[field as keyof ReturnType<typeof record.toPrimitives>];
+      return value instanceof Date ? value.getTime() : String(value);
+    });
+  }
+
+  async listByCompany(companyId: string, query: ListPayrollQuery) {
+    let items = [...this.records.values()].filter((record) => record.companyId === companyId);
+    if (query.employeeId) items = items.filter((record) => record.employeeId === query.employeeId);
+    if (query.status)
+      items = items.filter((record) => record.toPrimitives().status === query.status);
+    return paginateAndSort(items, query, (record, field) => {
+      const value = record.toPrimitives()[field as keyof ReturnType<typeof record.toPrimitives>];
+      return value instanceof Date ? value.getTime() : String(value);
+    });
+  }
+
+  async markPaid(payrollId: string, companyId: string, input: MarkPayrollPaidInput) {
+    const current = await this.findById(payrollId, companyId);
+    if (!current) throw new Error('Payroll not found');
+    const updated = PayrollRecordModel.create({
+      ...current.toPrimitives(),
+      status: 'PAID',
+      paidAt: new Date(),
+      paymentReference: input.paymentReference ?? null,
+      updatedByUserId: input.updatedByUserId ?? null,
+      updatedAt: new Date(),
+    });
+    this.records.set(payrollId, updated);
+    return updated;
   }
 }

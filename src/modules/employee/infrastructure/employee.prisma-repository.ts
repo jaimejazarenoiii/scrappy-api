@@ -81,4 +81,11 @@ export class EmployeePrismaRepository implements EmployeeRepository {
     if (!existing) throw new ResourceNotFoundError('Employee not found');
     return toDomain(await prisma.employee.update({ where: { id: employeeId }, data: { userId } }));
   }
+
+  async listActiveByCompany(companyId: string): Promise<EmployeeEntity[]> {
+    const records = await prisma.employee.findMany({
+      where: { companyId, status: 'ACTIVE', deletedAt: null },
+    });
+    return records.map(toDomain);
+  }
 }

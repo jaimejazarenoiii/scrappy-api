@@ -42,3 +42,56 @@ export async function loginAsEmployee(app: Express) {
     .send({ identifier: 'employee@scrappy.test', password: 'password123' });
   return { Authorization: `Bearer ${login.body.data.accessToken}` };
 }
+
+export async function createLinkedEmployeeUser(
+  app: Express,
+  userRepository: {
+    create: (input: {
+      id: string;
+      companyId: string;
+      email: string;
+      passwordHash: string;
+      role: 'EMPLOYEE';
+    }) => Promise<{ id: string }>;
+    linkEmployee: (userId: string, employeeId: string) => Promise<unknown>;
+  },
+  employeeRepository: {
+    create: (input: {
+      id: string;
+      companyId: string;
+      firstName: string;
+      lastName: string;
+      weeklySalary: number;
+    }) => Promise<{ id: string }>;
+    linkUser: (employeeId: string, companyId: string, userId: string) => Promise<unknown>;
+  },
+  companyId: string,
+  email = 'employee@scrappy.test',
+) {
+  const userId = randomUUID();
+  const employeeId = randomUUID();
+  await employeeRepository.create({
+    id: employeeId,
+    companyId,
+    firstName: 'Jane',
+    lastName: 'Worker',
+    weeklySalary: 3500,
+  });
+  await userRepository.create({
+    id: userId,
+    companyId,
+    email,
+    passwordHash: 'hashed:password123',
+    role: 'EMPLOYEE',
+  });
+  await employeeRepository.linkUser(employeeId, companyId, userId);
+  await userRepository.linkEmployee(userId, employeeId);
+  const login = await request(app)
+    .post('/api/v1/auth/login')
+    .send({ identifier: email, password: 'password123' });
+  return {
+    auth: { Authorization: `Bearer ${login.body.data.accessToken}` },
+    employeeId,
+    userId,
+  };
+}

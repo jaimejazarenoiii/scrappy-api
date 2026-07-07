@@ -36,4 +36,5 @@ export interface EmployeeRepository {
   ): Promise<EmployeeEntity>;
   softDelete(employeeId: string, companyId: string): Promise<EmployeeEntity>;
   linkUser(employeeId: string, companyId: string, userId: string): Promise<EmployeeEntity>;
+  listActiveByCompany(companyId: string): Promise<EmployeeEntity[]>;
 }

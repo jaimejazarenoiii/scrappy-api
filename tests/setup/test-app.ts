@@ -5,9 +5,13 @@ import { resetConfigForTests } from '../../src/config/index.js';
 import { resetLoggerForTests } from '../../src/config/logger.js';
 import {
   FakePasswordHasher,
+  InMemoryAttendanceRepository,
   InMemoryBranchRepository,
+  InMemoryCashAdvanceRepository,
   InMemoryCompanyRepository,
   InMemoryEmployeeRepository,
+  InMemoryLeaveRepository,
+  InMemoryPayrollRepository,
   InMemorySessionRepository,
   InMemoryUserRepository,
   InMemoryVehicleRepository,
@@ -39,6 +43,10 @@ export function createTestContext() {
   const branchRepository = new InMemoryBranchRepository();
   const warehouseRepository = new InMemoryWarehouseRepository();
   const vehicleRepository = new InMemoryVehicleRepository();
+  const attendanceRepository = new InMemoryAttendanceRepository();
+  const leaveRepository = new InMemoryLeaveRepository();
+  const cashAdvanceRepository = new InMemoryCashAdvanceRepository();
+  const payrollRepository = new InMemoryPayrollRepository();
   const sessionRepository = new InMemorySessionRepository();
   const passwordHasher = new FakePasswordHasher();
   const tokenProvider = new JwtTokenProvider();
@@ -49,6 +57,10 @@ export function createTestContext() {
     branchRepository,
     warehouseRepository,
     vehicleRepository,
+    attendanceSessionRepository: attendanceRepository,
+    leaveRecordRepository: leaveRepository,
+    cashAdvanceRepository,
+    payrollRecordRepository: payrollRepository,
     sessionRepository,
     passwordHasher,
     tokenProvider,
@@ -62,6 +74,10 @@ export function createTestContext() {
     branchRepository,
     warehouseRepository,
     vehicleRepository,
+    attendanceRepository,
+    leaveRepository,
+    cashAdvanceRepository,
+    payrollRepository,
     sessionRepository,
     passwordHasher,
     tokenProvider,

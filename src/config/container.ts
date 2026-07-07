@@ -12,6 +12,18 @@ import { EmployeePrismaRepository } from '../modules/employee/infrastructure/emp
 import { BranchPrismaRepository } from '../modules/branch/infrastructure/branch.prisma-repository.js';
 import { WarehousePrismaRepository } from '../modules/warehouse/infrastructure/warehouse.prisma-repository.js';
 import { VehiclePrismaRepository } from '../modules/vehicle/infrastructure/vehicle.prisma-repository.js';
+import { LeaveRecordPrismaRepository } from '../modules/leave/infrastructure/leave-record.prisma-repository.js';
+import { AttendanceSessionPrismaRepository } from '../modules/attendance/infrastructure/attendance-session.prisma-repository.js';
+import { AttendanceController } from '../modules/attendance/presentation/attendance.controller.js';
+import { TimeInUseCase } from '../modules/attendance/application/use-cases/time-in.use-case.js';
+import { TimeOutUseCase } from '../modules/attendance/application/use-cases/time-out.use-case.js';
+import { GetAttendanceStatusUseCase } from '../modules/attendance/application/use-cases/get-attendance-status.use-case.js';
+import { ListMyAttendanceUseCase } from '../modules/attendance/application/use-cases/list-my-attendance.use-case.js';
+import { ListCompanyAttendanceUseCase } from '../modules/attendance/application/use-cases/list-company-attendance.use-case.js';
+import { ManageAttendanceUseCase } from '../modules/attendance/application/use-cases/manage-attendance.use-case.js';
+import { WorkforceDashboardController } from '../modules/workforce-dashboard/presentation/workforce-dashboard.controller.js';
+import { GetWorkforceDashboardUseCase } from '../modules/workforce-dashboard/application/use-cases/get-workforce-dashboard.use-case.js';
+import { DashboardVisibilityService } from '../modules/workforce-dashboard/application/services/dashboard-visibility.service.js';
 import { CompanyController } from '../modules/company/presentation/company.controller.js';
 import { CreateCompanyWithOwnerUseCase } from '../modules/company/application/use-cases/create-company-with-owner.use-case.js';
 import { GetCompanyUseCase } from '../modules/company/application/use-cases/get-company.use-case.js';
@@ -43,6 +55,11 @@ import { GetVehicleUseCase } from '../modules/vehicle/application/use-cases/get-
 import { UpdateVehicleUseCase } from '../modules/vehicle/application/use-cases/update-vehicle.use-case.js';
 import { ArchiveVehicleUseCase } from '../modules/vehicle/application/use-cases/archive-vehicle.use-case.js';
 import { ListVehiclesUseCase } from '../modules/vehicle/application/use-cases/list-vehicles.use-case.js';
+import { LeaveController } from '../modules/leave/presentation/leave.controller.js';
+import { RequestLeaveUseCase } from '../modules/leave/application/use-cases/request-leave.use-case.js';
+import { ListMyLeaveUseCase } from '../modules/leave/application/use-cases/list-my-leave.use-case.js';
+import { ListCompanyLeaveUseCase } from '../modules/leave/application/use-cases/list-company-leave.use-case.js';
+import { ManageLeaveUseCase } from '../modules/leave/application/use-cases/manage-leave.use-case.js';
 import type { TokenProvider } from '../shared/auth/token-provider.interface.js';
 import type { PasswordHasher } from '../shared/auth/password-hasher.interface.js';
 import type { CompanyRepository } from '../modules/company/domain/company.repository.js';
@@ -52,6 +69,21 @@ import type { EmployeeRepository } from '../modules/employee/domain/employee.rep
 import type { BranchRepository } from '../modules/branch/domain/branch.repository.js';
 import type { WarehouseRepository } from '../modules/warehouse/domain/warehouse.repository.js';
 import type { VehicleRepository } from '../modules/vehicle/domain/vehicle.repository.js';
+import type { LeaveRecordRepository } from '../modules/leave/domain/leave-record.repository.js';
+import type { AttendanceSessionRepository } from '../modules/attendance/domain/attendance-session.repository.js';
+import { CashAdvancePrismaRepository } from '../modules/cash-advance/infrastructure/cash-advance.prisma-repository.js';
+import { CashAdvanceController } from '../modules/cash-advance/presentation/cash-advance.controller.js';
+import { CreateCashAdvanceUseCase } from '../modules/cash-advance/application/use-cases/create-cash-advance.use-case.js';
+import { ListMyCashAdvancesUseCase } from '../modules/cash-advance/application/use-cases/list-my-cash-advances.use-case.js';
+import { ListCompanyCashAdvancesUseCase } from '../modules/cash-advance/application/use-cases/list-company-cash-advances.use-case.js';
+import type { CashAdvanceRepository } from '../modules/cash-advance/domain/cash-advance.repository.js';
+import { PayrollRecordPrismaRepository } from '../modules/payroll/infrastructure/payroll-record.prisma-repository.js';
+import { PayrollController } from '../modules/payroll/presentation/payroll.controller.js';
+import { GenerateWeeklyPayrollUseCase } from '../modules/payroll/application/use-cases/generate-weekly-payroll.use-case.js';
+import { ListPayrollHistoryUseCase } from '../modules/payroll/application/use-cases/list-payroll-history.use-case.js';
+import { GetPayrollRecordUseCase } from '../modules/payroll/application/use-cases/get-payroll-record.use-case.js';
+import { MarkPayrollPaidUseCase } from '../modules/payroll/application/use-cases/mark-payroll-paid.use-case.js';
+import type { PayrollRecordRepository } from '../modules/payroll/domain/payroll-record.repository.js';
 
 export interface Container {
   tokenProvider: TokenProvider;
@@ -62,6 +94,11 @@ export interface Container {
   branchController: BranchController;
   warehouseController: WarehouseController;
   vehicleController: VehicleController;
+  cashAdvanceController: CashAdvanceController;
+  payrollController: PayrollController;
+  leaveController: LeaveController;
+  attendanceController: AttendanceController;
+  workforceDashboardController: WorkforceDashboardController;
   healthIndicator?: { check: () => Promise<boolean> };
 }
 
@@ -75,6 +112,10 @@ export interface ContainerOverrides {
   branchRepository?: BranchRepository;
   warehouseRepository?: WarehouseRepository;
   vehicleRepository?: VehicleRepository;
+  cashAdvanceRepository?: CashAdvanceRepository;
+  payrollRecordRepository?: PayrollRecordRepository;
+  leaveRecordRepository?: LeaveRecordRepository;
+  attendanceSessionRepository?: AttendanceSessionRepository;
   healthIndicator?: { check: () => Promise<boolean> };
 }
 
@@ -85,6 +126,14 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
   const branchRepository = overrides.branchRepository ?? new BranchPrismaRepository();
   const warehouseRepository = overrides.warehouseRepository ?? new WarehousePrismaRepository();
   const vehicleRepository = overrides.vehicleRepository ?? new VehiclePrismaRepository();
+  const cashAdvanceRepository =
+    overrides.cashAdvanceRepository ?? new CashAdvancePrismaRepository();
+  const payrollRecordRepository =
+    overrides.payrollRecordRepository ?? new PayrollRecordPrismaRepository();
+  const leaveRecordRepository =
+    overrides.leaveRecordRepository ?? new LeaveRecordPrismaRepository();
+  const attendanceSessionRepository =
+    overrides.attendanceSessionRepository ?? new AttendanceSessionPrismaRepository();
   const sessionRepository = overrides.sessionRepository ?? new SessionPrismaRepository();
   const passwordHasher = overrides.passwordHasher ?? new BcryptPasswordHasher();
   const tokenProvider = overrides.tokenProvider ?? new JwtTokenProvider();
@@ -138,6 +187,45 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
       new UpdateVehicleUseCase(vehicleRepository),
       new ArchiveVehicleUseCase(vehicleRepository),
       new ListVehiclesUseCase(vehicleRepository),
+    ),
+    cashAdvanceController: new CashAdvanceController(
+      new CreateCashAdvanceUseCase(cashAdvanceRepository, employeeRepository),
+      new ListMyCashAdvancesUseCase(cashAdvanceRepository, userRepository),
+      new ListCompanyCashAdvancesUseCase(cashAdvanceRepository),
+    ),
+    payrollController: new PayrollController(
+      new GenerateWeeklyPayrollUseCase(
+        payrollRecordRepository,
+        employeeRepository,
+        cashAdvanceRepository,
+      ),
+      new ListPayrollHistoryUseCase(payrollRecordRepository, userRepository),
+      new GetPayrollRecordUseCase(payrollRecordRepository, userRepository),
+      new MarkPayrollPaidUseCase(payrollRecordRepository, cashAdvanceRepository),
+    ),
+    leaveController: new LeaveController(
+      new RequestLeaveUseCase(leaveRecordRepository, employeeRepository, userRepository),
+      new ListMyLeaveUseCase(leaveRecordRepository, userRepository),
+      new ListCompanyLeaveUseCase(leaveRecordRepository),
+      new ManageLeaveUseCase(leaveRecordRepository),
+    ),
+    attendanceController: new AttendanceController(
+      new TimeInUseCase(attendanceSessionRepository, employeeRepository, userRepository),
+      new TimeOutUseCase(attendanceSessionRepository, userRepository),
+      new GetAttendanceStatusUseCase(attendanceSessionRepository, userRepository),
+      new ListMyAttendanceUseCase(attendanceSessionRepository, userRepository),
+      new ListCompanyAttendanceUseCase(attendanceSessionRepository),
+      new ManageAttendanceUseCase(attendanceSessionRepository),
+    ),
+    workforceDashboardController: new WorkforceDashboardController(
+      new GetWorkforceDashboardUseCase(
+        attendanceSessionRepository,
+        leaveRecordRepository,
+        cashAdvanceRepository,
+        payrollRecordRepository,
+        userRepository,
+        new DashboardVisibilityService(),
+      ),
     ),
   };
 }

@@ -49,6 +49,12 @@ export class LifecycleConflictError extends AppError {
   }
 }
 
+export class BusinessRuleViolationError extends AppError {
+  constructor(message = 'Business rule violation', details: Record<string, unknown>[] = []) {
+    super(message, 409, ERROR_CODES.BUSINESS_RULE_VIOLATION, details);
+  }
+}
+
 export class SessionExpiredError extends AppError {
   constructor(message = 'Session has expired') {
     super(message, 401, ERROR_CODES.SESSION_EXPIRED);
