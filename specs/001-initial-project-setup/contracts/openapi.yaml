@@ -1,0 +1,185 @@
+openapi: 3.0.3
+info:
+  title: Scrappy API
+  description: |
+    Junkshop management system API (Philippines) — bootstrap endpoints only.
+    Business endpoints will be added in future feature specifications.
+  version: 1.0.0
+  contact:
+    name: Scrappy API Team
+
+servers:
+  - url: http://localhost:{port}
+    description: Local development
+    variables:
+      port:
+        default: '3000'
+
+tags:
+  - name: Bootstrap
+    description: Application identity and health
+
+paths:
+  /:
+    get:
+      tags: [Bootstrap]
+      summary: Application information
+      description: Returns API name, version, and running status.
+      operationId: getRoot
+      responses:
+        '200':
+          description: Application is running
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessRootResponse'
+              example:
+                success: true
+                data:
+                  name: Scrappy API
+                  version: 1.0.0
+                  status: running
+                meta: {}
+                error: null
+
+  /health:
+    get:
+      tags: [Bootstrap]
+      summary: Health check
+      description: |
+        Returns health status. HTTP 200 when healthy; HTTP 503 when a critical
+        dependency (database) is unavailable.
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessHealthResponse'
+              example:
+                success: true
+                data:
+                  status: healthy
+                  checks:
+                    database: up
+                meta: {}
+                error: null
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiSuccessHealthResponse'
+              example:
+                success: true
+                data:
+                  status: unhealthy
+                  checks:
+                    database: down
+                meta: {}
+                error: null
+
+components:
+  schemas:
+    ApiEnvelope:
+      type: object
+      required: [success, data, meta, error]
+      properties:
+        success:
+          type: boolean
+        data:
+          nullable: true
+        meta:
+          type: object
+          additionalProperties: true
+        error:
+          nullable: true
+          $ref: '#/components/schemas/ApiError'
+
+    ApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: NOT_FOUND
+        message:
+          type: string
+          example: Resource not found
+
+    ServiceIdentity:
+      type: object
+      required: [name, version, status]
+      properties:
+        name:
+          type: string
+          example: Scrappy API
+        version:
+          type: string
+          example: 1.0.0
+        status:
+          type: string
+          example: running
+
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        checks:
+          type: object
+          additionalProperties:
+            type: string
+            enum: [up, down]
+
+    ApiSuccessRootResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiEnvelope'
+        - type: object
+          properties:
+            success:
+              type: boolean
+              enum: [true]
+            data:
+              $ref: '#/components/schemas/ServiceIdentity'
+            error:
+              type: 'null'
+
+    ApiSuccessHealthResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/HealthStatus'
+
+    ApiErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiEnvelope'
+        - type: object
+          properties:
+            success:
+              type: boolean
+              enum: [false]
+            data:
+              type: 'null'
+            error:
+              $ref: '#/components/schemas/ApiError'
+
+  responses:
+    NotFound:
+      description: Route not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+          example:
+            success: false
+            data: null
+            meta: {}
+            error:
+              code: NOT_FOUND
+              message: Route not found
