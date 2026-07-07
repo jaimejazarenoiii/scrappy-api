@@ -1,7 +1,7 @@
 {
   "name": "scrappy-api",
   "version": "1.0.0",
-  "description": "Scrappy — junkshop management system API (Philippines)",
+  "description": "Scrappy \u2014 junkshop management system API (Philippines)",
   "type": "module",
   "engines": {
     "node": ">=22.0.0"
@@ -20,12 +20,20 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:api": "vitest run tests/api"
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^8.2.0",
+    "jsonwebtoken": "^9.0.3",
     "pino": "^9.7.0",
     "pino-http": "^10.4.0",
     "swagger-jsdoc": "^6.2.8",
@@ -34,7 +42,10 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",
+    "@types/bcrypt": "^6.0.0",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.15.29",
     "@types/supertest": "^6.0.3",
     "@types/swagger-jsdoc": "^6.0.4",
@@ -42,14 +53,14 @@
     "eslint": "^9.28.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.0",
+    "pino-pretty": "^13.0.0",
     "prettier": "^3.5.3",
     "prisma": "^6.9.0",
     "supertest": "^7.1.1",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.33.1",
-    "vitest": "^3.2.1",
-    "pino-pretty": "^13.0.0"
+    "vitest": "^3.2.1"
   },
   "lint-staged": {
     "*.{ts,json,md}": [

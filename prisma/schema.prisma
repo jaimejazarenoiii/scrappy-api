@@ -6,3 +6,89 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum CompanyStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum UserRole {
+  OWNER
+  MANAGER
+  EMPLOYEE
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Company {
+  id            String          @id @default(uuid())
+  name          String          @unique
+  logoUrl       String?
+  contactNumber String?
+  email         String?
+  address       String?
+  status        CompanyStatus   @default(ACTIVE)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  deletedAt     DateTime?
+  users         User[]
+  employees     Employee[]
+}
+
+model User {
+  id           String       @id @default(uuid())
+  companyId    String
+  employeeId   String?      @unique
+  email        String       @unique
+  passwordHash String
+  role         UserRole
+  lastLoginAt  DateTime?
+  status       UserStatus   @default(ACTIVE)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  deletedAt    DateTime?
+  company      Company      @relation(fields: [companyId], references: [id])
+  employee     Employee?    @relation("UserEmployeeLink", fields: [employeeId], references: [id])
+  sessions     RefreshSession[]
+  @@index([companyId, role])
+}
+
+model Employee {
+  id            String         @id @default(uuid())
+  companyId     String
+  userId        String?        @unique
+  employeeNumber String?
+  firstName     String
+  middleName    String?
+  lastName      String
+  suffix        String?
+  contactNumber String?
+  weeklySalary  Decimal        @db.Decimal(10, 2)
+  status        EmployeeStatus @default(ACTIVE)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime?
+  company       Company        @relation(fields: [companyId], references: [id])
+  user          User?          @relation("UserEmployeeLink")
+  @@index([companyId, lastName])
+  @@unique([companyId, employeeNumber])
+}
+
+model RefreshSession {
+  id         String   @id @default(uuid())
+  userId     String
+  tokenHash  String
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+  @@index([userId])
+}
