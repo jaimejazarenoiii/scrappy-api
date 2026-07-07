@@ -1,7 +1,7 @@
 {
   "name": "scrappy-api",
   "version": "1.0.0",
-  "description": "Scrappy \u2014 junkshop management system API (Philippines)",
+  "description": "Scrappy — junkshop management system API (Philippines)",
   "type": "module",
   "engines": {
     "node": ">=22.0.0"
@@ -34,6 +34,7 @@
     "express-rate-limit": "^8.5.2",
     "helmet": "^8.2.0",
     "jsonwebtoken": "^9.0.3",
+    "multer": "^2.2.0",
     "pino": "^9.7.0",
     "pino-http": "^10.4.0",
     "swagger-jsdoc": "^6.2.8",
@@ -46,6 +47,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.2",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.2.0",
     "@types/node": "^22.15.29",
     "@types/supertest": "^6.0.3",
     "@types/swagger-jsdoc": "^6.0.4",

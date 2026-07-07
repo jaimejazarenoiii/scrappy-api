@@ -1,0 +1,630 @@
+openapi: 3.0.3
+info:
+  title: Scrappy API - Transaction Management (Foundation)
+  version: 1.0.0
+  description: P004 contracts for Transactions, Items, Attachments, and Suggestions.
+
+servers:
+  - url: /api/v1
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ApiSuccessEnvelope:
+      type: object
+      required: [success, data, meta, error]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { type: object }
+        meta: { type: object, additionalProperties: true }
+        error: { nullable: true, type: 'null' }
+
+    ApiErrorEnvelope:
+      type: object
+      required: [success, data, meta, error]
+      properties:
+        success: { type: boolean, enum: [false] }
+        data: { nullable: true, type: 'null' }
+        meta: { type: object, additionalProperties: true }
+        error: { $ref: '#/components/schemas/ErrorBody' }
+
+    ErrorBody:
+      type: object
+      required: [code, message, details]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        details:
+          type: array
+          items: { type: object, additionalProperties: true }
+
+    PaginationMeta:
+      type: object
+      properties:
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+        totalPages: { type: integer }
+
+    TransactionDirection:
+      type: string
+      enum: [INBOUND, OUTBOUND]
+
+    TransactionStatus:
+      type: string
+      enum: [DRAFT, CANCELLED]
+
+    TransactionLocationType:
+      type: string
+      enum: [BRANCH, WAREHOUSE, OUTSIDE]
+
+    TransactionItemUnit:
+      type: string
+      enum: [KG, G, TON, LB, PIECE, BUNDLE, SACK]
+
+    TransactionAttachmentType:
+      type: string
+      enum: [PHOTO]
+
+    AssignedEmployeeSummary:
+      type: object
+      required: [employeeId, assignedAt]
+      properties:
+        employeeId: { type: string, format: uuid }
+        assignedAt: { type: string, format: date-time }
+
+    TransactionItem:
+      type: object
+      required: [id, transactionId, materialName, weight, unit, price, total]
+      properties:
+        id: { type: string, format: uuid }
+        transactionId: { type: string, format: uuid }
+        materialName: { type: string }
+        weight: { type: number, format: decimal }
+        unit: { $ref: '#/components/schemas/TransactionItemUnit' }
+        price: { type: number, format: decimal }
+        total: { type: number, format: decimal }
+        notes: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    TransactionAttachment:
+      type: object
+      required: [id, transactionId, attachmentType, fileName, mimeType, fileSize, uploadedByUserId]
+      properties:
+        id: { type: string, format: uuid }
+        transactionId: { type: string, format: uuid }
+        attachmentType: { $ref: '#/components/schemas/TransactionAttachmentType' }
+        fileName: { type: string }
+        mimeType: { type: string }
+        fileSize: { type: integer }
+        uploadedByUserId: { type: string, format: uuid }
+        downloadUrl: { type: string, description: Optional signed or relative URL }
+        createdAt: { type: string, format: date-time }
+
+    TransactionSummary:
+      type: object
+      required: [id, companyId, direction, status, partyName, transactionDate, locationType]
+      properties:
+        id: { type: string, format: uuid }
+        companyId: { type: string, format: uuid }
+        direction: { $ref: '#/components/schemas/TransactionDirection' }
+        directionLabel: { type: string, enum: [BUY, SELL] }
+        status: { $ref: '#/components/schemas/TransactionStatus' }
+        partyName: { type: string }
+        partyContactNumber: { type: string, nullable: true }
+        transactionDate: { type: string, format: date-time }
+        locationType: { $ref: '#/components/schemas/TransactionLocationType' }
+        branchId: { type: string, format: uuid, nullable: true }
+        warehouseId: { type: string, format: uuid, nullable: true }
+        outsideLocationName: { type: string, nullable: true }
+        itemCount: { type: integer }
+        assignedEmployeeCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    TransactionDetail:
+      allOf:
+        - $ref: '#/components/schemas/TransactionSummary'
+        - type: object
+          required: [createdByUserId, items, attachments, assignedEmployees]
+          properties:
+            createdByUserId: { type: string, format: uuid }
+            updatedByUserId: { type: string, format: uuid, nullable: true }
+            outsideAddress: { type: string, nullable: true }
+            tripId: { type: string, format: uuid, nullable: true }
+            notes: { type: string, nullable: true }
+            cancellationReason: { type: string, nullable: true }
+            cancelledAt: { type: string, format: date-time, nullable: true }
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/TransactionItem' }
+            attachments:
+              type: array
+              items: { $ref: '#/components/schemas/TransactionAttachment' }
+            assignedEmployees:
+              type: array
+              items: { $ref: '#/components/schemas/AssignedEmployeeSummary' }
+
+    CreateTransactionRequest:
+      type: object
+      required: [direction, partyName, transactionDate, locationType, assignedEmployeeIds]
+      properties:
+        direction:
+          oneOf:
+            - $ref: '#/components/schemas/TransactionDirection'
+            - type: string
+              enum: [BUY, SELL]
+        partyName: { type: string, minLength: 1, maxLength: 200 }
+        partyContactNumber: { type: string, maxLength: 50 }
+        transactionDate: { type: string, format: date-time }
+        locationType: { $ref: '#/components/schemas/TransactionLocationType' }
+        branchId: { type: string, format: uuid }
+        warehouseId: { type: string, format: uuid }
+        outsideLocationName: { type: string, maxLength: 200 }
+        outsideAddress: { type: string, maxLength: 500 }
+        tripId: { type: string, format: uuid }
+        notes: { type: string, maxLength: 2000 }
+        assignedEmployeeIds:
+          type: array
+          minItems: 1
+          items: { type: string, format: uuid }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/CreateTransactionItemRequest' }
+
+    UpdateTransactionRequest:
+      type: object
+      minProperties: 1
+      properties:
+        direction:
+          oneOf:
+            - $ref: '#/components/schemas/TransactionDirection'
+            - type: string
+              enum: [BUY, SELL]
+        partyName: { type: string, minLength: 1, maxLength: 200 }
+        partyContactNumber: { type: string, maxLength: 50, nullable: true }
+        transactionDate: { type: string, format: date-time }
+        locationType: { $ref: '#/components/schemas/TransactionLocationType' }
+        branchId: { type: string, format: uuid, nullable: true }
+        warehouseId: { type: string, format: uuid, nullable: true }
+        outsideLocationName: { type: string, maxLength: 200, nullable: true }
+        outsideAddress: { type: string, maxLength: 500, nullable: true }
+        tripId: { type: string, format: uuid, nullable: true }
+        notes: { type: string, maxLength: 2000, nullable: true }
+        assignedEmployeeIds:
+          type: array
+          minItems: 1
+          items: { type: string, format: uuid }
+
+    CancelTransactionRequest:
+      type: object
+      properties:
+        cancellationReason: { type: string, maxLength: 1000 }
+
+    CreateTransactionItemRequest:
+      type: object
+      required: [materialName, weight, unit, price]
+      properties:
+        materialName: { type: string, minLength: 1, maxLength: 200 }
+        weight: { type: number, format: decimal, exclusiveMinimum: 0 }
+        unit: { $ref: '#/components/schemas/TransactionItemUnit' }
+        price: { type: number, format: decimal, minimum: 0 }
+        notes: { type: string, maxLength: 500 }
+
+    UpdateTransactionItemRequest:
+      type: object
+      minProperties: 1
+      properties:
+        materialName: { type: string, minLength: 1, maxLength: 200 }
+        weight: { type: number, format: decimal, exclusiveMinimum: 0 }
+        unit: { $ref: '#/components/schemas/TransactionItemUnit' }
+        price: { type: number, format: decimal, minimum: 0 }
+        notes: { type: string, maxLength: 500, nullable: true }
+
+    MaterialSuggestion:
+      type: object
+      required: [materialName]
+      properties:
+        materialName: { type: string }
+        lastUsedAt: { type: string, format: date-time, nullable: true }
+
+    PriceSuggestion:
+      type: object
+      required: [price]
+      properties:
+        price: { type: number, format: decimal }
+        lastUsedAt: { type: string, format: date-time, nullable: true }
+
+paths:
+  /transactions/suggestions/materials:
+    get:
+      tags: [Transaction Suggestions]
+      summary: Material name suggestions
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string, maxLength: 100 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10, maximum: 50 }
+      responses:
+        '200':
+          description: Material suggestions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/MaterialSuggestion' }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+
+  /transactions/suggestions/prices:
+    get:
+      tags: [Transaction Suggestions]
+      summary: Price suggestions for a material
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: materialName
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10, maximum: 50 }
+      responses:
+        '200':
+          description: Price suggestions
+        '400': { description: Validation error }
+        '401': { description: Unauthenticated }
+
+  /transactions/assigned:
+    get:
+      tags: [Transactions]
+      summary: List transactions assigned to authenticated employee
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, maximum: 100 }
+        - name: sortBy
+          in: query
+          schema: { type: string, enum: [transactionDate, createdAt, partyName] }
+        - name: sortOrder
+          in: query
+          schema: { type: string, enum: [asc, desc] }
+        - name: direction
+          in: query
+          schema: { $ref: '#/components/schemas/TransactionDirection' }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/TransactionStatus' }
+        - name: locationType
+          in: query
+          schema: { $ref: '#/components/schemas/TransactionLocationType' }
+        - name: fromDate
+          in: query
+          schema: { type: string, format: date }
+        - name: toDate
+          in: query
+          schema: { type: string, format: date }
+        - name: search
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Assigned transaction list
+        '403': { description: No linked employee profile }
+
+  /transactions:
+    post:
+      tags: [Transactions]
+      summary: Create draft transaction
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTransactionRequest' }
+      responses:
+        '201':
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/TransactionDetail' }
+        '400': { description: Validation error }
+        '403': { description: Forbidden or not timed in }
+        '409': { description: Business rule violation }
+
+    get:
+      tags: [Transactions]
+      summary: List company transactions (Manager/Owner)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, maximum: 100 }
+        - name: sortBy
+          in: query
+          schema: { type: string, enum: [transactionDate, createdAt, partyName, status] }
+        - name: sortOrder
+          in: query
+          schema: { type: string, enum: [asc, desc] }
+        - name: direction
+          in: query
+          schema: { $ref: '#/components/schemas/TransactionDirection' }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/TransactionStatus' }
+        - name: locationType
+          in: query
+          schema: { $ref: '#/components/schemas/TransactionLocationType' }
+        - name: branchId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: warehouseId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: assignedEmployeeId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: fromDate
+          in: query
+          schema: { type: string, format: date }
+        - name: toDate
+          in: query
+          schema: { type: string, format: date }
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: includeArchived
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Paginated transaction list
+        '403': { description: Employee role forbidden }
+
+  /transactions/{transactionId}:
+    get:
+      tags: [Transactions]
+      summary: View transaction detail
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Transaction detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessEnvelope'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/TransactionDetail' }
+        '403': { description: Forbidden }
+        '404': { description: Not found }
+
+    patch:
+      tags: [Transactions]
+      summary: Update draft transaction (including auto-save)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTransactionRequest' }
+      responses:
+        '200':
+          description: Updated transaction
+        '400': { description: Validation error }
+        '403': { description: Forbidden }
+        '404': { description: Not found }
+        '409': { description: Not draft or cancelled }
+
+  /transactions/{transactionId}/cancel:
+    post:
+      tags: [Transactions]
+      summary: Cancel draft transaction
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CancelTransactionRequest' }
+      responses:
+        '200':
+          description: Cancelled transaction
+        '403': { description: Forbidden }
+        '404': { description: Not found }
+        '409': { description: Lifecycle conflict }
+
+  /transactions/{transactionId}/archive:
+    post:
+      tags: [Transactions]
+      summary: Archive transaction
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Archived transaction
+        '403': { description: Forbidden }
+        '404': { description: Not found }
+        '409': { description: Already archived }
+
+  /transactions/{transactionId}/items:
+    get:
+      tags: [Transaction Items]
+      summary: List transaction items
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Item list
+        '403': { description: Forbidden }
+        '404': { description: Not found }
+
+    post:
+      tags: [Transaction Items]
+      summary: Add item to draft transaction
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTransactionItemRequest' }
+      responses:
+        '201':
+          description: Item created
+        '400': { description: Validation error }
+        '403': { description: Forbidden }
+        '409': { description: Not draft }
+
+  /transactions/{transactionId}/items/{itemId}:
+    patch:
+      tags: [Transaction Items]
+      summary: Update transaction item
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: itemId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTransactionItemRequest' }
+      responses:
+        '200':
+          description: Updated item
+        '409': { description: Not draft }
+
+    delete:
+      tags: [Transaction Items]
+      summary: Remove transaction item
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: itemId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Item removed
+        '409': { description: Not draft }
+
+  /transactions/{transactionId}/attachments:
+    get:
+      tags: [Transaction Attachments]
+      summary: List transaction attachments
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Attachment list
+
+    post:
+      tags: [Transaction Attachments]
+      summary: Upload photo attachment
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Attachment uploaded
+        '400': { description: Invalid file }
+        '409': { description: Not draft or max photos exceeded }
+
+  /transactions/{transactionId}/attachments/{attachmentId}:
+    delete:
+      tags: [Transaction Attachments]
+      summary: Remove attachment
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: attachmentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Attachment removed
+        '409': { description: Not draft }

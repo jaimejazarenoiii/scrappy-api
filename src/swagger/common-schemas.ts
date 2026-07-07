@@ -519,4 +519,204 @@ export const commonSchemas = {
       },
     },
   },
+
+  TransactionItem: {
+    type: 'object',
+    required: ['id', 'transactionId', 'materialName', 'weight', 'unit', 'price', 'total'],
+    properties: {
+      id: uuid,
+      transactionId: uuid,
+      materialName: { type: 'string' },
+      weight: { type: 'number' },
+      unit: { type: 'string', enum: ['KG', 'G', 'TON', 'LB', 'PIECE', 'BUNDLE', 'SACK'] },
+      price: { type: 'number' },
+      total: { type: 'number' },
+      notes: { type: 'string', nullable: true },
+      createdAt: dateTime,
+      updatedAt: dateTime,
+    },
+  },
+
+  TransactionAttachment: {
+    type: 'object',
+    required: [
+      'id',
+      'transactionId',
+      'attachmentType',
+      'fileName',
+      'filePath',
+      'mimeType',
+      'fileSize',
+      'uploadedByUserId',
+    ],
+    properties: {
+      id: uuid,
+      transactionId: uuid,
+      attachmentType: { type: 'string', enum: ['PHOTO'] },
+      fileName: { type: 'string' },
+      filePath: { type: 'string' },
+      mimeType: { type: 'string' },
+      fileSize: { type: 'integer' },
+      uploadedByUserId: uuid,
+      createdAt: dateTime,
+    },
+  },
+
+  TransactionSummary: {
+    type: 'object',
+    required: ['id', 'companyId', 'direction', 'status', 'partyName', 'transactionDate'],
+    properties: {
+      id: uuid,
+      companyId: uuid,
+      createdByUserId: uuid,
+      updatedByUserId: { ...uuid, nullable: true },
+      direction: { type: 'string', enum: ['INBOUND', 'OUTBOUND'] },
+      directionLabel: { type: 'string', enum: ['BUY', 'SELL'] },
+      status: { type: 'string', enum: ['DRAFT', 'CANCELLED'] },
+      partyName: { type: 'string' },
+      partyContactNumber: { type: 'string', nullable: true },
+      transactionDate: dateTime,
+      locationType: { type: 'string', enum: ['BRANCH', 'WAREHOUSE', 'OUTSIDE'] },
+      branchId: { ...uuid, nullable: true },
+      warehouseId: { ...uuid, nullable: true },
+      outsideLocationName: { type: 'string', nullable: true },
+      outsideAddress: { type: 'string', nullable: true },
+      tripId: { ...uuid, nullable: true },
+      notes: { type: 'string', nullable: true },
+      itemCount: { type: 'integer' },
+      totalAmount: { type: 'number' },
+      assignedEmployeeIds: { type: 'array', items: uuid },
+      cancellationReason: { type: 'string', nullable: true },
+      cancelledAt: { ...dateTime, nullable: true },
+      createdAt: dateTime,
+      updatedAt: dateTime,
+      deletedAt: { ...dateTime, nullable: true },
+    },
+  },
+
+  TransactionDetail: {
+    allOf: [
+      { $ref: '#/components/schemas/TransactionSummary' },
+      {
+        type: 'object',
+        properties: {
+          items: { type: 'array', items: { $ref: '#/components/schemas/TransactionItem' } },
+          attachments: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/TransactionAttachment' },
+          },
+          assignments: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: { employeeId: uuid, assignedAt: dateTime },
+            },
+          },
+        },
+      },
+    ],
+  },
+
+  CreateTransactionRequest: {
+    type: 'object',
+    required: ['direction', 'partyName', 'locationType', 'assignedEmployeeIds', 'items'],
+    properties: {
+      direction: { type: 'string', enum: ['INBOUND', 'OUTBOUND', 'BUY', 'SELL'] },
+      partyName: { type: 'string', minLength: 1 },
+      partyContactNumber: { type: 'string' },
+      transactionDate: dateTime,
+      locationType: { type: 'string', enum: ['BRANCH', 'WAREHOUSE', 'OUTSIDE'] },
+      branchId: uuid,
+      warehouseId: uuid,
+      outsideLocationName: { type: 'string' },
+      outsideAddress: { type: 'string' },
+      tripId: uuid,
+      notes: { type: 'string' },
+      assignedEmployeeIds: { type: 'array', items: uuid, minItems: 1 },
+      items: {
+        type: 'array',
+        minItems: 1,
+        items: { $ref: '#/components/schemas/CreateTransactionItemRequest' },
+      },
+    },
+  },
+
+  UpdateTransactionRequest: {
+    type: 'object',
+    minProperties: 1,
+    properties: {
+      direction: { type: 'string', enum: ['INBOUND', 'OUTBOUND', 'BUY', 'SELL'] },
+      partyName: { type: 'string', minLength: 1 },
+      partyContactNumber: { type: 'string', nullable: true },
+      transactionDate: dateTime,
+      locationType: { type: 'string', enum: ['BRANCH', 'WAREHOUSE', 'OUTSIDE'] },
+      branchId: { ...uuid, nullable: true },
+      warehouseId: { ...uuid, nullable: true },
+      outsideLocationName: { type: 'string', nullable: true },
+      outsideAddress: { type: 'string', nullable: true },
+      tripId: { ...uuid, nullable: true },
+      notes: { type: 'string', nullable: true },
+      assignedEmployeeIds: { type: 'array', items: uuid, minItems: 1 },
+    },
+  },
+
+  CreateTransactionItemRequest: {
+    type: 'object',
+    required: ['materialName', 'weight', 'unit', 'price'],
+    properties: {
+      materialName: { type: 'string', minLength: 1 },
+      weight: { type: 'number', exclusiveMinimum: 0 },
+      unit: { type: 'string', enum: ['KG', 'G', 'TON', 'LB', 'PIECE', 'BUNDLE', 'SACK'] },
+      price: { type: 'number', minimum: 0 },
+      total: { type: 'number', minimum: 0 },
+      notes: { type: 'string' },
+    },
+  },
+
+  UpdateTransactionItemRequest: {
+    type: 'object',
+    minProperties: 1,
+    properties: {
+      materialName: { type: 'string', minLength: 1 },
+      weight: { type: 'number', exclusiveMinimum: 0 },
+      unit: { type: 'string', enum: ['KG', 'G', 'TON', 'LB', 'PIECE', 'BUNDLE', 'SACK'] },
+      price: { type: 'number', minimum: 0 },
+      total: { type: 'number', minimum: 0 },
+      notes: { type: 'string', nullable: true },
+    },
+  },
+
+  CancelTransactionRequest: {
+    type: 'object',
+    properties: {
+      cancellationReason: { type: 'string', maxLength: 500 },
+    },
+  },
+
+  MaterialSuggestion: {
+    type: 'object',
+    required: ['materialName', 'lastUsedAt', 'usageCount'],
+    properties: {
+      materialName: { type: 'string' },
+      lastUsedAt: dateTime,
+      usageCount: { type: 'integer' },
+    },
+  },
+
+  PriceSuggestion: {
+    type: 'object',
+    required: ['price', 'lastUsedAt'],
+    properties: {
+      price: { type: 'number' },
+      lastUsedAt: dateTime,
+    },
+  },
+
+  DeletionResult: {
+    type: 'object',
+    required: ['deleted'],
+    properties: {
+      deleted: { type: 'boolean', enum: [true] },
+    },
+  },
 };

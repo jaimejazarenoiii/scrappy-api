@@ -84,6 +84,18 @@ import { ListPayrollHistoryUseCase } from '../modules/payroll/application/use-ca
 import { GetPayrollRecordUseCase } from '../modules/payroll/application/use-cases/get-payroll-record.use-case.js';
 import { MarkPayrollPaidUseCase } from '../modules/payroll/application/use-cases/mark-payroll-paid.use-case.js';
 import type { PayrollRecordRepository } from '../modules/payroll/domain/payroll-record.repository.js';
+import { TransactionPrismaRepository } from '../modules/transaction/infrastructure/transaction.prisma-repository.js';
+import { TransactionItemPrismaRepository } from '../modules/transaction/infrastructure/transaction-item.prisma-repository.js';
+import { TransactionAttachmentPrismaRepository } from '../modules/transaction/infrastructure/transaction-attachment.prisma-repository.js';
+import { TransactionSuggestionPrismaRepository } from '../modules/transaction/infrastructure/transaction-suggestion.prisma-repository.js';
+import { LocalFileStorage } from '../modules/transaction/infrastructure/file-storage/local-file-storage.js';
+import { buildTransactionController } from '../modules/transaction/index.js';
+import type { TransactionController } from '../modules/transaction/presentation/transaction.controller.js';
+import type { TransactionRepository } from '../modules/transaction/domain/transaction.repository.js';
+import type { TransactionItemRepository } from '../modules/transaction/domain/transaction-item.repository.js';
+import type { TransactionAttachmentRepository } from '../modules/transaction/domain/transaction-attachment.repository.js';
+import type { TransactionSuggestionRepository } from '../modules/transaction/domain/transaction-suggestion.repository.js';
+import type { FileStorage } from '../modules/transaction/infrastructure/file-storage/file-storage.interface.js';
 
 export interface Container {
   tokenProvider: TokenProvider;
@@ -99,6 +111,7 @@ export interface Container {
   leaveController: LeaveController;
   attendanceController: AttendanceController;
   workforceDashboardController: WorkforceDashboardController;
+  transactionController: TransactionController;
   healthIndicator?: { check: () => Promise<boolean> };
 }
 
@@ -116,6 +129,11 @@ export interface ContainerOverrides {
   payrollRecordRepository?: PayrollRecordRepository;
   leaveRecordRepository?: LeaveRecordRepository;
   attendanceSessionRepository?: AttendanceSessionRepository;
+  transactionRepository?: TransactionRepository;
+  transactionItemRepository?: TransactionItemRepository;
+  transactionAttachmentRepository?: TransactionAttachmentRepository;
+  transactionSuggestionRepository?: TransactionSuggestionRepository;
+  fileStorage?: FileStorage;
   healthIndicator?: { check: () => Promise<boolean> };
 }
 
@@ -137,6 +155,15 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
   const sessionRepository = overrides.sessionRepository ?? new SessionPrismaRepository();
   const passwordHasher = overrides.passwordHasher ?? new BcryptPasswordHasher();
   const tokenProvider = overrides.tokenProvider ?? new JwtTokenProvider();
+  const transactionRepository =
+    overrides.transactionRepository ?? new TransactionPrismaRepository();
+  const transactionItemRepository =
+    overrides.transactionItemRepository ?? new TransactionItemPrismaRepository();
+  const transactionAttachmentRepository =
+    overrides.transactionAttachmentRepository ?? new TransactionAttachmentPrismaRepository();
+  const transactionSuggestionRepository =
+    overrides.transactionSuggestionRepository ?? new TransactionSuggestionPrismaRepository();
+  const fileStorage = overrides.fileStorage ?? new LocalFileStorage();
 
   return {
     tokenProvider,
@@ -227,5 +254,17 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
         new DashboardVisibilityService(),
       ),
     ),
+    transactionController: buildTransactionController({
+      transactionRepository,
+      transactionItemRepository,
+      transactionAttachmentRepository,
+      transactionSuggestionRepository,
+      fileStorage,
+      userRepository,
+      employeeRepository,
+      attendanceRepository: attendanceSessionRepository,
+      branchRepository,
+      warehouseRepository,
+    }),
   };
 }

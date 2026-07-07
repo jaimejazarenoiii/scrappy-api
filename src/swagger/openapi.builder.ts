@@ -9,6 +9,7 @@ import { userOpenApiPaths } from '../modules/user/presentation/user.openapi.js';
 import { cashAdvanceOpenApiPaths } from '../modules/cash-advance/presentation/cash-advance.openapi.js';
 import { attendanceOpenApiPaths } from '../modules/attendance/presentation/attendance.openapi.js';
 import { workforceDashboardOpenApiPaths } from '../modules/workforce-dashboard/presentation/workforce-dashboard.openapi.js';
+import { transactionOpenApiPaths } from '../modules/transaction/presentation/transaction.openapi.js';
 import { payrollOpenApiPaths } from '../modules/payroll/presentation/payroll.openapi.js';
 import { commonSchemas } from './common-schemas.js';
 import { commonResponses } from './common-responses.js';
@@ -42,6 +43,7 @@ export function buildOpenApiDocument(): object {
       ...leaveOpenApiPaths,
       ...attendanceOpenApiPaths,
       ...workforceDashboardOpenApiPaths,
+      ...transactionOpenApiPaths,
     },
   };
 }

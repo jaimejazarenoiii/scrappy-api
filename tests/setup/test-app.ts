@@ -16,6 +16,12 @@ import {
   InMemoryUserRepository,
   InMemoryVehicleRepository,
   InMemoryWarehouseRepository,
+  InMemoryTransactionStore,
+  InMemoryTransactionRepository,
+  InMemoryTransactionItemRepository,
+  InMemoryTransactionAttachmentRepository,
+  InMemoryTransactionSuggestionRepository,
+  InMemoryFileStorage,
 } from './in-memory-repositories.js';
 
 export function setupTestEnv(): void {
@@ -50,6 +56,16 @@ export function createTestContext() {
   const sessionRepository = new InMemorySessionRepository();
   const passwordHasher = new FakePasswordHasher();
   const tokenProvider = new JwtTokenProvider();
+  const transactionStore = new InMemoryTransactionStore();
+  const transactionRepository = new InMemoryTransactionRepository(transactionStore);
+  const transactionItemRepository = new InMemoryTransactionItemRepository(transactionStore);
+  const transactionAttachmentRepository = new InMemoryTransactionAttachmentRepository(
+    transactionStore,
+  );
+  const transactionSuggestionRepository = new InMemoryTransactionSuggestionRepository(
+    transactionStore,
+  );
+  const fileStorage = new InMemoryFileStorage();
   const container = createContainer({
     companyRepository,
     userRepository,
@@ -64,6 +80,11 @@ export function createTestContext() {
     sessionRepository,
     passwordHasher,
     tokenProvider,
+    transactionRepository,
+    transactionItemRepository,
+    transactionAttachmentRepository,
+    transactionSuggestionRepository,
+    fileStorage,
   });
   const app = createApp(container);
   return {
@@ -81,5 +102,11 @@ export function createTestContext() {
     sessionRepository,
     passwordHasher,
     tokenProvider,
+    transactionStore,
+    transactionRepository,
+    transactionItemRepository,
+    transactionAttachmentRepository,
+    transactionSuggestionRepository,
+    fileStorage,
   };
 }

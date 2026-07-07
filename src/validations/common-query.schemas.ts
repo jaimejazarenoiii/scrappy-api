@@ -54,3 +54,20 @@ export const payrollListQuerySchema = paginationQuerySchema.extend({
   employeeId: z.string().uuid().optional(),
   sortBy: z.enum(['payPeriodStart', 'createdAt', 'status']).optional(),
 });
+
+const booleanFlagSchema = z
+  .enum(['true', 'false'])
+  .transform((value) => value === 'true')
+  .optional();
+
+export const transactionListQuerySchema = paginationQuerySchema.extend({
+  sortBy: z.enum(['transactionDate', 'createdAt', 'status']).optional(),
+  direction: z.enum(['INBOUND', 'OUTBOUND']).optional(),
+  status: z.enum(['DRAFT', 'CANCELLED']).optional(),
+  locationType: z.enum(['BRANCH', 'WAREHOUSE', 'OUTSIDE']).optional(),
+  branchId: z.string().uuid().optional(),
+  warehouseId: z.string().uuid().optional(),
+  fromDate: dateFilterSchema,
+  toDate: dateFilterSchema,
+  includeArchived: booleanFlagSchema,
+});

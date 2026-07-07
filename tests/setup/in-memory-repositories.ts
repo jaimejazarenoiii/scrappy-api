@@ -571,6 +571,505 @@ import type {
   MarkPayrollPaidInput,
   PayrollRecordRepository,
 } from '../../src/modules/payroll/domain/payroll-record.repository.js';
+import { randomUUID } from 'node:crypto';
+import { TransactionEntity } from '../../src/modules/transaction/domain/transaction.entity.js';
+import { TransactionItemEntity } from '../../src/modules/transaction/domain/transaction-item.entity.js';
+import { TransactionAttachmentEntity } from '../../src/modules/transaction/domain/transaction-attachment.entity.js';
+import type {
+  CancelTransactionInput,
+  CreateTransactionInput,
+  ListTransactionsQuery,
+  TransactionAssignmentView,
+  TransactionDetail,
+  TransactionRepository,
+  TransactionSummaryRow,
+  UpdateTransactionInput,
+} from '../../src/modules/transaction/domain/transaction.repository.js';
+import type {
+  CreateTransactionItemInput,
+  TransactionItemRepository,
+  UpdateTransactionItemInput,
+} from '../../src/modules/transaction/domain/transaction-item.repository.js';
+import type {
+  CreateTransactionAttachmentInput,
+  TransactionAttachmentRepository,
+} from '../../src/modules/transaction/domain/transaction-attachment.repository.js';
+import type {
+  MaterialSuggestion,
+  PriceSuggestion,
+  TransactionSuggestionRepository,
+} from '../../src/modules/transaction/domain/transaction-suggestion.repository.js';
+import type {
+  FileStorage,
+  SaveFileParams,
+  SavedFile,
+} from '../../src/modules/transaction/infrastructure/file-storage/file-storage.interface.js';
+
+interface AssignmentRecord {
+  transactionId: string;
+  employeeId: string;
+  assignedAt: Date;
+}
+
+export class InMemoryTransactionStore {
+  public transactions = new Map<string, TransactionEntity>();
+  public items = new Map<string, TransactionItemEntity>();
+  public attachments = new Map<string, TransactionAttachmentEntity>();
+  public assignments: AssignmentRecord[] = [];
+}
+
+function matchesTransactionFilters(
+  transaction: TransactionEntity,
+  store: InMemoryTransactionStore,
+  query: ListTransactionsQuery,
+): boolean {
+  const props = transaction.toPrimitives();
+  if (!query.includeArchived && props.deletedAt !== null) return false;
+  if (query.direction && props.direction !== query.direction) return false;
+  if (query.status && props.status !== query.status) return false;
+  if (query.locationType && props.locationType !== query.locationType) return false;
+  if (query.branchId && props.branchId !== query.branchId) return false;
+  if (query.warehouseId && props.warehouseId !== query.warehouseId) return false;
+  if (query.fromDate && props.transactionDate < query.fromDate) return false;
+  if (query.toDate && props.transactionDate > query.toDate) return false;
+  if (query.search) {
+    const search = query.search.toLowerCase();
+    const items = [...store.items.values()].filter((item) => item.transactionId === transaction.id);
+    const matches =
+      props.partyName.toLowerCase().includes(search) ||
+      (props.outsideLocationName?.toLowerCase().includes(search) ?? false) ||
+      (props.notes?.toLowerCase().includes(search) ?? false) ||
+      items.some((item) => item.materialName.toLowerCase().includes(search));
+    if (!matches) return false;
+  }
+  return true;
+}
+
+function sortTransactions(
+  transactions: TransactionEntity[],
+  query: ListTransactionsQuery,
+): TransactionEntity[] {
+  const sortBy = query.sortBy ?? 'transactionDate';
+  const order = query.sortOrder ?? 'desc';
+  return [...transactions].sort((left, right) => {
+    const leftProps = left.toPrimitives();
+    const rightProps = right.toPrimitives();
+    let leftValue: number | string = leftProps[sortBy] as never;
+    let rightValue: number | string = rightProps[sortBy] as never;
+    if (leftProps[sortBy] instanceof Date) {
+      leftValue = (leftProps[sortBy] as Date).getTime();
+      rightValue = (rightProps[sortBy] as Date).getTime();
+    }
+    if (leftValue < rightValue) return order === 'desc' ? 1 : -1;
+    if (leftValue > rightValue) return order === 'desc' ? -1 : 1;
+    return 0;
+  });
+}
+
+export class InMemoryTransactionRepository implements TransactionRepository {
+  constructor(private readonly store: InMemoryTransactionStore) {}
+
+  private buildDetail(transaction: TransactionEntity): TransactionDetail {
+    const items = [...this.store.items.values()].filter(
+      (item) => item.transactionId === transaction.id,
+    );
+    const attachments = [...this.store.attachments.values()].filter(
+      (attachment) => attachment.transactionId === transaction.id,
+    );
+    const assignments: TransactionAssignmentView[] = this.store.assignments.filter(
+      (assignment) => assignment.transactionId === transaction.id,
+    );
+    return { transaction, items, attachments, assignments };
+  }
+
+  private buildSummaryRow(transaction: TransactionEntity): TransactionSummaryRow {
+    const items = [...this.store.items.values()].filter(
+      (item) => item.transactionId === transaction.id,
+    );
+    const totalAmount =
+      Math.round(items.reduce((sum, item) => sum + item.toPrimitives().total, 0) * 100) / 100;
+    const assignedEmployeeIds = this.store.assignments
+      .filter((assignment) => assignment.transactionId === transaction.id)
+      .map((assignment) => assignment.employeeId);
+    return { transaction, itemCount: items.length, totalAmount, assignedEmployeeIds };
+  }
+
+  async create(input: CreateTransactionInput): Promise<TransactionDetail> {
+    const now = new Date();
+    const transaction = TransactionEntity.create({
+      id: input.id,
+      companyId: input.companyId,
+      createdByUserId: input.createdByUserId,
+      updatedByUserId: null,
+      direction: input.direction,
+      status: 'DRAFT',
+      partyName: input.partyName,
+      partyContactNumber: input.partyContactNumber ?? null,
+      transactionDate: input.transactionDate,
+      locationType: input.locationType,
+      branchId: input.branchId ?? null,
+      warehouseId: input.warehouseId ?? null,
+      outsideLocationName: input.outsideLocationName ?? null,
+      outsideAddress: input.outsideAddress ?? null,
+      tripId: input.tripId ?? null,
+      notes: input.notes ?? null,
+      cancellationReason: null,
+      cancelledAt: null,
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    });
+    this.store.transactions.set(transaction.id, transaction);
+    for (const item of input.items) {
+      this.store.items.set(
+        item.id,
+        TransactionItemEntity.create({
+          id: item.id,
+          transactionId: input.id,
+          materialName: item.materialName,
+          weight: item.weight,
+          unit: item.unit,
+          price: item.price,
+          total: item.total,
+          notes: item.notes ?? null,
+          createdAt: now,
+          updatedAt: now,
+        }),
+      );
+    }
+    for (const employeeId of input.assignedEmployeeIds) {
+      this.store.assignments.push({ transactionId: input.id, employeeId, assignedAt: now });
+    }
+    return this.buildDetail(transaction);
+  }
+
+  async findById(transactionId: string, companyId: string) {
+    const transaction = this.store.transactions.get(transactionId);
+    if (!transaction || !transaction.belongsToCompany(companyId) || transaction.isArchived()) {
+      return null;
+    }
+    return transaction;
+  }
+
+  async findByIdIncludingArchived(transactionId: string, companyId: string) {
+    const transaction = this.store.transactions.get(transactionId);
+    if (!transaction || !transaction.belongsToCompany(companyId)) return null;
+    return transaction;
+  }
+
+  async findDetailById(
+    transactionId: string,
+    companyId: string,
+    options?: { includeArchived?: boolean },
+  ): Promise<TransactionDetail | null> {
+    const transaction = this.store.transactions.get(transactionId);
+    if (!transaction || !transaction.belongsToCompany(companyId)) return null;
+    if (!options?.includeArchived && transaction.isArchived()) return null;
+    return this.buildDetail(transaction);
+  }
+
+  async update(
+    transactionId: string,
+    companyId: string,
+    input: UpdateTransactionInput,
+  ): Promise<TransactionDetail> {
+    const existing = await this.findById(transactionId, companyId);
+    if (!existing) throw new Error('Transaction not found');
+    const current = existing.toPrimitives();
+    const updated = TransactionEntity.create({
+      ...current,
+      direction: input.direction ?? current.direction,
+      partyName: input.partyName ?? current.partyName,
+      partyContactNumber:
+        input.partyContactNumber !== undefined
+          ? input.partyContactNumber
+          : current.partyContactNumber,
+      transactionDate: input.transactionDate ?? current.transactionDate,
+      locationType: input.locationType ?? current.locationType,
+      branchId: input.branchId !== undefined ? input.branchId : current.branchId,
+      warehouseId: input.warehouseId !== undefined ? input.warehouseId : current.warehouseId,
+      outsideLocationName:
+        input.outsideLocationName !== undefined
+          ? input.outsideLocationName
+          : current.outsideLocationName,
+      outsideAddress:
+        input.outsideAddress !== undefined ? input.outsideAddress : current.outsideAddress,
+      tripId: input.tripId !== undefined ? input.tripId : current.tripId,
+      notes: input.notes !== undefined ? input.notes : current.notes,
+      updatedByUserId: input.updatedByUserId ?? null,
+      updatedAt: new Date(),
+    });
+    this.store.transactions.set(transactionId, updated);
+    if (input.assignedEmployeeIds) {
+      this.store.assignments = this.store.assignments.filter(
+        (assignment) => assignment.transactionId !== transactionId,
+      );
+      const now = new Date();
+      for (const employeeId of input.assignedEmployeeIds) {
+        this.store.assignments.push({ transactionId, employeeId, assignedAt: now });
+      }
+    }
+    return this.buildDetail(updated);
+  }
+
+  async cancel(transactionId: string, companyId: string, input: CancelTransactionInput) {
+    const existing = await this.findById(transactionId, companyId);
+    if (!existing) throw new Error('Transaction not found');
+    const updated = TransactionEntity.create({
+      ...existing.toPrimitives(),
+      status: 'CANCELLED',
+      cancelledAt: new Date(),
+      cancellationReason: input.cancellationReason ?? null,
+      updatedByUserId: input.updatedByUserId ?? null,
+      updatedAt: new Date(),
+    });
+    this.store.transactions.set(transactionId, updated);
+    return updated;
+  }
+
+  async archive(transactionId: string, companyId: string) {
+    const existing = await this.findById(transactionId, companyId);
+    if (!existing) throw new Error('Transaction not found');
+    const updated = TransactionEntity.create({
+      ...existing.toPrimitives(),
+      deletedAt: new Date(),
+      updatedAt: new Date(),
+    });
+    this.store.transactions.set(transactionId, updated);
+    return updated;
+  }
+
+  async isEmployeeAssigned(transactionId: string, employeeId: string): Promise<boolean> {
+    return this.store.assignments.some(
+      (assignment) =>
+        assignment.transactionId === transactionId && assignment.employeeId === employeeId,
+    );
+  }
+
+  async listByCompany(companyId: string, query: ListTransactionsQuery) {
+    const filtered = [...this.store.transactions.values()].filter(
+      (transaction) =>
+        transaction.belongsToCompany(companyId) &&
+        matchesTransactionFilters(transaction, this.store, query),
+    );
+    const sorted = sortTransactions(filtered, query);
+    const start = (query.page - 1) * query.limit;
+    const page = sorted.slice(start, start + query.limit);
+    return {
+      items: page.map((transaction) => this.buildSummaryRow(transaction)),
+      total: sorted.length,
+    };
+  }
+
+  async listAssigned(companyId: string, employeeId: string, query: ListTransactionsQuery) {
+    const assignedIds = new Set(
+      this.store.assignments
+        .filter((assignment) => assignment.employeeId === employeeId)
+        .map((assignment) => assignment.transactionId),
+    );
+    const filtered = [...this.store.transactions.values()].filter(
+      (transaction) =>
+        transaction.belongsToCompany(companyId) &&
+        assignedIds.has(transaction.id) &&
+        matchesTransactionFilters(transaction, this.store, query),
+    );
+    const sorted = sortTransactions(filtered, query);
+    const start = (query.page - 1) * query.limit;
+    const page = sorted.slice(start, start + query.limit);
+    return {
+      items: page.map((transaction) => this.buildSummaryRow(transaction)),
+      total: sorted.length,
+    };
+  }
+}
+
+export class InMemoryTransactionItemRepository implements TransactionItemRepository {
+  constructor(private readonly store: InMemoryTransactionStore) {}
+
+  async create(input: CreateTransactionItemInput) {
+    const now = new Date();
+    const item = TransactionItemEntity.create({
+      id: input.id,
+      transactionId: input.transactionId,
+      materialName: input.materialName,
+      weight: input.weight,
+      unit: input.unit,
+      price: input.price,
+      total: input.total,
+      notes: input.notes ?? null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    this.store.items.set(item.id, item);
+    return item;
+  }
+
+  async findById(itemId: string, transactionId: string) {
+    const item = this.store.items.get(itemId);
+    if (!item || item.transactionId !== transactionId) return null;
+    return item;
+  }
+
+  async update(itemId: string, transactionId: string, input: UpdateTransactionItemInput) {
+    const existing = await this.findById(itemId, transactionId);
+    if (!existing) throw new Error('Transaction item not found');
+    const current = existing.toPrimitives();
+    const updated = TransactionItemEntity.create({
+      ...current,
+      materialName: input.materialName ?? current.materialName,
+      weight: input.weight ?? current.weight,
+      unit: input.unit ?? current.unit,
+      price: input.price ?? current.price,
+      total: input.total ?? current.total,
+      notes: input.notes !== undefined ? input.notes : current.notes,
+      updatedAt: new Date(),
+    });
+    this.store.items.set(itemId, updated);
+    return updated;
+  }
+
+  async delete(itemId: string, transactionId: string) {
+    const existing = await this.findById(itemId, transactionId);
+    if (!existing) throw new Error('Transaction item not found');
+    this.store.items.delete(itemId);
+  }
+
+  async listByTransaction(transactionId: string) {
+    return [...this.store.items.values()]
+      .filter((item) => item.transactionId === transactionId)
+      .sort((a, b) => a.toPrimitives().createdAt.getTime() - b.toPrimitives().createdAt.getTime());
+  }
+
+  async countByTransaction(transactionId: string) {
+    return [...this.store.items.values()].filter((item) => item.transactionId === transactionId)
+      .length;
+  }
+}
+
+export class InMemoryTransactionAttachmentRepository implements TransactionAttachmentRepository {
+  constructor(private readonly store: InMemoryTransactionStore) {}
+
+  async create(input: CreateTransactionAttachmentInput) {
+    const attachment = TransactionAttachmentEntity.create({
+      id: input.id,
+      transactionId: input.transactionId,
+      attachmentType: input.attachmentType,
+      fileName: input.fileName,
+      filePath: input.filePath,
+      mimeType: input.mimeType,
+      fileSize: input.fileSize,
+      uploadedByUserId: input.uploadedByUserId,
+      createdAt: new Date(),
+    });
+    this.store.attachments.set(attachment.id, attachment);
+    return attachment;
+  }
+
+  async findById(attachmentId: string, transactionId: string) {
+    const attachment = this.store.attachments.get(attachmentId);
+    if (!attachment || attachment.transactionId !== transactionId) return null;
+    return attachment;
+  }
+
+  async delete(attachmentId: string, transactionId: string) {
+    const existing = await this.findById(attachmentId, transactionId);
+    if (!existing) throw new Error('Transaction attachment not found');
+    this.store.attachments.delete(attachmentId);
+  }
+
+  async listByTransaction(transactionId: string) {
+    return [...this.store.attachments.values()]
+      .filter((attachment) => attachment.transactionId === transactionId)
+      .sort((a, b) => a.toPrimitives().createdAt.getTime() - b.toPrimitives().createdAt.getTime());
+  }
+
+  async countByTransaction(transactionId: string) {
+    return [...this.store.attachments.values()].filter(
+      (attachment) => attachment.transactionId === transactionId,
+    ).length;
+  }
+}
+
+export class InMemoryTransactionSuggestionRepository implements TransactionSuggestionRepository {
+  constructor(private readonly store: InMemoryTransactionStore) {}
+
+  private activeItems() {
+    return [...this.store.items.values()].filter((item) => {
+      const transaction = this.store.transactions.get(item.transactionId);
+      return transaction !== undefined && !transaction.isArchived();
+    });
+  }
+
+  private itemsForCompany(companyId: string) {
+    return this.activeItems().filter((item) => {
+      const transaction = this.store.transactions.get(item.transactionId);
+      return transaction?.belongsToCompany(companyId) ?? false;
+    });
+  }
+
+  async suggestMaterials(
+    companyId: string,
+    prefix: string | undefined,
+    limit: number,
+  ): Promise<MaterialSuggestion[]> {
+    const grouped = new Map<string, { lastUsedAt: Date; usageCount: number }>();
+    for (const item of this.itemsForCompany(companyId)) {
+      const props = item.toPrimitives();
+      if (prefix && !props.materialName.toLowerCase().includes(prefix.toLowerCase())) continue;
+      const existing = grouped.get(props.materialName);
+      if (!existing) {
+        grouped.set(props.materialName, { lastUsedAt: props.createdAt, usageCount: 1 });
+      } else {
+        existing.usageCount += 1;
+        if (props.createdAt > existing.lastUsedAt) existing.lastUsedAt = props.createdAt;
+      }
+    }
+    return [...grouped.entries()]
+      .map(([materialName, value]) => ({ materialName, ...value }))
+      .sort((a, b) => {
+        const diff = b.lastUsedAt.getTime() - a.lastUsedAt.getTime();
+        if (diff !== 0) return diff;
+        return a.materialName.localeCompare(b.materialName);
+      })
+      .slice(0, limit);
+  }
+
+  async suggestPrices(
+    companyId: string,
+    materialName: string,
+    limit: number,
+  ): Promise<PriceSuggestion[]> {
+    const grouped = new Map<number, Date>();
+    for (const item of this.itemsForCompany(companyId)) {
+      const props = item.toPrimitives();
+      if (props.materialName.toLowerCase() !== materialName.toLowerCase()) continue;
+      const existing = grouped.get(props.price);
+      if (!existing || props.createdAt > existing) grouped.set(props.price, props.createdAt);
+    }
+    return [...grouped.entries()]
+      .map(([price, lastUsedAt]) => ({ price, lastUsedAt }))
+      .sort((a, b) => b.lastUsedAt.getTime() - a.lastUsedAt.getTime())
+      .slice(0, limit);
+  }
+}
+
+export class InMemoryFileStorage implements FileStorage {
+  public files = new Map<string, Buffer>();
+
+  async save(params: SaveFileParams): Promise<SavedFile> {
+    const filePath = `transactions/${params.companyId}/${params.transactionId}/${randomUUID()}`;
+    this.files.set(filePath, params.content);
+    return { filePath, fileSize: params.content.length };
+  }
+
+  async delete(filePath: string): Promise<void> {
+    this.files.delete(filePath);
+  }
+
+  resolvePath(filePath: string): string {
+    return filePath;
+  }
+}
 
 function filterByDateRange<T>(
   items: T[],

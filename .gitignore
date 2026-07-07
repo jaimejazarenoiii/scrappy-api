@@ -34,3 +34,6 @@ Thumbs.db
 # Prisma
 prisma/*.db
 prisma/*.db-journal
+
+# Uploads (local attachment storage)
+uploads/
