@@ -37,6 +37,8 @@ import { GetEmployeeUseCase } from '../modules/employee/application/use-cases/ge
 import { UpdateEmployeeUseCase } from '../modules/employee/application/use-cases/update-employee.use-case.js';
 import { ArchiveEmployeeUseCase } from '../modules/employee/application/use-cases/archive-employee.use-case.js';
 import { LinkEmployeeToUserUseCase } from '../modules/employee/application/use-cases/link-employee-to-user.use-case.js';
+import { ListEmployeesUseCase } from '../modules/employee/application/use-cases/list-employees.use-case.js';
+import { GetMyEmployeeUseCase } from '../modules/employee/application/use-cases/get-my-employee.use-case.js';
 import { BranchController } from '../modules/branch/presentation/branch.controller.js';
 import { CreateBranchUseCase } from '../modules/branch/application/use-cases/create-branch.use-case.js';
 import { GetBranchUseCase } from '../modules/branch/application/use-cases/get-branch.use-case.js';
@@ -88,6 +90,7 @@ import { TransactionPrismaRepository } from '../modules/transaction/infrastructu
 import { TransactionItemPrismaRepository } from '../modules/transaction/infrastructure/transaction-item.prisma-repository.js';
 import { TransactionAttachmentPrismaRepository } from '../modules/transaction/infrastructure/transaction-attachment.prisma-repository.js';
 import { TransactionSuggestionPrismaRepository } from '../modules/transaction/infrastructure/transaction-suggestion.prisma-repository.js';
+import { TransactionNumberSequencePrismaRepository } from '../modules/transaction/infrastructure/transaction-number-sequence.prisma-repository.js';
 import { LocalFileStorage } from '../modules/transaction/infrastructure/file-storage/local-file-storage.js';
 import { buildTransactionController } from '../modules/transaction/index.js';
 import type { TransactionController } from '../modules/transaction/presentation/transaction.controller.js';
@@ -95,6 +98,7 @@ import type { TransactionRepository } from '../modules/transaction/domain/transa
 import type { TransactionItemRepository } from '../modules/transaction/domain/transaction-item.repository.js';
 import type { TransactionAttachmentRepository } from '../modules/transaction/domain/transaction-attachment.repository.js';
 import type { TransactionSuggestionRepository } from '../modules/transaction/domain/transaction-suggestion.repository.js';
+import type { TransactionNumberSequenceRepository } from '../modules/transaction/domain/transaction-number-sequence.repository.js';
 import type { FileStorage } from '../modules/transaction/infrastructure/file-storage/file-storage.interface.js';
 
 export interface Container {
@@ -133,6 +137,7 @@ export interface ContainerOverrides {
   transactionItemRepository?: TransactionItemRepository;
   transactionAttachmentRepository?: TransactionAttachmentRepository;
   transactionSuggestionRepository?: TransactionSuggestionRepository;
+  transactionNumberSequenceRepository?: TransactionNumberSequenceRepository;
   fileStorage?: FileStorage;
   healthIndicator?: { check: () => Promise<boolean> };
 }
@@ -163,6 +168,9 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
     overrides.transactionAttachmentRepository ?? new TransactionAttachmentPrismaRepository();
   const transactionSuggestionRepository =
     overrides.transactionSuggestionRepository ?? new TransactionSuggestionPrismaRepository();
+  const transactionNumberSequenceRepository =
+    overrides.transactionNumberSequenceRepository ??
+    new TransactionNumberSequencePrismaRepository();
   const fileStorage = overrides.fileStorage ?? new LocalFileStorage();
 
   return {
@@ -193,6 +201,8 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
       new UpdateEmployeeUseCase(employeeRepository),
       new ArchiveEmployeeUseCase(employeeRepository),
       new LinkEmployeeToUserUseCase(employeeRepository, userRepository),
+      new ListEmployeesUseCase(employeeRepository),
+      new GetMyEmployeeUseCase(userRepository, employeeRepository),
     ),
     branchController: new BranchController(
       new CreateBranchUseCase(branchRepository),
@@ -259,6 +269,8 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
       transactionItemRepository,
       transactionAttachmentRepository,
       transactionSuggestionRepository,
+      transactionNumberSequenceRepository,
+      companyRepository,
       fileStorage,
       userRepository,
       employeeRepository,

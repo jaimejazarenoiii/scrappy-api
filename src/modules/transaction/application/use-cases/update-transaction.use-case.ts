@@ -13,8 +13,8 @@ import type {
   UpdateTransactionInput,
 } from '../../domain/transaction.repository.js';
 import type { TransactionLocationType } from '../../domain/transaction-location-type.js';
-import { assertDraftEditable, assertLocationFields } from '../../domain/transaction-rules.js';
-import { assertCanManageDraft } from '../policies/transaction-authorization.policy.js';
+import { assertEditable, assertLocationFields } from '../../domain/transaction-rules.js';
+import { assertCanEditTransaction } from '../policies/transaction-authorization.policy.js';
 import {
   buildTransactionDetailResponse,
   type TransactionDetailResponseDto,
@@ -39,14 +39,14 @@ export class UpdateTransactionUseCase {
   ): Promise<TransactionDetailResponseDto> {
     const existing = await this.transactionRepository.findById(transactionId, auth.companyId);
     if (!existing) throw new ResourceNotFoundError('Transaction not found');
-    assertDraftEditable(existing);
 
     const isAssigned = await resolveIsAssigned(
       { userRepository: this.userRepository, transactionRepository: this.transactionRepository },
       auth,
       transactionId,
     );
-    assertCanManageDraft(auth, { isAssigned });
+    assertCanEditTransaction(auth, { isAssigned });
+    assertEditable(existing, auth.role, isAssigned);
 
     const current = existing.toPrimitives();
     const mergedLocationType = (input.locationType ??

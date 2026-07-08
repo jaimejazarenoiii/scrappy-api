@@ -16,6 +16,12 @@ export function createCompanyRoutes(
   const router = Router();
   router.post('/companies', validate(createCompanySchema), controller.create);
   router.get(
+    '/companies/me',
+    authenticationMiddleware,
+    authorize(['OWNER', 'MANAGER', 'EMPLOYEE']),
+    controller.getMine,
+  );
+  router.get(
     '/companies/:companyId',
     authenticationMiddleware,
     validate(companyIdParamsSchema, 'params'),

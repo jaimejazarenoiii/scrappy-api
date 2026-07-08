@@ -1,5 +1,6 @@
 import {
   BusinessRuleViolationError,
+  ForbiddenError,
   LifecycleConflictError,
   ValidationAppError,
 } from '../../../shared/errors/http-exceptions.js';
@@ -8,6 +9,8 @@ import type { OperationalAttendanceSession } from '../../../shared/workforce/ope
 import { computeItemTotal } from '../../../shared/transactions/item-total.js';
 import type { TransactionEntity } from './transaction.entity.js';
 import type { TransactionLocationType } from './transaction-location-type.js';
+import type { UserRole } from '../../../shared/policy/roles.js';
+import { assertTransition, type TransactionAction } from './transaction-lifecycle.js';
 
 export interface LocationFieldsInput {
   locationType: TransactionLocationType;
@@ -23,6 +26,23 @@ export interface LocationFieldsInput {
 export function assertDraftEditable(transaction: TransactionEntity): void {
   if (!transaction.isDraft()) {
     throw new LifecycleConflictError('Only draft transactions can be modified.');
+  }
+}
+
+export function assertEditable(
+  transaction: TransactionEntity,
+  role: UserRole,
+  isAssigned: boolean,
+): void {
+  assertNotArchived(transaction);
+  if (transaction.isCancelled()) {
+    throw new LifecycleConflictError('Cancelled transactions cannot be modified.');
+  }
+  if (transaction.isPaid()) {
+    throw new LifecycleConflictError('Paid transactions cannot be modified.');
+  }
+  if (!transaction.isEditableBy(role, isAssigned)) {
+    throw new ForbiddenError('You do not have permission to modify this transaction.');
   }
 }
 
@@ -77,6 +97,54 @@ export function assertOperationallyReady(session: OperationalAttendanceSession |
   if (!isOperationallyReady(session)) {
     throw new BusinessRuleViolationError('You must be timed in before creating a transaction.');
   }
+}
+
+export function assertHasItems(itemCount: number): void {
+  if (itemCount < 1) {
+    throw new ValidationAppError('At least one item is required before submission.', [
+      { path: 'items', message: 'At least one item is required before submission.' },
+    ]);
+  }
+}
+
+export function assertPositiveGrandTotal(totalAmount: number): void {
+  if (totalAmount <= 0) {
+    throw new BusinessRuleViolationError(
+      'Transaction total must be greater than zero before submission.',
+      [{ path: 'totalAmount', message: 'Transaction total must be greater than zero.' }],
+    );
+  }
+}
+
+export function assertReadyForPayment(transaction: TransactionEntity, role: UserRole): void {
+  assertNotArchived(transaction);
+  assertTransition(transaction.status, 'settle', role);
+}
+
+export function assertPaid(transaction: TransactionEntity, role: UserRole): void {
+  assertNotArchived(transaction);
+  assertTransition(transaction.status, 'reopen', role);
+}
+
+export function assertStatusTransition(
+  transaction: TransactionEntity,
+  action: TransactionAction,
+  role: UserRole,
+): void {
+  assertNotArchived(transaction);
+  assertTransition(transaction.status, action, role);
+}
+
+export function assertFinishable(
+  transaction: TransactionEntity,
+  itemCount: number,
+  totalAmount: number,
+  role: UserRole,
+): void {
+  assertStatusTransition(transaction, 'finish', role);
+  assertLocationFields(transaction.toPrimitives());
+  assertHasItems(itemCount);
+  assertPositiveGrandTotal(totalAmount);
 }
 
 /**

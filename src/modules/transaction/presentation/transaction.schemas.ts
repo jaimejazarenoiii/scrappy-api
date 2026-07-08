@@ -100,6 +100,22 @@ export const cancelTransactionSchema = z
   })
   .default({});
 
+export const returnToDraftSchema = z
+  .object({
+    reason: z.string().max(500).optional(),
+  })
+  .default({});
+
+export const settleTransactionSchema = z
+  .object({
+    settlementNote: z.string().max(500).optional(),
+  })
+  .default({});
+
+export const reopenTransactionSchema = z.object({
+  reason: z.string().min(1).max(1000),
+});
+
 export const createTransactionItemSchema = itemInputSchema;
 
 export const updateTransactionItemSchema = z
@@ -129,6 +145,10 @@ export const priceSuggestionQuerySchema = z.object({
 
 export const transactionIdParamsSchema = z.object({
   transactionId: z.string().uuid(),
+});
+
+export const transactionNumberParamsSchema = z.object({
+  transactionNumber: z.string().regex(/^(IN|OUT)-\d{8}-\d{6}$/),
 });
 
 export const transactionItemParamsSchema = z.object({

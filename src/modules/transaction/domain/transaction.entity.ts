@@ -1,12 +1,14 @@
 import type { TransactionDirection } from './transaction-direction.js';
 import type { TransactionStatus } from './transaction-status.js';
 import type { TransactionLocationType } from './transaction-location-type.js';
+import type { UserRole } from '../../../shared/policy/roles.js';
 
 export interface TransactionProps {
   id: string;
   companyId: string;
   createdByUserId: string;
   updatedByUserId: string | null;
+  transactionNumber: string;
   direction: TransactionDirection;
   status: TransactionStatus;
   partyName: string;
@@ -19,8 +21,16 @@ export interface TransactionProps {
   outsideAddress: string | null;
   tripId: string | null;
   notes: string | null;
+  submittedAt: Date | null;
+  submittedByUserId: string | null;
+  paidAt: Date | null;
+  paidByUserId: string | null;
   cancellationReason: string | null;
   cancelledAt: Date | null;
+  cancelledByUserId: string | null;
+  reopenedAt: Date | null;
+  reopenedByUserId: string | null;
+  reopenReason: string | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -42,6 +52,9 @@ export class TransactionEntity {
   get createdByUserId(): string {
     return this.props.createdByUserId;
   }
+  get transactionNumber(): string {
+    return this.props.transactionNumber;
+  }
   get status(): TransactionStatus {
     return this.props.status;
   }
@@ -57,6 +70,14 @@ export class TransactionEntity {
 
   isDraft(): boolean {
     return this.props.status === 'DRAFT';
+  }
+
+  isReadyForPayment(): boolean {
+    return this.props.status === 'READY_FOR_PAYMENT';
+  }
+
+  isPaid(): boolean {
+    return this.props.status === 'PAID';
   }
 
   isCancelled(): boolean {
@@ -81,6 +102,18 @@ export class TransactionEntity {
 
   belongsToCompany(companyId: string): boolean {
     return this.props.companyId === companyId;
+  }
+
+  isEditableBy(role: UserRole, isAssigned: boolean): boolean {
+    if (this.isArchived() || this.isCancelled()) return false;
+    if (this.isPaid()) return false;
+    if (this.isDraft()) {
+      return role === 'OWNER' || role === 'MANAGER' || isAssigned;
+    }
+    if (this.isReadyForPayment()) {
+      return role === 'OWNER' || role === 'MANAGER';
+    }
+    return false;
   }
 
   toPrimitives(): TransactionProps {

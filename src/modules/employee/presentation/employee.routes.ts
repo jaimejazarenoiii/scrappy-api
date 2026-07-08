@@ -11,6 +11,8 @@ import type { EmployeeController } from './employee.controller.js';
 
 export function createEmployeeRoutes(controller: EmployeeController): Router {
   const router = Router();
+  router.get('/employees/me', authorize(['OWNER', 'MANAGER', 'EMPLOYEE']), controller.me);
+  router.get('/employees', authorize(['OWNER', 'MANAGER', 'EMPLOYEE']), controller.list);
   router.post(
     '/employees',
     authorize(['OWNER', 'MANAGER']),

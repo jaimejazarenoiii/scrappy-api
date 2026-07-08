@@ -570,9 +570,10 @@ export const commonSchemas = {
       companyId: uuid,
       createdByUserId: uuid,
       updatedByUserId: { ...uuid, nullable: true },
+      transactionNumber: { type: 'string' },
       direction: { type: 'string', enum: ['INBOUND', 'OUTBOUND'] },
       directionLabel: { type: 'string', enum: ['BUY', 'SELL'] },
-      status: { type: 'string', enum: ['DRAFT', 'CANCELLED'] },
+      status: { type: 'string', enum: ['DRAFT', 'READY_FOR_PAYMENT', 'PAID', 'CANCELLED'] },
       partyName: { type: 'string' },
       partyContactNumber: { type: 'string', nullable: true },
       transactionDate: dateTime,
@@ -586,8 +587,16 @@ export const commonSchemas = {
       itemCount: { type: 'integer' },
       totalAmount: { type: 'number' },
       assignedEmployeeIds: { type: 'array', items: uuid },
+      submittedAt: { ...dateTime, nullable: true },
+      submittedByUserId: { ...uuid, nullable: true },
+      paidAt: { ...dateTime, nullable: true },
+      paidByUserId: { ...uuid, nullable: true },
       cancellationReason: { type: 'string', nullable: true },
       cancelledAt: { ...dateTime, nullable: true },
+      cancelledByUserId: { ...uuid, nullable: true },
+      reopenedAt: { ...dateTime, nullable: true },
+      reopenedByUserId: { ...uuid, nullable: true },
+      reopenReason: { type: 'string', nullable: true },
       createdAt: dateTime,
       updatedAt: dateTime,
       deletedAt: { ...dateTime, nullable: true },
@@ -693,6 +702,28 @@ export const commonSchemas = {
     },
   },
 
+  ReturnToDraftRequest: {
+    type: 'object',
+    properties: {
+      reason: { type: 'string', maxLength: 500 },
+    },
+  },
+
+  SettleTransactionRequest: {
+    type: 'object',
+    properties: {
+      settlementNote: { type: 'string', maxLength: 500 },
+    },
+  },
+
+  ReopenTransactionRequest: {
+    type: 'object',
+    required: ['reason'],
+    properties: {
+      reason: { type: 'string', minLength: 1, maxLength: 1000 },
+    },
+  },
+
   MaterialSuggestion: {
     type: 'object',
     required: ['materialName', 'lastUsedAt', 'usageCount'],
@@ -717,6 +748,62 @@ export const commonSchemas = {
     required: ['deleted'],
     properties: {
       deleted: { type: 'boolean', enum: [true] },
+    },
+  },
+
+  ReceiptCompany: {
+    type: 'object',
+    required: ['name'],
+    properties: {
+      name: { type: 'string' },
+      contactNumber: { type: 'string', nullable: true },
+      email: { type: 'string', nullable: true },
+      address: { type: 'string', nullable: true },
+    },
+  },
+
+  ReceiptItem: {
+    type: 'object',
+    required: ['id', 'transactionId', 'materialName', 'weight', 'unit', 'price', 'total'],
+    properties: {
+      id: uuid,
+      transactionId: uuid,
+      materialName: { type: 'string' },
+      weight: { type: 'number' },
+      unit: { type: 'string', enum: ['KG', 'G', 'TON', 'LB', 'PIECE', 'BUNDLE', 'SACK'] },
+      price: { type: 'number' },
+      total: { type: 'number' },
+      notes: { type: 'string', nullable: true },
+      createdAt: dateTime,
+      updatedAt: dateTime,
+    },
+  },
+
+  Receipt: {
+    type: 'object',
+    required: [
+      'transactionNumber',
+      'company',
+      'direction',
+      'directionLabel',
+      'partyName',
+      'transactionDate',
+      'items',
+      'grandTotal',
+      'paidByDisplayName',
+      'paidAt',
+    ],
+    properties: {
+      transactionNumber: { type: 'string' },
+      company: { $ref: '#/components/schemas/ReceiptCompany' },
+      direction: { type: 'string', enum: ['INBOUND', 'OUTBOUND'] },
+      directionLabel: { type: 'string', enum: ['BUY', 'SELL'] },
+      partyName: { type: 'string' },
+      transactionDate: dateTime,
+      items: { type: 'array', items: { $ref: '#/components/schemas/ReceiptItem' } },
+      grandTotal: { type: 'number' },
+      paidByDisplayName: { type: 'string' },
+      paidAt: dateTime,
     },
   },
 };

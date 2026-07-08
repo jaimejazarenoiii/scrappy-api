@@ -4,6 +4,7 @@ import type { AuthorizationContext } from '../../../shared/policy/authorization-
 import type { ListTransactionsQuery } from '../domain/transaction.repository.js';
 import type { CreateTransactionUseCase } from '../application/use-cases/create-transaction.use-case.js';
 import type { GetTransactionUseCase } from '../application/use-cases/get-transaction.use-case.js';
+import type { GetTransactionByNumberUseCase } from '../application/use-cases/get-transaction-by-number.use-case.js';
 import type { UpdateTransactionUseCase } from '../application/use-cases/update-transaction.use-case.js';
 import type { ListTransactionsUseCase } from '../application/use-cases/list-transactions.use-case.js';
 import type { ListAssignedTransactionsUseCase } from '../application/use-cases/list-assigned-transactions.use-case.js';
@@ -16,7 +17,12 @@ import type { ListTransactionAttachmentsUseCase } from '../application/use-cases
 import type { RemoveTransactionAttachmentUseCase } from '../application/use-cases/remove-transaction-attachment.use-case.js';
 import type { GetMaterialSuggestionsUseCase } from '../application/use-cases/get-material-suggestions.use-case.js';
 import type { GetPriceSuggestionsUseCase } from '../application/use-cases/get-price-suggestions.use-case.js';
+import type { FinishTransactionUseCase } from '../application/use-cases/finish-transaction.use-case.js';
+import type { ReturnToDraftUseCase } from '../application/use-cases/return-to-draft.use-case.js';
+import type { SettleTransactionUseCase } from '../application/use-cases/settle-transaction.use-case.js';
 import type { CancelTransactionUseCase } from '../application/use-cases/cancel-transaction.use-case.js';
+import type { ReopenTransactionUseCase } from '../application/use-cases/reopen-transaction.use-case.js';
+import type { GetReceiptUseCase } from '../application/use-cases/get-receipt.use-case.js';
 import type { ArchiveTransactionUseCase } from '../application/use-cases/archive-transaction.use-case.js';
 
 function authContext(req: Request): AuthorizationContext {
@@ -31,6 +37,7 @@ export class TransactionController {
   constructor(
     private readonly createTransactionUseCase: CreateTransactionUseCase,
     private readonly getTransactionUseCase: GetTransactionUseCase,
+    private readonly getTransactionByNumberUseCase: GetTransactionByNumberUseCase,
     private readonly updateTransactionUseCase: UpdateTransactionUseCase,
     private readonly listTransactionsUseCase: ListTransactionsUseCase,
     private readonly listAssignedTransactionsUseCase: ListAssignedTransactionsUseCase,
@@ -43,7 +50,12 @@ export class TransactionController {
     private readonly removeTransactionAttachmentUseCase: RemoveTransactionAttachmentUseCase,
     private readonly getMaterialSuggestionsUseCase: GetMaterialSuggestionsUseCase,
     private readonly getPriceSuggestionsUseCase: GetPriceSuggestionsUseCase,
+    private readonly finishTransactionUseCase: FinishTransactionUseCase,
+    private readonly returnToDraftUseCase: ReturnToDraftUseCase,
+    private readonly settleTransactionUseCase: SettleTransactionUseCase,
     private readonly cancelTransactionUseCase: CancelTransactionUseCase,
+    private readonly reopenTransactionUseCase: ReopenTransactionUseCase,
+    private readonly getReceiptUseCase: GetReceiptUseCase,
     private readonly archiveTransactionUseCase: ArchiveTransactionUseCase,
   ) {}
 
@@ -71,6 +83,21 @@ export class TransactionController {
         success(
           await this.getTransactionUseCase.execute(
             String(req.params.transactionId),
+            authContext(req),
+          ),
+        ),
+      );
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getByNumber: RequestHandler = async (req, res, next) => {
+    try {
+      res.json(
+        success(
+          await this.getTransactionByNumberUseCase.execute(
+            String(req.params.transactionNumber),
             authContext(req),
           ),
         ),
@@ -257,6 +284,53 @@ export class TransactionController {
     }
   };
 
+  finish: RequestHandler = async (req, res, next) => {
+    try {
+      res.json(
+        success(
+          await this.finishTransactionUseCase.execute(
+            String(req.params.transactionId),
+            authContext(req),
+          ),
+        ),
+      );
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  returnToDraft: RequestHandler = async (req, res, next) => {
+    try {
+      res.json(
+        success(
+          await this.returnToDraftUseCase.execute(
+            String(req.params.transactionId),
+            authContext(req),
+            req.body,
+          ),
+        ),
+      );
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  settle: RequestHandler = async (req, res, next) => {
+    try {
+      res.json(
+        success(
+          await this.settleTransactionUseCase.execute(
+            String(req.params.transactionId),
+            authContext(req),
+            req.body,
+          ),
+        ),
+      );
+    } catch (error) {
+      next(error);
+    }
+  };
+
   cancel: RequestHandler = async (req, res, next) => {
     try {
       res.json(
@@ -266,6 +340,34 @@ export class TransactionController {
             authContext(req),
             req.body,
           ),
+        ),
+      );
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  reopen: RequestHandler = async (req, res, next) => {
+    try {
+      res.json(
+        success(
+          await this.reopenTransactionUseCase.execute(
+            String(req.params.transactionId),
+            authContext(req),
+            req.body,
+          ),
+        ),
+      );
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getReceipt: RequestHandler = async (req, res, next) => {
+    try {
+      res.json(
+        success(
+          await this.getReceiptUseCase.execute(String(req.params.transactionId), authContext(req)),
         ),
       );
     } catch (error) {

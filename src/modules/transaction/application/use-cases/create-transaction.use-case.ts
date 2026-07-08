@@ -26,6 +26,7 @@ import {
 import type { CreateTransactionRequestDto } from '../dto/create-transaction.request.js';
 import { resolveActingEmployeeIdForUser } from '../services/transaction-access.service.js';
 import { logTransactionAudit } from '../services/transaction-audit.service.js';
+import type { TransactionNumberService } from '../services/transaction-number.service.js';
 
 export class CreateTransactionUseCase {
   constructor(
@@ -35,6 +36,7 @@ export class CreateTransactionUseCase {
     private readonly attendanceRepository: AttendanceSessionRepository,
     private readonly branchRepository: BranchRepository,
     private readonly warehouseRepository: WarehouseRepository,
+    private readonly transactionNumberService: TransactionNumberService,
   ) {}
 
   async execute(
@@ -86,14 +88,22 @@ export class CreateTransactionUseCase {
       };
     });
 
+    const transactionDate = input.transactionDate ?? new Date();
+    const transactionNumber = await this.transactionNumberService.allocate(
+      companyId,
+      direction,
+      transactionDate,
+    );
+
     const detail = await this.transactionRepository.create({
       id: randomUUID(),
       companyId,
       createdByUserId: userId,
+      transactionNumber,
       direction,
       partyName: input.partyName,
       partyContactNumber: input.partyContactNumber ?? null,
-      transactionDate: input.transactionDate ?? new Date(),
+      transactionDate,
       locationType: input.locationType,
       branchId: input.locationType === 'BRANCH' ? (input.branchId ?? null) : null,
       warehouseId: input.locationType === 'WAREHOUSE' ? (input.warehouseId ?? null) : null,

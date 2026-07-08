@@ -41,6 +41,17 @@ export const companyOpenApiPaths = {
       { requireAuth: false },
     ),
   },
+  '/api/v1/companies/me': {
+    get: protectedOperation({
+      tags: ['Company'],
+      summary: 'View current company',
+      description:
+        "Returns the authenticated user's own company, resolved from the access token. No identifier required.",
+      responses: {
+        ...successResponse('Company', 'Current company details'),
+      },
+    }),
+  },
   '/api/v1/companies/{companyId}': {
     get: protectedOperation({
       tags: ['Company'],

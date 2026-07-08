@@ -49,11 +49,15 @@ function buildListWhere(
   }
   if (query.search) {
     where.OR = [
+      { transactionNumber: { contains: query.search, mode: 'insensitive' } },
       { partyName: { contains: query.search, mode: 'insensitive' } },
       { outsideLocationName: { contains: query.search, mode: 'insensitive' } },
       { notes: { contains: query.search, mode: 'insensitive' } },
       { items: { some: { materialName: { contains: query.search, mode: 'insensitive' } } } },
     ];
+  }
+  if (query.transactionNumber) {
+    where.transactionNumber = { startsWith: query.transactionNumber };
   }
   return where;
 }
@@ -88,6 +92,7 @@ export class TransactionPrismaRepository implements TransactionRepository {
         id: input.id,
         companyId: input.companyId,
         createdByUserId: input.createdByUserId,
+        transactionNumber: input.transactionNumber,
         direction: input.direction,
         partyName: input.partyName,
         partyContactNumber: input.partyContactNumber ?? null,
@@ -122,6 +127,13 @@ export class TransactionPrismaRepository implements TransactionRepository {
   async findById(transactionId: string, companyId: string) {
     const record = await prisma.transaction.findFirst({
       where: { id: transactionId, companyId, deletedAt: null },
+    });
+    return record ? toTransactionDomain(record) : null;
+  }
+
+  async findByTransactionNumber(transactionNumber: string, companyId: string) {
+    const record = await prisma.transaction.findFirst({
+      where: { transactionNumber, companyId, deletedAt: null },
     });
     return record ? toTransactionDomain(record) : null;
   }
@@ -161,6 +173,7 @@ export class TransactionPrismaRepository implements TransactionRepository {
       updatedByUserId: input.updatedByUserId ?? null,
     };
     if (input.direction !== undefined) data.direction = input.direction;
+    if (input.status !== undefined) data.status = input.status;
     if (input.partyName !== undefined) data.partyName = input.partyName;
     if (input.partyContactNumber !== undefined) data.partyContactNumber = input.partyContactNumber;
     if (input.transactionDate !== undefined) data.transactionDate = input.transactionDate;
@@ -172,6 +185,14 @@ export class TransactionPrismaRepository implements TransactionRepository {
     if (input.outsideAddress !== undefined) data.outsideAddress = input.outsideAddress;
     if (input.tripId !== undefined) data.tripId = input.tripId;
     if (input.notes !== undefined) data.notes = input.notes;
+    if (input.submittedAt !== undefined) data.submittedAt = input.submittedAt;
+    if (input.submittedByUserId !== undefined) data.submittedByUserId = input.submittedByUserId;
+    if (input.paidAt !== undefined) data.paidAt = input.paidAt;
+    if (input.paidByUserId !== undefined) data.paidByUserId = input.paidByUserId;
+    if (input.cancelledByUserId !== undefined) data.cancelledByUserId = input.cancelledByUserId;
+    if (input.reopenedAt !== undefined) data.reopenedAt = input.reopenedAt;
+    if (input.reopenedByUserId !== undefined) data.reopenedByUserId = input.reopenedByUserId;
+    if (input.reopenReason !== undefined) data.reopenReason = input.reopenReason;
 
     await prisma.$transaction(async (tx) => {
       await tx.transaction.update({ where: { id: transactionId }, data });
@@ -198,6 +219,7 @@ export class TransactionPrismaRepository implements TransactionRepository {
         cancelledAt: new Date(),
         cancellationReason: input.cancellationReason ?? null,
         updatedByUserId: input.updatedByUserId ?? null,
+        cancelledByUserId: input.cancelledByUserId ?? null,
       },
     });
     return toTransactionDomain(record);

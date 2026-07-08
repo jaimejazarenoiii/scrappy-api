@@ -5,8 +5,8 @@ import { computeItemTotal } from '../../../../shared/transactions/item-total.js'
 import type { UserRepository } from '../../../user/domain/user.repository.js';
 import type { TransactionRepository } from '../../domain/transaction.repository.js';
 import type { TransactionItemRepository } from '../../domain/transaction-item.repository.js';
-import { assertDraftEditable, assertItemTotal } from '../../domain/transaction-rules.js';
-import { assertCanManageDraft } from '../policies/transaction-authorization.policy.js';
+import { assertEditable, assertItemTotal } from '../../domain/transaction-rules.js';
+import { assertCanEditTransaction } from '../policies/transaction-authorization.policy.js';
 import {
   buildTransactionItemResponse,
   type TransactionItemResponseDto,
@@ -29,14 +29,14 @@ export class AddTransactionItemUseCase {
   ): Promise<TransactionItemResponseDto> {
     const transaction = await this.transactionRepository.findById(transactionId, auth.companyId);
     if (!transaction) throw new ResourceNotFoundError('Transaction not found');
-    assertDraftEditable(transaction);
 
     const isAssigned = await resolveIsAssigned(
       { userRepository: this.userRepository, transactionRepository: this.transactionRepository },
       auth,
       transactionId,
     );
-    assertCanManageDraft(auth, { isAssigned });
+    assertCanEditTransaction(auth, { isAssigned });
+    assertEditable(transaction, auth.role, isAssigned);
 
     assertItemTotal(input.weight, input.price, input.total);
 

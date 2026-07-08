@@ -21,6 +21,13 @@ export class CompanyController {
       next(error);
     }
   };
+  getMine: RequestHandler = async (req, res, next) => {
+    try {
+      res.json(success(await this.getCompanyUseCase.execute(req.auth!.companyId)));
+    } catch (error) {
+      next(error);
+    }
+  };
   getById: RequestHandler = async (req, res, next) => {
     try {
       if (req.auth && req.auth.companyId !== String(req.params.companyId))

@@ -7,8 +7,8 @@ import type {
   TransactionItemRepository,
   UpdateTransactionItemInput,
 } from '../../domain/transaction-item.repository.js';
-import { assertDraftEditable, assertItemTotal } from '../../domain/transaction-rules.js';
-import { assertCanManageDraft } from '../policies/transaction-authorization.policy.js';
+import { assertEditable, assertItemTotal } from '../../domain/transaction-rules.js';
+import { assertCanEditTransaction } from '../policies/transaction-authorization.policy.js';
 import {
   buildTransactionItemResponse,
   type TransactionItemResponseDto,
@@ -32,14 +32,14 @@ export class UpdateTransactionItemUseCase {
   ): Promise<TransactionItemResponseDto> {
     const transaction = await this.transactionRepository.findById(transactionId, auth.companyId);
     if (!transaction) throw new ResourceNotFoundError('Transaction not found');
-    assertDraftEditable(transaction);
 
     const isAssigned = await resolveIsAssigned(
       { userRepository: this.userRepository, transactionRepository: this.transactionRepository },
       auth,
       transactionId,
     );
-    assertCanManageDraft(auth, { isAssigned });
+    assertCanEditTransaction(auth, { isAssigned });
+    assertEditable(transaction, auth.role, isAssigned);
 
     const existing = await this.itemRepository.findById(itemId, transactionId);
     if (!existing) throw new ResourceNotFoundError('Transaction item not found');

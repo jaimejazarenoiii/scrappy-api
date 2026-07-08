@@ -18,8 +18,12 @@ const listQueryParams = [
   queryParam('sortBy', { type: 'string', enum: ['transactionDate', 'createdAt', 'status'] }),
   queryParam('sortOrder', { type: 'string', enum: ['asc', 'desc'] }),
   queryParam('search', { type: 'string' }),
+  queryParam('transactionNumber', { type: 'string' }),
   queryParam('direction', { type: 'string', enum: ['INBOUND', 'OUTBOUND'] }),
-  queryParam('status', { type: 'string', enum: ['DRAFT', 'CANCELLED'] }),
+  queryParam('status', {
+    type: 'string',
+    enum: ['DRAFT', 'READY_FOR_PAYMENT', 'PAID', 'CANCELLED'],
+  }),
   queryParam('locationType', { type: 'string', enum: ['BRANCH', 'WAREHOUSE', 'OUTSIDE'] }),
   queryParam('branchId', { type: 'string', format: 'uuid' }),
   queryParam('warehouseId', { type: 'string', format: 'uuid' }),
@@ -77,6 +81,22 @@ export const transactionOpenApiPaths = {
       },
     }),
   },
+  '/api/v1/transactions/by-number/{transactionNumber}': {
+    get: protectedOperation({
+      tags: [TRANSACTIONS_TAG],
+      summary: 'Get a transaction by business transaction number',
+      parameters: [
+        {
+          in: 'path',
+          name: 'transactionNumber',
+          required: true,
+          schema: { type: 'string', pattern: '^(IN|OUT)-\\d{8}-\\d{6}$' },
+          description: 'Business transaction number',
+        },
+      ],
+      responses: { ...successResponse('TransactionDetail', 'Transaction detail') },
+    }),
+  },
   '/api/v1/transactions/{transactionId}': {
     get: protectedOperation({
       tags: [TRANSACTIONS_TAG],
@@ -86,19 +106,54 @@ export const transactionOpenApiPaths = {
     }),
     patch: protectedOperation({
       tags: [TRANSACTIONS_TAG],
-      summary: 'Update a draft transaction (supports auto-save)',
+      summary: 'Update a transaction (draft or ready for payment based on role)',
       parameters: [uuidPathParam('transactionId', 'Transaction identifier')],
       requestBody: jsonRequestBody('UpdateTransactionRequest'),
       responses: { ...successResponse('TransactionDetail', 'Updated transaction') },
     }),
   },
+  '/api/v1/transactions/{transactionId}/finish': {
+    post: protectedOperation({
+      tags: [TRANSACTIONS_TAG],
+      summary: 'Submit a draft transaction for settlement',
+      parameters: [uuidPathParam('transactionId', 'Transaction identifier')],
+      responses: { ...successResponse('TransactionDetail', 'Submitted transaction') },
+    }),
+  },
+  '/api/v1/transactions/{transactionId}/return-to-draft': {
+    post: protectedOperation({
+      tags: [TRANSACTIONS_TAG],
+      summary: 'Return a ready-for-payment transaction to draft',
+      parameters: [uuidPathParam('transactionId', 'Transaction identifier')],
+      requestBody: jsonRequestBody('ReturnToDraftRequest', false),
+      responses: { ...successResponse('TransactionDetail', 'Draft transaction') },
+    }),
+  },
+  '/api/v1/transactions/{transactionId}/settle': {
+    post: protectedOperation({
+      tags: [TRANSACTIONS_TAG],
+      summary: 'Mark a ready-for-payment transaction as paid',
+      parameters: [uuidPathParam('transactionId', 'Transaction identifier')],
+      requestBody: jsonRequestBody('SettleTransactionRequest', false),
+      responses: { ...successResponse('TransactionDetail', 'Settled transaction') },
+    }),
+  },
   '/api/v1/transactions/{transactionId}/cancel': {
     post: protectedOperation({
       tags: [TRANSACTIONS_TAG],
-      summary: 'Cancel a draft transaction (becomes read-only)',
+      summary: 'Cancel a transaction (draft or ready for payment)',
       parameters: [uuidPathParam('transactionId', 'Transaction identifier')],
       requestBody: jsonRequestBody('CancelTransactionRequest', false),
       responses: { ...successResponse('TransactionDetail', 'Cancelled transaction') },
+    }),
+  },
+  '/api/v1/transactions/{transactionId}/reopen': {
+    post: protectedOperation({
+      tags: [TRANSACTIONS_TAG],
+      summary: 'Reopen a paid transaction for correction',
+      parameters: [uuidPathParam('transactionId', 'Transaction identifier')],
+      requestBody: jsonRequestBody('ReopenTransactionRequest'),
+      responses: { ...successResponse('TransactionDetail', 'Reopened transaction') },
     }),
   },
   '/api/v1/transactions/{transactionId}/archive': {
@@ -107,6 +162,14 @@ export const transactionOpenApiPaths = {
       summary: 'Archive a transaction (owners/managers)',
       parameters: [uuidPathParam('transactionId', 'Transaction identifier')],
       responses: { ...successResponse('TransactionDetail', 'Archived transaction') },
+    }),
+  },
+  '/api/v1/transactions/{transactionId}/receipt': {
+    get: protectedOperation({
+      tags: [TRANSACTIONS_TAG],
+      summary: 'Get settlement receipt for a paid transaction',
+      parameters: [uuidPathParam('transactionId', 'Transaction identifier')],
+      responses: { ...successResponse('Receipt', 'Transaction receipt') },
     }),
   },
   '/api/v1/transactions/{transactionId}/items': {

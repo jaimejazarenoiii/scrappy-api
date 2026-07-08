@@ -1,9 +1,11 @@
 import type { AuthorizationContext } from '../../../../shared/policy/authorization-context.js';
-import { ResourceNotFoundError } from '../../../../shared/errors/http-exceptions.js';
+import {
+  ForbiddenError,
+  ResourceNotFoundError,
+} from '../../../../shared/errors/http-exceptions.js';
 import type { UserRepository } from '../../../user/domain/user.repository.js';
 import type { TransactionRepository } from '../../domain/transaction.repository.js';
-import { assertDraftEditable } from '../../domain/transaction-rules.js';
-import { assertCanManageDraft } from '../policies/transaction-authorization.policy.js';
+import { assertStatusTransition } from '../../domain/transaction-rules.js';
 import {
   buildTransactionDetailResponse,
   type TransactionDetailResponseDto,
@@ -25,18 +27,26 @@ export class CancelTransactionUseCase {
   ): Promise<TransactionDetailResponseDto> {
     const existing = await this.transactionRepository.findById(transactionId, auth.companyId);
     if (!existing) throw new ResourceNotFoundError('Transaction not found');
-    assertDraftEditable(existing);
 
     const isAssigned = await resolveIsAssigned(
       { userRepository: this.userRepository, transactionRepository: this.transactionRepository },
       auth,
       transactionId,
     );
-    assertCanManageDraft(auth, { isAssigned });
+    if (auth.role === 'EMPLOYEE') {
+      if (!isAssigned) {
+        throw new ForbiddenError('You are not assigned to this transaction.');
+      }
+      if (!existing.isDraft()) {
+        throw new ForbiddenError('Employees can only cancel draft transactions.');
+      }
+    }
+    assertStatusTransition(existing, 'cancel', auth.role);
 
     await this.transactionRepository.cancel(transactionId, auth.companyId, {
       cancellationReason: input.cancellationReason ?? null,
       updatedByUserId: auth.userId,
+      cancelledByUserId: auth.userId,
     });
 
     logTransactionAudit({

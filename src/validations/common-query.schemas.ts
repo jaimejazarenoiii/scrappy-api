@@ -63,7 +63,8 @@ const booleanFlagSchema = z
 export const transactionListQuerySchema = paginationQuerySchema.extend({
   sortBy: z.enum(['transactionDate', 'createdAt', 'status']).optional(),
   direction: z.enum(['INBOUND', 'OUTBOUND']).optional(),
-  status: z.enum(['DRAFT', 'CANCELLED']).optional(),
+  status: z.enum(['DRAFT', 'READY_FOR_PAYMENT', 'PAID', 'CANCELLED']).optional(),
+  transactionNumber: z.string().max(32).optional(),
   locationType: z.enum(['BRANCH', 'WAREHOUSE', 'OUTSIDE']).optional(),
   branchId: z.string().uuid().optional(),
   warehouseId: z.string().uuid().optional(),

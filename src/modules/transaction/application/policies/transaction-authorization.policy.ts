@@ -44,3 +44,36 @@ export function assertCanManageDraft(
   if (isManagerOrOwner(auth)) return;
   assertEmployeeAssigned(opts.isAssigned);
 }
+
+export function assertCanFinish(auth: AuthorizationContext, opts: { isAssigned: boolean }): void {
+  if (auth.role !== 'EMPLOYEE') {
+    throw new ForbiddenError('Only employees can submit transactions for settlement.');
+  }
+  assertEmployeeAssigned(opts.isAssigned);
+}
+
+export function assertCanSettle(auth: AuthorizationContext): void {
+  if (!isManagerOrOwner(auth)) {
+    throw new ForbiddenError('Only owners and managers can settle transactions.');
+  }
+}
+
+export function assertCanReturnToDraft(auth: AuthorizationContext): void {
+  if (!isManagerOrOwner(auth)) {
+    throw new ForbiddenError('Only owners and managers can return transactions to draft.');
+  }
+}
+
+export function assertCanReopen(auth: AuthorizationContext): void {
+  if (auth.role !== 'OWNER') {
+    throw new ForbiddenError('Only owners can reopen paid transactions.');
+  }
+}
+
+export function assertCanEditTransaction(
+  auth: AuthorizationContext,
+  opts: { isAssigned: boolean },
+): void {
+  if (isManagerOrOwner(auth)) return;
+  assertEmployeeAssigned(opts.isAssigned);
+}

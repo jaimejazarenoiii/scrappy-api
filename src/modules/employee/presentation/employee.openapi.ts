@@ -7,6 +7,15 @@ import {
 
 export const employeeOpenApiPaths = {
   '/api/v1/employees': {
+    get: protectedOperation({
+      tags: ['Employees'],
+      summary: 'List company employees',
+      description:
+        "Returns the active employees of the authenticated user's company, resolved from the access token. Useful for populating assignment pickers.",
+      responses: {
+        ...successResponse({ type: 'array', items: 'Employee' }, 'Company employees'),
+      },
+    }),
     post: protectedOperation({
       tags: ['Employees'],
       summary: 'Create employee',
@@ -14,6 +23,17 @@ export const employeeOpenApiPaths = {
       requestBody: jsonRequestBody('CreateEmployeeRequest'),
       responses: {
         ...successResponse('Employee', 'Employee created', '201'),
+      },
+    }),
+  },
+  '/api/v1/employees/me': {
+    get: protectedOperation({
+      tags: ['Employees'],
+      summary: 'View current employee profile',
+      description:
+        'Returns the employee profile linked to the authenticated user, resolved from the access token. Returns 404 when the user has no linked employee record.',
+      responses: {
+        ...successResponse('Employee', 'Current employee profile'),
       },
     }),
   },

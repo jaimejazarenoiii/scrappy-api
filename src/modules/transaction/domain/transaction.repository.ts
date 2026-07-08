@@ -20,6 +20,7 @@ export interface CreateTransactionInput {
   id: string;
   companyId: string;
   createdByUserId: string;
+  transactionNumber: string;
   direction: TransactionDirection;
   partyName: string;
   partyContactNumber?: string | null;
@@ -37,6 +38,7 @@ export interface CreateTransactionInput {
 
 export interface UpdateTransactionInput {
   direction?: TransactionDirection;
+  status?: TransactionStatus;
   partyName?: string;
   partyContactNumber?: string | null;
   transactionDate?: Date;
@@ -49,11 +51,20 @@ export interface UpdateTransactionInput {
   notes?: string | null;
   updatedByUserId?: string | null;
   assignedEmployeeIds?: string[];
+  submittedAt?: Date | null;
+  submittedByUserId?: string | null;
+  paidAt?: Date | null;
+  paidByUserId?: string | null;
+  cancelledByUserId?: string | null;
+  reopenedAt?: Date | null;
+  reopenedByUserId?: string | null;
+  reopenReason?: string | null;
 }
 
 export interface CancelTransactionInput {
   cancellationReason?: string | null;
   updatedByUserId?: string | null;
+  cancelledByUserId?: string | null;
 }
 
 export interface ListTransactionsQuery {
@@ -62,6 +73,7 @@ export interface ListTransactionsQuery {
   sortBy?: 'transactionDate' | 'createdAt' | 'status';
   sortOrder?: 'asc' | 'desc';
   search?: string;
+  transactionNumber?: string;
   direction?: TransactionDirection;
   status?: TransactionStatus;
   locationType?: TransactionLocationType;
@@ -100,6 +112,10 @@ export interface ListTransactionsResult {
 export interface TransactionRepository {
   create(input: CreateTransactionInput): Promise<TransactionDetail>;
   findById(transactionId: string, companyId: string): Promise<TransactionEntity | null>;
+  findByTransactionNumber(
+    transactionNumber: string,
+    companyId: string,
+  ): Promise<TransactionEntity | null>;
   findByIdIncludingArchived(
     transactionId: string,
     companyId: string,

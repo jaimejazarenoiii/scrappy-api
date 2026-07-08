@@ -12,6 +12,7 @@ describe('transaction create api', () => {
     const create = await createDraftTransaction(app, employee.auth, [employee.employeeId]);
     expect(create.status).toBe(201);
     expect(create.body.data.status).toBe('DRAFT');
+    expect(create.body.data.transactionNumber).toMatch(/^IN-\d{8}-\d{6}$/);
     expect(create.body.data.items).toHaveLength(1);
     expect(create.body.data.assignedEmployeeIds).toContain(employee.employeeId);
 

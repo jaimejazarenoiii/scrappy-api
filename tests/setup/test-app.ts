@@ -21,6 +21,7 @@ import {
   InMemoryTransactionItemRepository,
   InMemoryTransactionAttachmentRepository,
   InMemoryTransactionSuggestionRepository,
+  InMemoryTransactionNumberSequenceRepository,
   InMemoryFileStorage,
 } from './in-memory-repositories.js';
 
@@ -65,6 +66,9 @@ export function createTestContext() {
   const transactionSuggestionRepository = new InMemoryTransactionSuggestionRepository(
     transactionStore,
   );
+  const transactionNumberSequenceRepository = new InMemoryTransactionNumberSequenceRepository(
+    transactionStore,
+  );
   const fileStorage = new InMemoryFileStorage();
   const container = createContainer({
     companyRepository,
@@ -84,6 +88,7 @@ export function createTestContext() {
     transactionItemRepository,
     transactionAttachmentRepository,
     transactionSuggestionRepository,
+    transactionNumberSequenceRepository,
     fileStorage,
   });
   const app = createApp(container);
@@ -107,6 +112,7 @@ export function createTestContext() {
     transactionItemRepository,
     transactionAttachmentRepository,
     transactionSuggestionRepository,
+    transactionNumberSequenceRepository,
     fileStorage,
   };
 }

@@ -63,4 +63,25 @@ describe('transaction cancel and archive api', () => {
       .set(employee.auth);
     expect(archive.status).toBe(403);
   });
+
+  it('allows owner to cancel a ready-for-payment transaction', async () => {
+    const { app, userRepository, employeeRepository } = createTestContext();
+    const { owner, employee } = await setupTransactionActors(
+      app,
+      userRepository,
+      employeeRepository,
+    );
+    const create = await createDraftTransaction(app, employee.auth, [employee.employeeId]);
+    const transactionId = create.body.data.id as string;
+
+    await request(app).post(`/api/v1/transactions/${transactionId}/finish`).set(employee.auth);
+
+    const cancel = await request(app)
+      .post(`/api/v1/transactions/${transactionId}/cancel`)
+      .set(owner.auth)
+      .send({ cancellationReason: 'Manager rejected settlement' });
+    expect(cancel.status).toBe(200);
+    expect(cancel.body.data.status).toBe('CANCELLED');
+    expect(cancel.body.data.cancelledByUserId).toBe(owner.userId);
+  });
 });

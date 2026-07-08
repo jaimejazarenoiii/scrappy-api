@@ -13,9 +13,9 @@ import {
   MAX_PHOTO_SIZE_BYTES,
   MAX_TRANSACTION_PHOTOS,
 } from '../../domain/attachment-constraints.js';
-import { assertDraftEditable } from '../../domain/transaction-rules.js';
+import { assertEditable } from '../../domain/transaction-rules.js';
 import type { FileStorage } from '../../infrastructure/file-storage/file-storage.interface.js';
-import { assertCanManageDraft } from '../policies/transaction-authorization.policy.js';
+import { assertCanEditTransaction } from '../policies/transaction-authorization.policy.js';
 import {
   buildTransactionAttachmentResponse,
   type TransactionAttachmentResponseDto,
@@ -57,14 +57,14 @@ export class AddTransactionAttachmentUseCase {
 
     const transaction = await this.transactionRepository.findById(transactionId, auth.companyId);
     if (!transaction) throw new ResourceNotFoundError('Transaction not found');
-    assertDraftEditable(transaction);
 
     const isAssigned = await resolveIsAssigned(
       { userRepository: this.userRepository, transactionRepository: this.transactionRepository },
       auth,
       transactionId,
     );
-    assertCanManageDraft(auth, { isAssigned });
+    assertCanEditTransaction(auth, { isAssigned });
+    assertEditable(transaction, auth.role, isAssigned);
 
     const existingCount = await this.attachmentRepository.countByTransaction(transactionId);
     if (existingCount >= MAX_TRANSACTION_PHOTOS) {

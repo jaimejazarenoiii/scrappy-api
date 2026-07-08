@@ -11,12 +11,14 @@ import {
   InMemoryAttendanceRepository,
   InMemoryBranchRepository,
   InMemoryEmployeeRepository,
+  InMemoryTransactionNumberSequenceRepository,
   InMemoryTransactionRepository,
   InMemoryTransactionStore,
   InMemoryUserRepository,
   InMemoryWarehouseRepository,
 } from '../../setup/in-memory-repositories.js';
 import { setupTestEnv } from '../../setup/test-app.js';
+import { TransactionNumberService } from '../../../src/modules/transaction/application/services/transaction-number.service.js';
 
 async function buildFixture() {
   const companyId = randomUUID();
@@ -27,6 +29,9 @@ async function buildFixture() {
   const warehouseRepository = new InMemoryWarehouseRepository();
   const store = new InMemoryTransactionStore();
   const transactionRepository = new InMemoryTransactionRepository(store);
+  const transactionNumberSequenceRepository = new InMemoryTransactionNumberSequenceRepository(
+    store,
+  );
 
   const employeeId = randomUUID();
   const userId = randomUUID();
@@ -53,6 +58,7 @@ async function buildFixture() {
     attendanceRepository,
     branchRepository,
     warehouseRepository,
+    new TransactionNumberService(transactionNumberSequenceRepository),
   );
 
   return {
@@ -65,6 +71,7 @@ async function buildFixture() {
     branchRepository,
     warehouseRepository,
     transactionRepository,
+    transactionNumberSequenceRepository,
     useCase,
   };
 }
@@ -105,6 +112,7 @@ describe('CreateTransactionUseCase', () => {
     expect(result.items[0]!.total).toBe(2500);
     expect(result.totalAmount).toBe(2500);
     expect(result.assignedEmployeeIds).toContain(f.employeeId);
+    expect(result.transactionNumber).toMatch(/^IN-\d{8}-\d{6}$/);
   });
 
   it('rejects creation when the employee is not timed in', async () => {

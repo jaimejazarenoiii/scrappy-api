@@ -5,6 +5,8 @@ import type { GetEmployeeUseCase } from '../application/use-cases/get-employee.u
 import type { UpdateEmployeeUseCase } from '../application/use-cases/update-employee.use-case.js';
 import type { ArchiveEmployeeUseCase } from '../application/use-cases/archive-employee.use-case.js';
 import type { LinkEmployeeToUserUseCase } from '../application/use-cases/link-employee-to-user.use-case.js';
+import type { ListEmployeesUseCase } from '../application/use-cases/list-employees.use-case.js';
+import type { GetMyEmployeeUseCase } from '../application/use-cases/get-my-employee.use-case.js';
 
 export class EmployeeController {
   constructor(
@@ -13,12 +15,30 @@ export class EmployeeController {
     private readonly updateEmployeeUseCase: UpdateEmployeeUseCase,
     private readonly archiveEmployeeUseCase: ArchiveEmployeeUseCase,
     private readonly linkEmployeeToUserUseCase: LinkEmployeeToUserUseCase,
+    private readonly listEmployeesUseCase: ListEmployeesUseCase,
+    private readonly getMyEmployeeUseCase: GetMyEmployeeUseCase,
   ) {}
   create: RequestHandler = async (req, res, next) => {
     try {
       res
         .status(201)
         .json(success(await this.createEmployeeUseCase.execute(req.auth!.companyId, req.body)));
+    } catch (error) {
+      next(error);
+    }
+  };
+  list: RequestHandler = async (req, res, next) => {
+    try {
+      res.json(success(await this.listEmployeesUseCase.execute(req.auth!.companyId)));
+    } catch (error) {
+      next(error);
+    }
+  };
+  me: RequestHandler = async (req, res, next) => {
+    try {
+      res.json(
+        success(await this.getMyEmployeeUseCase.execute(req.auth!.userId, req.auth!.companyId)),
+      );
     } catch (error) {
       next(error);
     }

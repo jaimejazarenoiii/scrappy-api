@@ -1,0 +1,283 @@
+openapi: 3.0.3
+info:
+  title: Scrappy API - Transaction Settlement (P005)
+  version: 1.0.0
+  description: |
+    P005 contracts extending P004 Transaction Management with settlement workflow,
+    Transaction Number, receipt, and status transitions.
+
+servers:
+  - url: /api/v1
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    TransactionStatus:
+      type: string
+      enum: [DRAFT, READY_FOR_PAYMENT, PAID, CANCELLED]
+
+    TransactionNumber:
+      type: string
+      pattern: '^(IN|OUT)-\d{8}-\d{6}$'
+      example: IN-20260708-000001
+
+    ReturnToDraftRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 500
+          description: Optional audit reason for returning to draft
+
+    SettleTransactionRequest:
+      type: object
+      properties:
+        settlementNote:
+          type: string
+          maxLength: 500
+          description: Optional audit note; not included on receipt in P005
+
+    ReopenTransactionRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+
+    CancelTransactionRequest:
+      type: object
+      properties:
+        cancellationReason:
+          type: string
+          maxLength: 500
+
+    SettlementSummary:
+      type: object
+      properties:
+        submittedAt: { type: string, format: date-time, nullable: true }
+        submittedByUserId: { type: string, format: uuid, nullable: true }
+        paidAt: { type: string, format: date-time, nullable: true }
+        paidByUserId: { type: string, format: uuid, nullable: true }
+        paidByDisplayName: { type: string, nullable: true }
+
+    TransactionDetailExtended:
+      type: object
+      description: P004 TransactionDetail plus P005 fields
+      allOf:
+        - type: object
+          required: [id, transactionNumber, status]
+          properties:
+            transactionNumber: { $ref: '#/components/schemas/TransactionNumber' }
+            status: { $ref: '#/components/schemas/TransactionStatus' }
+            settlement: { $ref: '#/components/schemas/SettlementSummary' }
+
+    ReceiptCompany:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        contactNumber: { type: string, nullable: true }
+        email: { type: string, format: email, nullable: true }
+        address: { type: string, nullable: true }
+
+    ReceiptItem:
+      type: object
+      required: [materialName, weight, unit, price, total]
+      properties:
+        materialName: { type: string }
+        weight: { type: number }
+        unit: { type: string }
+        price: { type: number }
+        total: { type: number }
+
+    Receipt:
+      type: object
+      required:
+        - transactionNumber
+        - company
+        - direction
+        - directionLabel
+        - partyName
+        - transactionDate
+        - items
+        - grandTotal
+        - paidByDisplayName
+        - paidAt
+      properties:
+        transactionNumber: { $ref: '#/components/schemas/TransactionNumber' }
+        company: { $ref: '#/components/schemas/ReceiptCompany' }
+        direction: { type: string, enum: [INBOUND, OUTBOUND] }
+        directionLabel: { type: string, enum: [BUY, SELL] }
+        partyName: { type: string }
+        transactionDate: { type: string, format: date-time }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ReceiptItem' }
+        grandTotal: { type: number }
+        paidByDisplayName: { type: string }
+        paidAt: { type: string, format: date-time }
+
+    ErrorBody:
+      type: object
+      required: [code, message, details]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        details:
+          type: array
+          items: { type: object, additionalProperties: true }
+
+paths:
+  /transactions/{transactionId}/finish:
+    post:
+      tags: [Transaction Settlement]
+      summary: Submit transaction for settlement
+      description: Employee finishes a complete Draft transaction; status becomes READY_FOR_PAYMENT.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Transaction submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  data: { $ref: '#/components/schemas/TransactionDetailExtended' }
+        '400': { description: VALIDATION_ERROR — incomplete transaction }
+        '403': { description: FORBIDDEN — not assigned or wrong role }
+        '404': { description: RESOURCE_NOT_FOUND }
+        '409': { description: LIFECYCLE_CONFLICT or BUSINESS_RULE_VIOLATION }
+
+  /transactions/{transactionId}/return-to-draft:
+    post:
+      tags: [Transaction Settlement]
+      summary: Return submitted transaction to Draft
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReturnToDraftRequest' }
+      responses:
+        '200':
+          description: Transaction returned to Draft
+        '403': { description: FORBIDDEN — Employee }
+        '409': { description: LIFECYCLE_CONFLICT — not READY_FOR_PAYMENT }
+
+  /transactions/{transactionId}/settle:
+    post:
+      tags: [Transaction Settlement]
+      summary: Mark transaction Paid
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SettleTransactionRequest' }
+      responses:
+        '200':
+          description: Transaction settled
+        '403': { description: FORBIDDEN — Employee }
+        '409': { description: LIFECYCLE_CONFLICT — duplicate settlement }
+
+  /transactions/{transactionId}/reopen:
+    post:
+      tags: [Transaction Settlement]
+      summary: Reopen Paid transaction (Owner only)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReopenTransactionRequest' }
+      responses:
+        '200':
+          description: Transaction reopened to READY_FOR_PAYMENT
+        '403': { description: FORBIDDEN — Manager or Employee }
+        '409': { description: LIFECYCLE_CONFLICT — not PAID }
+
+  /transactions/{transactionId}/receipt:
+    get:
+      tags: [Transaction Receipt]
+      summary: Get settlement receipt
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Receipt payload
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  data: { $ref: '#/components/schemas/Receipt' }
+        '409': { description: LIFECYCLE_CONFLICT — not PAID }
+
+  /transactions/by-number/{transactionNumber}:
+    get:
+      tags: [Transactions]
+      summary: Get transaction by Transaction Number
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: transactionNumber
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/TransactionNumber' }
+      responses:
+        '200':
+          description: Transaction detail
+        '404': { description: RESOURCE_NOT_FOUND }
+
+  /transactions:
+    get:
+      tags: [Transactions]
+      summary: List transactions (extended P005 filters)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [DRAFT, READY_FOR_PAYMENT, PAID, CANCELLED]
+        - name: transactionNumber
+          in: query
+          description: Exact or prefix match
+          schema: { type: string }
+        - name: search
+          in: query
+          description: Includes transactionNumber in search scope
+          schema: { type: string }
+      responses:
+        '200':
+          description: Paginated list with transactionNumber on each item

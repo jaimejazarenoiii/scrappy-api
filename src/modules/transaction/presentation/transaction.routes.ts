@@ -10,9 +10,13 @@ import {
   listTransactionsQuerySchema,
   materialSuggestionQuerySchema,
   priceSuggestionQuerySchema,
+  reopenTransactionSchema,
+  returnToDraftSchema,
+  settleTransactionSchema,
   transactionAttachmentParamsSchema,
   transactionIdParamsSchema,
   transactionItemParamsSchema,
+  transactionNumberParamsSchema,
   updateTransactionItemSchema,
   updateTransactionSchema,
 } from './transaction.schemas.js';
@@ -59,6 +63,13 @@ export function createTransactionRoutes(controller: TransactionController): Rout
   );
 
   router.get(
+    '/transactions/by-number/:transactionNumber',
+    authorize([...ALL_ROLES]),
+    validate(transactionNumberParamsSchema, 'params'),
+    controller.getByNumber,
+  );
+
+  router.get(
     '/transactions/:transactionId',
     authorize([...ALL_ROLES]),
     validate(transactionIdParamsSchema, 'params'),
@@ -74,6 +85,29 @@ export function createTransactionRoutes(controller: TransactionController): Rout
   );
 
   router.post(
+    '/transactions/:transactionId/finish',
+    authorize([...ALL_ROLES]),
+    validate(transactionIdParamsSchema, 'params'),
+    controller.finish,
+  );
+
+  router.post(
+    '/transactions/:transactionId/return-to-draft',
+    authorize([...MANAGER_ROLES]),
+    validate(transactionIdParamsSchema, 'params'),
+    validate(returnToDraftSchema),
+    controller.returnToDraft,
+  );
+
+  router.post(
+    '/transactions/:transactionId/settle',
+    authorize([...MANAGER_ROLES]),
+    validate(transactionIdParamsSchema, 'params'),
+    validate(settleTransactionSchema),
+    controller.settle,
+  );
+
+  router.post(
     '/transactions/:transactionId/cancel',
     authorize([...ALL_ROLES]),
     validate(transactionIdParamsSchema, 'params'),
@@ -82,10 +116,25 @@ export function createTransactionRoutes(controller: TransactionController): Rout
   );
 
   router.post(
+    '/transactions/:transactionId/reopen',
+    authorize(['OWNER']),
+    validate(transactionIdParamsSchema, 'params'),
+    validate(reopenTransactionSchema),
+    controller.reopen,
+  );
+
+  router.post(
     '/transactions/:transactionId/archive',
     authorize([...MANAGER_ROLES]),
     validate(transactionIdParamsSchema, 'params'),
     controller.archive,
+  );
+
+  router.get(
+    '/transactions/:transactionId/receipt',
+    authorize([...ALL_ROLES]),
+    validate(transactionIdParamsSchema, 'params'),
+    controller.getReceipt,
   );
 
   router.get(

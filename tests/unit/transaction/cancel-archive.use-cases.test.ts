@@ -51,6 +51,22 @@ describe('CancelTransactionUseCase', () => {
     expect(result.status).toBe('CANCELLED');
     expect(result.cancellationReason).toBe('Duplicate');
     expect(result.cancelledAt).not.toBeNull();
+    expect(result.cancelledByUserId).toBe(f.auth.userId);
+  });
+
+  it('allows managers to cancel a ready-for-payment transaction', async () => {
+    const f = await buildFixture();
+    await f.transactionRepository.update(f.transactionId, f.companyId, {
+      status: 'READY_FOR_PAYMENT',
+      submittedAt: new Date(),
+      submittedByUserId: f.auth.userId,
+      updatedByUserId: f.auth.userId,
+    });
+
+    const result = await f.cancel.execute(f.transactionId, f.auth, {
+      cancellationReason: 'Invalid submission',
+    });
+    expect(result.status).toBe('CANCELLED');
   });
 
   it('rejects cancelling an already cancelled transaction', async () => {

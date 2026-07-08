@@ -586,6 +586,10 @@ import type {
   UpdateTransactionInput,
 } from '../../src/modules/transaction/domain/transaction.repository.js';
 import type {
+  AllocateTransactionNumberSequenceInput,
+  TransactionNumberSequenceRepository,
+} from '../../src/modules/transaction/domain/transaction-number-sequence.repository.js';
+import type {
   CreateTransactionItemInput,
   TransactionItemRepository,
   UpdateTransactionItemInput,
@@ -616,6 +620,7 @@ export class InMemoryTransactionStore {
   public items = new Map<string, TransactionItemEntity>();
   public attachments = new Map<string, TransactionAttachmentEntity>();
   public assignments: AssignmentRecord[] = [];
+  public sequences = new Map<string, number>();
 }
 
 function matchesTransactionFilters(
@@ -636,11 +641,18 @@ function matchesTransactionFilters(
     const search = query.search.toLowerCase();
     const items = [...store.items.values()].filter((item) => item.transactionId === transaction.id);
     const matches =
+      (props.transactionNumber ?? '').toLowerCase().includes(search) ||
       props.partyName.toLowerCase().includes(search) ||
       (props.outsideLocationName?.toLowerCase().includes(search) ?? false) ||
       (props.notes?.toLowerCase().includes(search) ?? false) ||
       items.some((item) => item.materialName.toLowerCase().includes(search));
     if (!matches) return false;
+  }
+  if (
+    query.transactionNumber &&
+    !(props.transactionNumber ?? '').startsWith(query.transactionNumber)
+  ) {
+    return false;
   }
   return true;
 }
@@ -701,6 +713,7 @@ export class InMemoryTransactionRepository implements TransactionRepository {
       companyId: input.companyId,
       createdByUserId: input.createdByUserId,
       updatedByUserId: null,
+      transactionNumber: input.transactionNumber ?? `TMP-${randomUUID()}`,
       direction: input.direction,
       status: 'DRAFT',
       partyName: input.partyName,
@@ -713,8 +726,16 @@ export class InMemoryTransactionRepository implements TransactionRepository {
       outsideAddress: input.outsideAddress ?? null,
       tripId: input.tripId ?? null,
       notes: input.notes ?? null,
+      submittedAt: null,
+      submittedByUserId: null,
+      paidAt: null,
+      paidByUserId: null,
       cancellationReason: null,
       cancelledAt: null,
+      cancelledByUserId: null,
+      reopenedAt: null,
+      reopenedByUserId: null,
+      reopenReason: null,
       createdAt: now,
       updatedAt: now,
       deletedAt: null,
@@ -751,6 +772,17 @@ export class InMemoryTransactionRepository implements TransactionRepository {
     return transaction;
   }
 
+  async findByTransactionNumber(transactionNumber: string, companyId: string) {
+    return (
+      [...this.store.transactions.values()].find(
+        (transaction) =>
+          transaction.transactionNumber === transactionNumber &&
+          transaction.belongsToCompany(companyId) &&
+          !transaction.isArchived(),
+      ) ?? null
+    );
+  }
+
   async findByIdIncludingArchived(transactionId: string, companyId: string) {
     const transaction = this.store.transactions.get(transactionId);
     if (!transaction || !transaction.belongsToCompany(companyId)) return null;
@@ -778,6 +810,7 @@ export class InMemoryTransactionRepository implements TransactionRepository {
     const current = existing.toPrimitives();
     const updated = TransactionEntity.create({
       ...current,
+      status: input.status ?? current.status,
       direction: input.direction ?? current.direction,
       partyName: input.partyName ?? current.partyName,
       partyContactNumber:
@@ -797,6 +830,17 @@ export class InMemoryTransactionRepository implements TransactionRepository {
       tripId: input.tripId !== undefined ? input.tripId : current.tripId,
       notes: input.notes !== undefined ? input.notes : current.notes,
       updatedByUserId: input.updatedByUserId ?? null,
+      submittedAt: input.submittedAt !== undefined ? input.submittedAt : current.submittedAt,
+      submittedByUserId:
+        input.submittedByUserId !== undefined ? input.submittedByUserId : current.submittedByUserId,
+      paidAt: input.paidAt !== undefined ? input.paidAt : current.paidAt,
+      paidByUserId: input.paidByUserId !== undefined ? input.paidByUserId : current.paidByUserId,
+      cancelledByUserId:
+        input.cancelledByUserId !== undefined ? input.cancelledByUserId : current.cancelledByUserId,
+      reopenedAt: input.reopenedAt !== undefined ? input.reopenedAt : current.reopenedAt,
+      reopenedByUserId:
+        input.reopenedByUserId !== undefined ? input.reopenedByUserId : current.reopenedByUserId,
+      reopenReason: input.reopenReason !== undefined ? input.reopenReason : current.reopenReason,
       updatedAt: new Date(),
     });
     this.store.transactions.set(transactionId, updated);
@@ -821,6 +865,7 @@ export class InMemoryTransactionRepository implements TransactionRepository {
       cancelledAt: new Date(),
       cancellationReason: input.cancellationReason ?? null,
       updatedByUserId: input.updatedByUserId ?? null,
+      cancelledByUserId: input.cancelledByUserId ?? null,
       updatedAt: new Date(),
     });
     this.store.transactions.set(transactionId, updated);
@@ -880,6 +925,18 @@ export class InMemoryTransactionRepository implements TransactionRepository {
       items: page.map((transaction) => this.buildSummaryRow(transaction)),
       total: sorted.length,
     };
+  }
+}
+
+export class InMemoryTransactionNumberSequenceRepository implements TransactionNumberSequenceRepository {
+  constructor(private readonly store: InMemoryTransactionStore) {}
+
+  async allocateNext(input: AllocateTransactionNumberSequenceInput): Promise<number> {
+    const dateKey = input.sequenceDate.toISOString().slice(0, 10);
+    const key = `${input.companyId}:${input.direction}:${dateKey}`;
+    const next = (this.store.sequences.get(key) ?? 0) + 1;
+    this.store.sequences.set(key, next);
+    return next;
   }
 }
 

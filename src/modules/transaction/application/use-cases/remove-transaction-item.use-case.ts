@@ -3,8 +3,8 @@ import { ResourceNotFoundError } from '../../../../shared/errors/http-exceptions
 import type { UserRepository } from '../../../user/domain/user.repository.js';
 import type { TransactionRepository } from '../../domain/transaction.repository.js';
 import type { TransactionItemRepository } from '../../domain/transaction-item.repository.js';
-import { assertDraftEditable } from '../../domain/transaction-rules.js';
-import { assertCanManageDraft } from '../policies/transaction-authorization.policy.js';
+import { assertEditable } from '../../domain/transaction-rules.js';
+import { assertCanEditTransaction } from '../policies/transaction-authorization.policy.js';
 import { resolveIsAssigned } from '../services/transaction-access.service.js';
 import { logTransactionAudit } from '../services/transaction-audit.service.js';
 
@@ -18,14 +18,14 @@ export class RemoveTransactionItemUseCase {
   async execute(transactionId: string, itemId: string, auth: AuthorizationContext): Promise<void> {
     const transaction = await this.transactionRepository.findById(transactionId, auth.companyId);
     if (!transaction) throw new ResourceNotFoundError('Transaction not found');
-    assertDraftEditable(transaction);
 
     const isAssigned = await resolveIsAssigned(
       { userRepository: this.userRepository, transactionRepository: this.transactionRepository },
       auth,
       transactionId,
     );
-    assertCanManageDraft(auth, { isAssigned });
+    assertCanEditTransaction(auth, { isAssigned });
+    assertEditable(transaction, auth.role, isAssigned);
 
     const existing = await this.itemRepository.findById(itemId, transactionId);
     if (!existing) throw new ResourceNotFoundError('Transaction item not found');

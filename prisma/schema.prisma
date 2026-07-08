@@ -79,6 +79,8 @@ enum TransactionDirection {
 
 enum TransactionStatus {
   DRAFT
+  READY_FOR_PAYMENT
+  PAID
   CANCELLED
 }
 
@@ -329,6 +331,7 @@ model Transaction {
   companyId           String
   createdByUserId     String
   updatedByUserId     String?
+  transactionNumber   String
   direction           TransactionDirection
   status              TransactionStatus               @default(DRAFT)
   partyName           String
@@ -341,8 +344,16 @@ model Transaction {
   outsideAddress      String?
   tripId              String?
   notes               String?
+  submittedAt         DateTime?
+  submittedByUserId   String?
+  paidAt              DateTime?
+  paidByUserId        String?
   cancellationReason  String?
   cancelledAt         DateTime?
+  cancelledByUserId   String?
+  reopenedAt          DateTime?
+  reopenedByUserId    String?
+  reopenReason        String?
   createdAt           DateTime                        @default(now())
   updatedAt           DateTime                        @updatedAt
   deletedAt           DateTime?
@@ -353,14 +364,28 @@ model Transaction {
   attachments         TransactionAttachment[]
   assignments         TransactionEmployeeAssignment[]
 
+  @@unique([companyId, transactionNumber])
   @@index([companyId, status, deletedAt])
+  @@index([companyId, transactionNumber])
   @@index([companyId, transactionDate])
   @@index([companyId, direction, status])
+  @@index([companyId, submittedAt])
+  @@index([companyId, paidAt])
   @@index([companyId, locationType])
   @@index([companyId, branchId])
   @@index([companyId, warehouseId])
   @@index([companyId, createdByUserId])
   @@index([companyId, deletedAt, transactionDate])
+}
+
+model TransactionNumberSequence {
+  companyId    String
+  direction    TransactionDirection
+  sequenceDate DateTime             @db.Date
+  lastSequence Int                  @default(0)
+
+  @@id([companyId, direction, sequenceDate])
+  @@index([companyId, sequenceDate])
 }
 
 model TransactionItem {

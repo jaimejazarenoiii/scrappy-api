@@ -3,9 +3,9 @@ import { ResourceNotFoundError } from '../../../../shared/errors/http-exceptions
 import type { UserRepository } from '../../../user/domain/user.repository.js';
 import type { TransactionRepository } from '../../domain/transaction.repository.js';
 import type { TransactionAttachmentRepository } from '../../domain/transaction-attachment.repository.js';
-import { assertDraftEditable } from '../../domain/transaction-rules.js';
+import { assertEditable } from '../../domain/transaction-rules.js';
 import type { FileStorage } from '../../infrastructure/file-storage/file-storage.interface.js';
-import { assertCanManageDraft } from '../policies/transaction-authorization.policy.js';
+import { assertCanEditTransaction } from '../policies/transaction-authorization.policy.js';
 import { resolveIsAssigned } from '../services/transaction-access.service.js';
 import { logTransactionAudit } from '../services/transaction-audit.service.js';
 
@@ -24,14 +24,14 @@ export class RemoveTransactionAttachmentUseCase {
   ): Promise<void> {
     const transaction = await this.transactionRepository.findById(transactionId, auth.companyId);
     if (!transaction) throw new ResourceNotFoundError('Transaction not found');
-    assertDraftEditable(transaction);
 
     const isAssigned = await resolveIsAssigned(
       { userRepository: this.userRepository, transactionRepository: this.transactionRepository },
       auth,
       transactionId,
     );
-    assertCanManageDraft(auth, { isAssigned });
+    assertCanEditTransaction(auth, { isAssigned });
+    assertEditable(transaction, auth.role, isAssigned);
 
     const attachment = await this.attachmentRepository.findById(attachmentId, transactionId);
     if (!attachment) throw new ResourceNotFoundError('Transaction attachment not found');
