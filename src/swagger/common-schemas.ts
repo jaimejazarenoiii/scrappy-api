@@ -374,6 +374,21 @@ export const commonSchemas = {
     },
   },
 
+  CompanyLeaveRecord: {
+    allOf: [
+      { $ref: '#/components/schemas/LeaveRecord' },
+      {
+        type: 'object',
+        required: ['firstName', 'lastName', 'employeeNumber'],
+        properties: {
+          firstName: { type: 'string' },
+          lastName: { type: 'string' },
+          employeeNumber: { type: 'string', nullable: true },
+        },
+      },
+    ],
+  },
+
   RequestLeaveBody: {
     type: 'object',
     required: ['leaveType', 'leaveDate'],
@@ -381,6 +396,12 @@ export const commonSchemas = {
       leaveType: { type: 'string', enum: ['HALF_DAY', 'FULL_DAY'] },
       leaveDate: { type: 'string', format: 'date' },
       reason: { type: 'string', maxLength: 500 },
+      employeeId: {
+        type: 'string',
+        format: 'uuid',
+        description:
+          'Target employee. Required for owners; optional for managers creating on behalf.',
+      },
     },
   },
 
@@ -390,6 +411,9 @@ export const commonSchemas = {
     properties: {
       status: { type: 'string', enum: ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'] },
       managerNote: { type: 'string', maxLength: 1000 },
+      leaveType: { type: 'string', enum: ['HALF_DAY', 'FULL_DAY'] },
+      leaveDate: { type: 'string', format: 'date' },
+      reason: { type: 'string', maxLength: 500, nullable: true },
     },
   },
 
@@ -471,6 +495,21 @@ export const commonSchemas = {
     },
   },
 
+  CompanyAttendanceSession: {
+    allOf: [
+      { $ref: '#/components/schemas/AttendanceSession' },
+      {
+        type: 'object',
+        required: ['firstName', 'lastName', 'employeeNumber'],
+        properties: {
+          firstName: { type: 'string' },
+          lastName: { type: 'string' },
+          employeeNumber: { type: 'string', nullable: true },
+        },
+      },
+    ],
+  },
+
   AttendanceStatus: {
     type: 'object',
     required: ['isTimedIn'],
@@ -491,6 +530,85 @@ export const commonSchemas = {
     type: 'object',
     properties: {
       note: { type: 'string', maxLength: 500 },
+    },
+  },
+
+  AttendanceDashboard: {
+    type: 'object',
+    required: ['date', 'summary', 'employees'],
+    properties: {
+      date: { type: 'string', format: 'date' },
+      summary: {
+        type: 'object',
+        properties: {
+          totalEmployees: { type: 'integer' },
+          present: { type: 'integer' },
+          late: { type: 'integer' },
+          absent: { type: 'integer' },
+          onLeave: { type: 'integer' },
+          timedIn: { type: 'integer' },
+        },
+      },
+      employees: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            employeeId: uuid,
+            firstName: { type: 'string' },
+            lastName: { type: 'string' },
+            employeeNumber: { type: 'string', nullable: true },
+            status: {
+              type: 'string',
+              enum: ['ABSENT', 'ON_TIME', 'LATE', 'TIMED_OUT', 'ON_LEAVE'],
+            },
+            isTimedIn: { type: 'boolean' },
+            isLate: { type: 'boolean' },
+            isAbsent: { type: 'boolean' },
+            onLeave: { type: 'boolean' },
+            timeInToday: { ...dateTime, nullable: true },
+            timeOutToday: { ...dateTime, nullable: true },
+            openSession: { ...{ $ref: '#/components/schemas/AttendanceSession' }, nullable: true },
+            leaveToday: { ...{ $ref: '#/components/schemas/LeaveRecord' }, nullable: true },
+          },
+        },
+      },
+    },
+  },
+
+  LeaveDashboard: {
+    type: 'object',
+    required: ['date', 'summary', 'employees'],
+    properties: {
+      date: { type: 'string', format: 'date' },
+      summary: {
+        type: 'object',
+        properties: {
+          totalEmployees: { type: 'integer' },
+          pendingRequests: { type: 'integer' },
+          onLeaveToday: { type: 'integer' },
+          approvedThisWeek: { type: 'integer' },
+        },
+      },
+      employees: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            employeeId: uuid,
+            firstName: { type: 'string' },
+            lastName: { type: 'string' },
+            employeeNumber: { type: 'string', nullable: true },
+            pendingRequests: { type: 'integer' },
+            onLeaveToday: { type: 'boolean' },
+            todayLeave: { ...{ $ref: '#/components/schemas/LeaveRecord' }, nullable: true },
+            pendingLeave: {
+              type: 'array',
+              items: { $ref: '#/components/schemas/LeaveRecord' },
+            },
+          },
+        },
+      },
     },
   },
 
@@ -804,6 +922,149 @@ export const commonSchemas = {
       grandTotal: { type: 'number' },
       paidByDisplayName: { type: 'string' },
       paidAt: dateTime,
+    },
+  },
+  TripStatus: {
+    type: 'string',
+    enum: ['DRAFT', 'STARTED', 'COMPLETED', 'CANCELLED'],
+  },
+  TripMemberRole: {
+    type: 'string',
+    enum: ['DRIVER', 'HELPER', 'BUYER', 'SUPERVISOR'],
+  },
+  TripNumber: {
+    type: 'string',
+    pattern: '^TRIP-\\d{8}-\\d{6}$',
+    example: 'TRIP-20260708-000001',
+  },
+  VehicleSummary: {
+    type: 'object',
+    required: ['id', 'plateNumber', 'status'],
+    properties: {
+      id: uuid,
+      plateNumber: { type: 'string' },
+      description: { type: 'string', nullable: true },
+      status: { type: 'string', enum: ['AVAILABLE', 'IN_USE', 'MAINTENANCE', 'INACTIVE'] },
+    },
+  },
+  TripMember: {
+    type: 'object',
+    required: ['id', 'tripId', 'employeeId', 'role'],
+    properties: {
+      id: uuid,
+      tripId: uuid,
+      employeeId: uuid,
+      role: { $ref: '#/components/schemas/TripMemberRole' },
+      createdAt: dateTime,
+      updatedAt: dateTime,
+    },
+  },
+  TripSummary: {
+    type: 'object',
+    required: [
+      'id',
+      'companyId',
+      'tripNumber',
+      'status',
+      'scheduledStart',
+      'vehicle',
+      'origin',
+      'destination',
+    ],
+    properties: {
+      id: uuid,
+      companyId: uuid,
+      tripNumber: { $ref: '#/components/schemas/TripNumber' },
+      vehicle: { $ref: '#/components/schemas/VehicleSummary' },
+      status: { $ref: '#/components/schemas/TripStatus' },
+      scheduledStart: { type: 'string', format: 'date-time' },
+      actualStart: { ...dateTime, nullable: true },
+      actualEnd: { ...dateTime, nullable: true },
+      origin: { type: 'string' },
+      destination: { type: 'string' },
+      notes: { type: 'string', nullable: true },
+    },
+  },
+  TripDetail: {
+    allOf: [{ $ref: '#/components/schemas/TripSummary' }],
+    type: 'object',
+    required: ['members'],
+    properties: {
+      members: { type: 'array', items: { $ref: '#/components/schemas/TripMember' } },
+    },
+  },
+  CreateTripRequest: {
+    type: 'object',
+    required: ['vehicleId', 'scheduledStart', 'origin', 'destination'],
+    properties: {
+      vehicleId: uuid,
+      scheduledStart: { type: 'string', format: 'date-time' },
+      origin: { type: 'string', minLength: 1, maxLength: 500 },
+      destination: { type: 'string', minLength: 1, maxLength: 500 },
+      notes: { type: 'string', maxLength: 2000, nullable: true },
+      members: {
+        type: 'array',
+        items: { $ref: '#/components/schemas/TripMemberCreate' },
+      },
+    },
+  },
+  TripMemberCreate: {
+    type: 'object',
+    required: ['employeeId', 'role'],
+    properties: {
+      employeeId: uuid,
+      role: { $ref: '#/components/schemas/TripMemberRole' },
+    },
+  },
+  UpdateTripRequest: {
+    type: 'object',
+    minProperties: 1,
+    properties: {
+      vehicleId: uuid,
+      scheduledStart: { type: 'string', format: 'date-time' },
+      origin: { type: 'string', minLength: 1, maxLength: 500 },
+      destination: { type: 'string', minLength: 1, maxLength: 500 },
+      notes: { type: 'string', maxLength: 2000, nullable: true },
+    },
+  },
+  ArchiveTripRequest: {
+    type: 'object',
+    properties: {
+      reason: { type: 'string', maxLength: 500, nullable: true },
+    },
+  },
+  StartTripRequest: {
+    type: 'object',
+    properties: {
+      note: { type: 'string', maxLength: 500 },
+    },
+  },
+  CompleteTripRequest: {
+    type: 'object',
+    properties: {
+      note: { type: 'string', maxLength: 500 },
+    },
+  },
+  CancelTripRequest: {
+    type: 'object',
+    required: ['reason'],
+    properties: {
+      reason: { type: 'string', minLength: 1, maxLength: 1000 },
+    },
+  },
+  AddTripMemberRequest: {
+    type: 'object',
+    required: ['employeeId', 'role'],
+    properties: {
+      employeeId: uuid,
+      role: { $ref: '#/components/schemas/TripMemberRole' },
+    },
+  },
+  UpdateTripMemberRequest: {
+    type: 'object',
+    required: ['role'],
+    properties: {
+      role: { $ref: '#/components/schemas/TripMemberRole' },
     },
   },
 };

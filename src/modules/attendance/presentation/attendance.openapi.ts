@@ -57,7 +57,15 @@ export const attendanceOpenApiPaths = {
         queryParam('fromDate', { type: 'string', format: 'date' }),
         queryParam('toDate', { type: 'string', format: 'date' }),
       ],
-      responses: { ...paginatedListResponse('AttendanceSession', 'Company attendance') },
+      responses: { ...paginatedListResponse('CompanyAttendanceSession', 'Company attendance') },
+    }),
+  },
+  '/api/v1/workforce/attendance/dashboard': {
+    get: protectedOperation({
+      tags: ['Attendance'],
+      summary: 'Attendance dashboard for owners and managers',
+      parameters: [queryParam('date', { type: 'string', format: 'date' })],
+      responses: { ...successResponse('AttendanceDashboard', 'Attendance dashboard') },
     }),
   },
   '/api/v1/workforce/attendance/{attendanceId}': {

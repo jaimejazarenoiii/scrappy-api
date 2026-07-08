@@ -11,7 +11,7 @@ export const leaveOpenApiPaths = {
   '/api/v1/workforce/leave': {
     post: protectedOperation({
       tags: ['Leave'],
-      summary: 'Request leave',
+      summary: 'Request leave (self-service or on behalf of an employee)',
       requestBody: jsonRequestBody('RequestLeaveBody'),
       responses: { ...successResponse('LeaveRecord', 'Leave record created', '201') },
     }),
@@ -48,7 +48,15 @@ export const leaveOpenApiPaths = {
         queryParam('fromDate', { type: 'string', format: 'date' }),
         queryParam('toDate', { type: 'string', format: 'date' }),
       ],
-      responses: { ...paginatedListResponse('LeaveRecord', 'Company leave records') },
+      responses: { ...paginatedListResponse('CompanyLeaveRecord', 'Company leave records') },
+    }),
+  },
+  '/api/v1/workforce/leave/dashboard': {
+    get: protectedOperation({
+      tags: ['Leave'],
+      summary: 'Leave dashboard for owners and managers',
+      parameters: [queryParam('date', { type: 'string', format: 'date' })],
+      responses: { ...successResponse('LeaveDashboard', 'Leave dashboard') },
     }),
   },
   '/api/v1/workforce/leave/{leaveId}': {

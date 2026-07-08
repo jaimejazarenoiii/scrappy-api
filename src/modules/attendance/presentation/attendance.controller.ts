@@ -6,6 +6,7 @@ import type { TimeOutUseCase } from '../application/use-cases/time-out.use-case.
 import type { GetAttendanceStatusUseCase } from '../application/use-cases/get-attendance-status.use-case.js';
 import type { ListMyAttendanceUseCase } from '../application/use-cases/list-my-attendance.use-case.js';
 import type { ListCompanyAttendanceUseCase } from '../application/use-cases/list-company-attendance.use-case.js';
+import type { GetAttendanceDashboardUseCase } from '../application/use-cases/get-attendance-dashboard.use-case.js';
 import type { ManageAttendanceUseCase } from '../application/use-cases/manage-attendance.use-case.js';
 
 export class AttendanceController {
@@ -15,6 +16,7 @@ export class AttendanceController {
     private readonly getAttendanceStatusUseCase: GetAttendanceStatusUseCase,
     private readonly listMyAttendanceUseCase: ListMyAttendanceUseCase,
     private readonly listCompanyAttendanceUseCase: ListCompanyAttendanceUseCase,
+    private readonly getAttendanceDashboardUseCase: GetAttendanceDashboardUseCase,
     private readonly manageAttendanceUseCase: ManageAttendanceUseCase,
   ) {}
 
@@ -70,6 +72,21 @@ export class AttendanceController {
         req.validatedQuery as ListAttendanceQuery,
       );
       res.json(success(result.items, { ...result.meta }));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  dashboard: RequestHandler = async (req, res, next) => {
+    try {
+      res.json(
+        success(
+          await this.getAttendanceDashboardUseCase.execute(
+            req.auth!.companyId,
+            (req.validatedQuery as { date?: string } | undefined)?.date,
+          ),
+        ),
+      );
     } catch (error) {
       next(error);
     }

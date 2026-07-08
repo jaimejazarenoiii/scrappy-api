@@ -31,5 +31,10 @@ describe('leave request api', () => {
     const companyList = await request(app).get('/api/v1/workforce/leave/company').set(auth);
     expect(companyList.status).toBe(200);
     expect(companyList.body.data.length).toBeGreaterThanOrEqual(1);
+    expect(companyList.body.data[0]).toMatchObject({
+      firstName: 'Jane',
+      lastName: 'Worker',
+      employeeId: employee.employeeId,
+    });
   });
 });

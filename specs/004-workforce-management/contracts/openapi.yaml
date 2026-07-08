@@ -68,6 +68,16 @@ components:
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
 
+    CompanyAttendanceSession:
+      allOf:
+        - { $ref: '#/components/schemas/AttendanceSession' }
+        - type: object
+          required: [firstName, lastName, employeeNumber]
+          properties:
+            firstName: { type: string }
+            lastName: { type: string }
+            employeeNumber: { type: string, nullable: true }
+
     AttendanceStatus:
       type: object
       required: [isTimedIn]
@@ -108,6 +118,16 @@ components:
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
 
+    CompanyLeaveRecord:
+      allOf:
+        - { $ref: '#/components/schemas/LeaveRecord' }
+        - type: object
+          required: [firstName, lastName, employeeNumber]
+          properties:
+            firstName: { type: string }
+            lastName: { type: string }
+            employeeNumber: { type: string, nullable: true }
+
     RequestLeaveBody:
       type: object
       required: [leaveType, leaveDate]
@@ -115,6 +135,10 @@ components:
         leaveType: { type: string, enum: [HALF_DAY, FULL_DAY] }
         leaveDate: { type: string, format: date }
         reason: { type: string, maxLength: 500 }
+        employeeId:
+          type: string
+          format: uuid
+          description: Target employee. Required for owners; optional for managers creating on behalf.
 
     ManageLeaveRequest:
       type: object
@@ -122,6 +146,9 @@ components:
       properties:
         status: { type: string, enum: [PENDING, APPROVED, REJECTED, CANCELLED] }
         managerNote: { type: string, maxLength: 1000 }
+        leaveType: { type: string, enum: [HALF_DAY, FULL_DAY] }
+        leaveDate: { type: string, format: date }
+        reason: { type: string, maxLength: 500, nullable: true }
 
     CashAdvance:
       type: object
@@ -305,7 +332,17 @@ paths:
         - { name: toDate, in: query, schema: { type: string, format: date } }
       responses:
         '200':
-          description: Paginated company attendance
+          description: Paginated company attendance enriched with employee firstName, lastName, and employeeNumber
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/ApiSuccessEnvelope' }
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/CompanyAttendanceSession' }
 
   /workforce/attendance/{attendanceId}:
     patch:
@@ -326,7 +363,7 @@ paths:
   /workforce/leave:
     post:
       tags: [Leave]
-      summary: Request leave
+      summary: Request leave (self-service or on behalf of an employee)
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -362,7 +399,17 @@ paths:
         - { name: limit, in: query, schema: { type: integer, default: 20 } }
       responses:
         '200':
-          description: Paginated company leave records
+          description: Paginated company leave records enriched with employee firstName, lastName, and employeeNumber
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/ApiSuccessEnvelope' }
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/CompanyLeaveRecord' }
 
   /workforce/leave/{leaveId}:
     patch:

@@ -2,6 +2,7 @@ import { assertOpenSessionExists } from '../../domain/attendance-rules.js';
 import type { AttendanceSessionRepository } from '../../domain/attendance-session.repository.js';
 import type { UserRepository } from '../../../user/domain/user.repository.js';
 import { resolveActingEmployeeId } from '../../../../shared/workforce/employee-context.js';
+import { assertWorkforceTrackingRequired } from '../../../../shared/workforce/workforce-role-policy.js';
 import { ResourceNotFoundError } from '../../../../shared/errors/http-exceptions.js';
 import type { TimeOutRequestDto } from '../dto/time-in.request.js';
 import type { AttendanceResponseDto } from '../dto/attendance.response.js';
@@ -24,6 +25,7 @@ export class TimeOutUseCase {
   ): Promise<AttendanceResponseDto> {
     const user = await this.userRepository.findById(userId, companyId);
     if (!user) throw new ResourceNotFoundError('User not found');
+    assertWorkforceTrackingRequired(user);
     const employeeId = resolveActingEmployeeId(user);
     const openSession = await this.attendanceRepository.findOpenSession(employeeId, companyId);
     assertOpenSessionExists(openSession);

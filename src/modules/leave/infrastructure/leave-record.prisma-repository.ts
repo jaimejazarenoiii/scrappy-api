@@ -50,13 +50,19 @@ export class LeaveRecordPrismaRepository implements LeaveRecordRepository {
     return record ? toLeaveDomain(record) : null;
   }
 
-  async findOverlapping(employeeId: string, companyId: string, leaveDate: Date) {
+  async findOverlapping(
+    employeeId: string,
+    companyId: string,
+    leaveDate: Date,
+    excludeLeaveId?: string,
+  ) {
     const record = await prisma.leaveRecord.findFirst({
       where: {
         employeeId,
         companyId,
         leaveDate,
         status: { not: 'CANCELLED' },
+        ...(excludeLeaveId ? { id: { not: excludeLeaveId } } : {}),
       },
     });
     return record ? toLeaveDomain(record) : null;
@@ -70,6 +76,9 @@ export class LeaveRecordPrismaRepository implements LeaveRecordRepository {
       data: {
         ...(input.status !== undefined && { status: input.status }),
         ...(input.managerNote !== undefined && { managerNote: input.managerNote }),
+        ...(input.leaveType !== undefined && { leaveType: input.leaveType }),
+        ...(input.leaveDate !== undefined && { leaveDate: input.leaveDate }),
+        ...(input.reason !== undefined && { reason: input.reason }),
         updatedByUserId: input.updatedByUserId ?? null,
       },
     });

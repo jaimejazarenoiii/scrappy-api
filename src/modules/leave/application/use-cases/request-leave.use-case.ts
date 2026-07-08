@@ -7,10 +7,19 @@ import type { LeaveRecordRepository } from '../../domain/leave-record.repository
 import type { EmployeeRepository } from '../../../employee/domain/employee.repository.js';
 import type { UserRepository } from '../../../user/domain/user.repository.js';
 import { resolveActingEmployeeId } from '../../../../shared/workforce/employee-context.js';
-import { ResourceNotFoundError } from '../../../../shared/errors/http-exceptions.js';
+import {
+  assertWorkforceTrackingRequired,
+  canManageWorkforceOnBehalf,
+} from '../../../../shared/workforce/workforce-role-policy.js';
+import {
+  ForbiddenError,
+  ResourceNotFoundError,
+  ValidationAppError,
+} from '../../../../shared/errors/http-exceptions.js';
 import type { RequestLeaveRequestDto } from '../dto/request-leave.request.js';
 import type { LeaveResponseDto } from '../dto/leave.response.js';
 import { logLeaveAudit } from '../services/leave-audit.service.js';
+import type { UserEntity } from '../../../user/domain/user.entity.js';
 
 function toResponse(record: { toPrimitives(): LeaveResponseDto }): LeaveResponseDto {
   return record.toPrimitives();
@@ -30,7 +39,9 @@ export class RequestLeaveUseCase {
   ): Promise<LeaveResponseDto> {
     const user = await this.userRepository.findById(userId, companyId);
     if (!user) throw new ResourceNotFoundError('User not found');
-    const employeeId = resolveActingEmployeeId(user);
+
+    const employeeId = this.resolveTargetEmployeeId(user, input.employeeId);
+
     const employee = await this.employeeRepository.findById(employeeId, companyId);
     if (!employee) throw new ResourceNotFoundError('Employee not found');
     assertEmployeeCanRequestLeave(employee);
@@ -59,8 +70,27 @@ export class RequestLeaveUseCase {
       resourceType: 'leave_record',
       resourceId: record.id,
       actorUserId: userId,
+      metadata: {
+        onBehalf: input.employeeId !== undefined,
+      },
     });
 
     return toResponse(record);
+  }
+
+  private resolveTargetEmployeeId(user: UserEntity, requestedEmployeeId?: string): string {
+    if (requestedEmployeeId) {
+      if (!canManageWorkforceOnBehalf(user.role)) {
+        throw new ForbiddenError('You are not allowed to request leave for another employee.');
+      }
+      return requestedEmployeeId;
+    }
+
+    if (user.role === 'OWNER') {
+      throw new ValidationAppError('employeeId is required when creating leave as an owner.');
+    }
+
+    assertWorkforceTrackingRequired(user);
+    return resolveActingEmployeeId(user);
   }
 }

@@ -130,4 +130,22 @@ describe('transaction item use cases', () => {
       }),
     ).rejects.toThrow(LifecycleConflictError);
   });
+
+  it('allows managers to add items on ready-for-payment transactions', async () => {
+    const f = await buildFixture();
+    await f.transactionRepository.update(f.transactionId, f.companyId, {
+      status: 'READY_FOR_PAYMENT',
+      submittedAt: new Date(),
+      submittedByUserId: f.auth.userId,
+    });
+
+    const item = await f.addItem.execute(f.transactionId, f.auth, {
+      materialName: 'Aluminum',
+      weight: 2,
+      unit: 'KG',
+      price: 50,
+    });
+    expect(item.materialName).toBe('Aluminum');
+    expect(item.total).toBe(100);
+  });
 });

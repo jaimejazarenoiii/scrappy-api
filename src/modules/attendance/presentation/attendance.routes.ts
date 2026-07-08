@@ -3,6 +3,7 @@ import { authorize } from '../../../middleware/authorization.middleware.js';
 import { validate } from '../../../middleware/validation.middleware.js';
 import type { AttendanceController } from './attendance.controller.js';
 import {
+  attendanceDashboardQuerySchema,
   attendanceIdParamsSchema,
   listAttendanceQuerySchema,
   manageAttendanceSchema,
@@ -15,13 +16,13 @@ export function createAttendanceRoutes(controller: AttendanceController): Router
 
   router.post(
     '/workforce/attendance/time-in',
-    authorize(['OWNER', 'MANAGER', 'EMPLOYEE']),
+    authorize(['MANAGER', 'EMPLOYEE']),
     validate(timeInSchema),
     controller.timeIn,
   );
   router.post(
     '/workforce/attendance/time-out',
-    authorize(['OWNER', 'MANAGER', 'EMPLOYEE']),
+    authorize(['MANAGER', 'EMPLOYEE']),
     validate(timeOutSchema),
     controller.timeOut,
   );
@@ -41,6 +42,12 @@ export function createAttendanceRoutes(controller: AttendanceController): Router
     authorize(['OWNER', 'MANAGER']),
     validate(listAttendanceQuerySchema, 'query'),
     controller.listCompany,
+  );
+  router.get(
+    '/workforce/attendance/dashboard',
+    authorize(['OWNER', 'MANAGER']),
+    validate(attendanceDashboardQuerySchema, 'query'),
+    controller.dashboard,
   );
   router.patch(
     '/workforce/attendance/:attendanceId',

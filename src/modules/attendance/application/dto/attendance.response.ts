@@ -19,3 +19,9 @@ export interface AttendanceStatusResponseDto {
   isTimedIn: boolean;
   openSession: AttendanceResponseDto | null;
 }
+
+export interface CompanyAttendanceResponseDto extends AttendanceResponseDto {
+  firstName: string;
+  lastName: string;
+  employeeNumber: string | null;
+}

@@ -33,3 +33,7 @@ export const attendanceIdParamsSchema = z.object({
 });
 
 export const listAttendanceQuerySchema = attendanceListQuerySchema;
+
+export const attendanceDashboardQuerySchema = z.object({
+  date: z.string().date().optional(),
+});

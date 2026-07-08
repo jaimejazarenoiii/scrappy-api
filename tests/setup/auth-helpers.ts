@@ -95,3 +95,87 @@ export async function createLinkedEmployeeUser(
     userId,
   };
 }
+
+export async function createLinkedManagerUser(
+  app: Express,
+  userRepository: {
+    create: (input: {
+      id: string;
+      companyId: string;
+      email: string;
+      passwordHash: string;
+      role: 'MANAGER';
+    }) => Promise<{ id: string }>;
+    linkEmployee: (userId: string, employeeId: string) => Promise<unknown>;
+  },
+  employeeRepository: {
+    create: (input: {
+      id: string;
+      companyId: string;
+      firstName: string;
+      lastName: string;
+      weeklySalary: number;
+    }) => Promise<{ id: string }>;
+    linkUser: (employeeId: string, companyId: string, userId: string) => Promise<unknown>;
+  },
+  companyId: string,
+  email = 'manager-linked@scrappy.test',
+) {
+  const userId = randomUUID();
+  const employeeId = randomUUID();
+  await employeeRepository.create({
+    id: employeeId,
+    companyId,
+    firstName: 'Mark',
+    lastName: 'Manager',
+    weeklySalary: 5000,
+  });
+  await userRepository.create({
+    id: userId,
+    companyId,
+    email,
+    passwordHash: 'hashed:password123',
+    role: 'MANAGER',
+  });
+  await employeeRepository.linkUser(employeeId, companyId, userId);
+  await userRepository.linkEmployee(userId, employeeId);
+  const login = await request(app)
+    .post('/api/v1/auth/login')
+    .send({ identifier: email, password: 'password123' });
+  return {
+    auth: { Authorization: `Bearer ${login.body.data.accessToken}` },
+    employeeId,
+    userId,
+  };
+}
+
+export async function createManagerUser(
+  app: Express,
+  userRepository: {
+    create: (input: {
+      id: string;
+      companyId: string;
+      email: string;
+      passwordHash: string;
+      role: 'MANAGER';
+    }) => Promise<{ id: string }>;
+  },
+  companyId: string,
+  email = 'manager@scrappy.test',
+) {
+  const userId = randomUUID();
+  await userRepository.create({
+    id: userId,
+    companyId,
+    email,
+    passwordHash: 'hashed:password123',
+    role: 'MANAGER',
+  });
+  const login = await request(app)
+    .post('/api/v1/auth/login')
+    .send({ identifier: email, password: 'password123' });
+  return {
+    auth: { Authorization: `Bearer ${login.body.data.accessToken}` },
+    userId,
+  };
+}

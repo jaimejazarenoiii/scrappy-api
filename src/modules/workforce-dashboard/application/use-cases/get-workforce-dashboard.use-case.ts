@@ -8,6 +8,7 @@ import type { PayrollRecordRepository as PayrollRepository } from '../../../payr
 import type { PayrollResponseDto } from '../../../payroll/application/dto/payroll.response.js';
 import type { UserRepository } from '../../../user/domain/user.repository.js';
 import { resolveActingEmployeeId } from '../../../../shared/workforce/employee-context.js';
+import { isWorkforceTrackingRequired } from '../../../../shared/workforce/workforce-role-policy.js';
 import { ResourceNotFoundError } from '../../../../shared/errors/http-exceptions.js';
 import type { WorkforceDashboardResponseDto } from '../dto/workforce-dashboard.response.js';
 import { DashboardVisibilityService } from '../services/dashboard-visibility.service.js';
@@ -49,6 +50,25 @@ export class GetWorkforceDashboardUseCase {
     const user = await this.userRepository.findById(userId, companyId);
     if (!user) throw new ResourceNotFoundError('User not found');
 
+    if (!isWorkforceTrackingRequired(user.role)) {
+      return {
+        attendanceStatus: {
+          isTimedIn: false,
+          openSession: null,
+        },
+        attendanceSummary: [],
+        leaveSummary: [],
+        cashAdvanceSummary: {
+          outstandingBalance: 0,
+          recentAdvances: [],
+        },
+        payrollSummary: [],
+        tripsSummary: [],
+        transactionsSummary: [],
+        visibility: this.dashboardVisibilityService.resolve(null, user.role),
+      };
+    }
+
     const employeeId = resolveActingEmployeeId(user);
     const openSession = await this.attendanceRepository.findOpenSession(employeeId, companyId);
 
@@ -89,7 +109,7 @@ export class GetWorkforceDashboardUseCase {
       payrollSummary: payrollResult.items.map(toPayrollResponse),
       tripsSummary: [],
       transactionsSummary: [],
-      visibility: this.dashboardVisibilityService.resolve(openSession),
+      visibility: this.dashboardVisibilityService.resolve(openSession, user.role),
     };
   }
 }

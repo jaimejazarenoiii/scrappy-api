@@ -12,3 +12,9 @@ export interface LeaveResponseDto {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface CompanyLeaveResponseDto extends LeaveResponseDto {
+  firstName: string;
+  lastName: string;
+  employeeNumber: string | null;
+}

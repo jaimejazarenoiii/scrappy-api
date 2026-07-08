@@ -94,6 +94,20 @@ enum TransactionAttachmentType {
   PHOTO
 }
 
+enum TripStatus {
+  DRAFT
+  STARTED
+  COMPLETED
+  CANCELLED
+}
+
+enum TripMemberRole {
+  DRIVER
+  HELPER
+  BUYER
+  SUPERVISOR
+}
+
 enum TransactionItemUnit {
   KG
   G
@@ -125,6 +139,7 @@ model Company {
   cashAdvances       CashAdvance[]
   payrollRecords     PayrollRecord[]
   transactions       Transaction[]
+  trips              Trip[]
 }
 
 model User {
@@ -168,6 +183,7 @@ model Employee {
   cashAdvances           CashAdvance[]
   payrollRecords         PayrollRecord[]
   transactionAssignments TransactionEmployeeAssignment[]
+  tripMembers           TripMember[]
 
   @@unique([companyId, employeeNumber])
   @@index([companyId, lastName])
@@ -235,6 +251,7 @@ model Vehicle {
   createdByUserId String?
   updatedByUserId String?
   company         Company       @relation(fields: [companyId], references: [id])
+  trips           Trip[]
 
   @@index([companyId, status])
   @@index([companyId, deletedAt])
@@ -360,6 +377,7 @@ model Transaction {
   company             Company                         @relation(fields: [companyId], references: [id])
   branch              Branch?                         @relation(fields: [branchId], references: [id])
   warehouse           Warehouse?                      @relation(fields: [warehouseId], references: [id])
+  trip                Trip?                           @relation(fields: [tripId], references: [id], onDelete: SetNull)
   items               TransactionItem[]
   attachments         TransactionAttachment[]
   assignments         TransactionEmployeeAssignment[]
@@ -431,4 +449,65 @@ model TransactionEmployeeAssignment {
   @@id([transactionId, employeeId])
   @@index([employeeId, transactionId])
   @@index([employeeId])
+}
+
+model Trip {
+  id                 String      @id @default(uuid())
+  companyId          String
+  tripNumber        String
+  vehicleId          String
+  status             TripStatus  @default(DRAFT)
+  scheduledStart    DateTime
+  actualStart       DateTime?
+  actualEnd         DateTime?
+  origin             String
+  destination        String
+  notes              String?
+
+  createdByUserId      String?
+  updatedByUserId      String?
+  startedByUserId      String?
+  completedByUserId    String?
+  cancelledByUserId    String?
+  cancellationReason   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  company Company @relation(fields: [companyId], references: [id])
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+
+  members TripMember[]
+  transactions Transaction[]
+
+  @@index([companyId, status, deletedAt])
+  @@index([companyId, scheduledStart])
+  @@index([companyId, tripNumber])
+  @@unique([companyId, tripNumber])
+}
+
+model TripMember {
+  id          String           @id @default(uuid())
+  tripId      String
+  employeeId  String
+  role        TripMemberRole
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@unique([tripId, employeeId])
+  @@index([tripId])
+  @@index([employeeId])
+}
+
+model TripNumberSequence {
+  companyId    String
+  sequenceDate DateTime             @db.Date
+  lastSequence Int                  @default(0)
+
+  @@id([companyId, sequenceDate])
+  @@index([companyId, sequenceDate])
 }

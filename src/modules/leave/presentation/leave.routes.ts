@@ -3,6 +3,7 @@ import { authorize } from '../../../middleware/authorization.middleware.js';
 import { validate } from '../../../middleware/validation.middleware.js';
 import type { LeaveController } from './leave.controller.js';
 import {
+  leaveDashboardQuerySchema,
   leaveIdParamsSchema,
   listLeaveQuerySchema,
   manageLeaveSchema,
@@ -29,6 +30,12 @@ export function createLeaveRoutes(controller: LeaveController): Router {
     authorize(['OWNER', 'MANAGER']),
     validate(listLeaveQuerySchema, 'query'),
     controller.listCompany,
+  );
+  router.get(
+    '/workforce/leave/dashboard',
+    authorize(['OWNER', 'MANAGER']),
+    validate(leaveDashboardQuerySchema, 'query'),
+    controller.dashboard,
   );
   router.patch(
     '/workforce/leave/:leaveId',

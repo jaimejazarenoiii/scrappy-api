@@ -4,6 +4,7 @@ import type { AttendanceSessionRepository } from '../../domain/attendance-sessio
 import type { EmployeeRepository } from '../../../employee/domain/employee.repository.js';
 import type { UserRepository } from '../../../user/domain/user.repository.js';
 import { resolveActingEmployeeId } from '../../../../shared/workforce/employee-context.js';
+import { assertWorkforceTrackingRequired } from '../../../../shared/workforce/workforce-role-policy.js';
 import { ResourceNotFoundError } from '../../../../shared/errors/http-exceptions.js';
 import type { TimeInRequestDto } from '../dto/time-in.request.js';
 import type { AttendanceResponseDto } from '../dto/attendance.response.js';
@@ -27,6 +28,7 @@ export class TimeInUseCase {
   ): Promise<AttendanceResponseDto> {
     const user = await this.userRepository.findById(userId, companyId);
     if (!user) throw new ResourceNotFoundError('User not found');
+    assertWorkforceTrackingRequired(user);
     const employeeId = resolveActingEmployeeId(user);
     const employee = await this.employeeRepository.findById(employeeId, companyId);
     if (!employee) throw new ResourceNotFoundError('Employee not found');

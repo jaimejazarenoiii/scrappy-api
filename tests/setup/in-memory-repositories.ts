@@ -247,6 +247,14 @@ export class InMemoryEmployeeRepository implements EmployeeRepository {
       (employee) => employee.companyId === companyId && employee.isActive(),
     );
   }
+
+  async findByIds(employeeIds: string[], companyId: string): Promise<EmployeeEntity[]> {
+    if (employeeIds.length === 0) return [];
+    const idSet = new Set(employeeIds);
+    return [...this.employees.values()].filter(
+      (employee) => idSet.has(employee.id) && employee.companyId === companyId,
+    );
+  }
 }
 
 export class InMemorySessionRepository implements SessionRepository {
@@ -1254,11 +1262,17 @@ export class InMemoryLeaveRepository implements LeaveRecordRepository {
     return record;
   }
 
-  async findOverlapping(employeeId: string, companyId: string, leaveDate: Date) {
+  async findOverlapping(
+    employeeId: string,
+    companyId: string,
+    leaveDate: Date,
+    excludeLeaveId?: string,
+  ) {
     const target = leaveDate.toISOString().slice(0, 10);
     return (
       [...this.records.values()].find((record) => {
         if (record.employeeId !== employeeId || record.companyId !== companyId) return false;
+        if (excludeLeaveId && record.id === excludeLeaveId) return false;
         if (record.toPrimitives().status === 'CANCELLED') return false;
         return record.toPrimitives().leaveDate.toISOString().slice(0, 10) === target;
       }) ?? null

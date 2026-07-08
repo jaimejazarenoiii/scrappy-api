@@ -239,12 +239,12 @@ pagination metadata in `meta`. Base path: `/api/v1/workforce`.
 
 ### Leave
 
-| Method | URI                          | Purpose       | Auth Roles     |
-| ------ | ---------------------------- | ------------- | -------------- |
-| POST   | `/workforce/leave`           | Request leave | EMPLOYEE       |
-| GET    | `/workforce/leave`           | My history    | EMPLOYEE       |
-| GET    | `/workforce/leave/company`   | Company list  | OWNER, MANAGER |
-| PATCH  | `/workforce/leave/{leaveId}` | Manage leave  | OWNER, MANAGER |
+| Method | URI                          | Purpose       | Auth Roles               |
+| ------ | ---------------------------- | ------------- | ------------------------ |
+| POST   | `/workforce/leave`           | Request leave | OWNER, MANAGER, EMPLOYEE |
+| GET    | `/workforce/leave`           | My history    | EMPLOYEE                 |
+| GET    | `/workforce/leave/company`   | Company list  | OWNER, MANAGER           |
+| PATCH  | `/workforce/leave/{leaveId}` | Manage leave  | OWNER, MANAGER           |
 
 ### Cash Advances
 

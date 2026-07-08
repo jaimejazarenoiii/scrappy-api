@@ -19,6 +19,7 @@ import {
   assertItemTotal,
   assertOperationallyReady,
 } from '../../domain/transaction-rules.js';
+import { isOperationallyReadyForRole } from '../../../../shared/workforce/operational-readiness.js';
 import {
   buildTransactionDetailResponse,
   type TransactionDetailResponseDto,
@@ -49,6 +50,8 @@ export class CreateTransactionUseCase {
       companyId,
       userId,
     );
+    const actingUser = await this.userRepository.findById(userId, companyId);
+    if (!actingUser) throw new ResourceNotFoundError('User not found');
     const actingEmployee = await this.employeeRepository.findById(actingEmployeeId, companyId);
     if (!actingEmployee) throw new ResourceNotFoundError('Employee not found');
 
@@ -56,7 +59,9 @@ export class CreateTransactionUseCase {
       actingEmployeeId,
       companyId,
     );
-    assertOperationallyReady(openSession);
+    if (!isOperationallyReadyForRole(openSession, actingUser.role)) {
+      assertOperationallyReady(openSession);
+    }
 
     const direction = toCanonicalDirection(input.direction);
 

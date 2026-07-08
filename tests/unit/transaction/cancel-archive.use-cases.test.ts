@@ -76,6 +76,20 @@ describe('CancelTransactionUseCase', () => {
       LifecycleConflictError,
     );
   });
+
+  it('rejects cancelling a paid transaction', async () => {
+    const f = await buildFixture();
+    await f.transactionRepository.update(f.transactionId, f.companyId, {
+      status: 'PAID',
+      submittedAt: new Date(),
+      submittedByUserId: f.auth.userId,
+      paidAt: new Date(),
+      paidByUserId: f.auth.userId,
+    });
+    await expect(f.cancel.execute(f.transactionId, f.auth, {})).rejects.toThrow(
+      LifecycleConflictError,
+    );
+  });
 });
 
 describe('ArchiveTransactionUseCase', () => {

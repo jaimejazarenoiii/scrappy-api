@@ -317,7 +317,7 @@ access, forbidden role actions, not found, and business rule conflicts.
   - Method: `GET`
   - URI: `/api/v1/workforce/attendance/company`
   - Request: optional employee filter, date range, and pagination parameters.
-  - Response: Collection of attendance records within the Company.
+  - Response: Collection of attendance records within the Company, each including `firstName`, `lastName`, and `employeeNumber`.
   - Errors: unauthenticated, forbidden for Employee role, validation error.
 
 - **Manage Attendance Record (Manager/Owner)**
@@ -332,10 +332,10 @@ access, forbidden role actions, not found, and business rule conflicts.
 #### Leave
 
 - **Request Leave**
-  - Purpose: Create a leave request for the authenticated Employee.
+  - Purpose: Create a leave request for the authenticated Employee, or on behalf of another Employee when authorized.
   - Method: `POST`
   - URI: `/api/v1/workforce/leave`
-  - Request: leave type (`HALF_DAY` or `FULL_DAY`), leave date, optional reason.
+  - Request: leave type (`HALF_DAY` or `FULL_DAY`), leave date, optional reason, and optional `employeeId` (required for owners; optional for managers creating on behalf).
   - Response: Created leave record.
   - Errors: validation error, overlapping leave conflict, unauthenticated, forbidden.
 
@@ -352,14 +352,14 @@ access, forbidden role actions, not found, and business rule conflicts.
   - Method: `GET`
   - URI: `/api/v1/workforce/leave/company`
   - Request: optional employee filter, status filter, date range, pagination.
-  - Response: Collection of leave records within the Company.
+  - Response: Collection of leave records within the Company, each including `firstName`, `lastName`, and `employeeNumber`.
   - Errors: unauthenticated, forbidden for Employee role.
 
 - **Manage Leave Record (Manager/Owner)**
   - Purpose: Update leave status or details for a Company Employee.
   - Method: `PATCH`
   - URI: `/api/v1/workforce/leave/{leaveId}`
-  - Request: at least one mutable leave field (for example status or manager note).
+  - Request: at least one mutable leave field (for example status, manager note, leave type, leave date, or reason).
   - Response: Updated leave record.
   - Errors: not found, forbidden, validation error, lifecycle conflict.
 

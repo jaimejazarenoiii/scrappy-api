@@ -4,6 +4,7 @@ import type { ListLeaveQuery } from '../domain/leave-record.repository.js';
 import type { RequestLeaveUseCase } from '../application/use-cases/request-leave.use-case.js';
 import type { ListMyLeaveUseCase } from '../application/use-cases/list-my-leave.use-case.js';
 import type { ListCompanyLeaveUseCase } from '../application/use-cases/list-company-leave.use-case.js';
+import type { GetLeaveDashboardUseCase } from '../application/use-cases/get-leave-dashboard.use-case.js';
 import type { ManageLeaveUseCase } from '../application/use-cases/manage-leave.use-case.js';
 
 export class LeaveController {
@@ -11,6 +12,7 @@ export class LeaveController {
     private readonly requestLeaveUseCase: RequestLeaveUseCase,
     private readonly listMyLeaveUseCase: ListMyLeaveUseCase,
     private readonly listCompanyLeaveUseCase: ListCompanyLeaveUseCase,
+    private readonly getLeaveDashboardUseCase: GetLeaveDashboardUseCase,
     private readonly manageLeaveUseCase: ManageLeaveUseCase,
   ) {}
 
@@ -48,6 +50,21 @@ export class LeaveController {
         req.validatedQuery as ListLeaveQuery,
       );
       res.json(success(result.items, { ...result.meta }));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  dashboard: RequestHandler = async (req, res, next) => {
+    try {
+      res.json(
+        success(
+          await this.getLeaveDashboardUseCase.execute(
+            req.auth!.companyId,
+            (req.validatedQuery as { date?: string } | undefined)?.date,
+          ),
+        ),
+      );
     } catch (error) {
       next(error);
     }

@@ -137,4 +137,16 @@ describe('transaction attachment use cases', () => {
       LifecycleConflictError,
     );
   });
+
+  it('allows managers to upload photos on ready-for-payment transactions', async () => {
+    const f = await buildFixture();
+    await f.transactionRepository.update(f.transactionId, f.companyId, {
+      status: 'READY_FOR_PAYMENT',
+      submittedAt: new Date(),
+      submittedByUserId: f.auth.userId,
+    });
+
+    const attachment = await f.add.execute(f.transactionId, f.auth, photo());
+    expect(attachment.fileName).toBe('receipt.jpg');
+  });
 });

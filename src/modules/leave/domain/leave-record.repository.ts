@@ -14,6 +14,9 @@ export interface CreateLeaveRecordInput {
 export interface ManageLeaveInput {
   status?: LeaveStatus;
   managerNote?: string | null;
+  leaveType?: LeaveType;
+  leaveDate?: Date;
+  reason?: string | null;
   updatedByUserId?: string | null;
 }
 
@@ -40,6 +43,7 @@ export interface LeaveRecordRepository {
     employeeId: string,
     companyId: string,
     leaveDate: Date,
+    excludeLeaveId?: string,
   ): Promise<LeaveRecordEntity | null>;
   update(leaveId: string, companyId: string, input: ManageLeaveInput): Promise<LeaveRecordEntity>;
   listByEmployee(

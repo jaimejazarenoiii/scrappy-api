@@ -24,7 +24,8 @@ the access token carries the user's `companyId`, and every request only ever see
 12. [Workforce — Payroll](#12-workforce--payroll)
 13. [Workforce — Dashboard](#13-workforce--dashboard)
 14. [Transactions](#14-transactions)
-15. [Typical frontend flows](#15-typical-frontend-flows)
+15. [Trip Management](#15-trip-management)
+16. [Typical frontend flows](#16-typical-frontend-flows)
 
 ---
 
@@ -271,14 +272,15 @@ deletedAt }`.
 
 ## 9. Workforce — Attendance
 
-| Method & path                                | Roles          | Description                                        |
-| -------------------------------------------- | -------------- | -------------------------------------------------- |
-| `POST /workforce/attendance/time-in`         | all            | Open attendance session (linked employee required) |
-| `POST /workforce/attendance/time-out`        | all            | Close open session                                 |
-| `GET /workforce/attendance/status`           | all            | `{ isTimedIn, openSession }`                       |
-| `GET /workforce/attendance`                  | all            | My attendance history (paginated)                  |
-| `GET /workforce/attendance/company`          | OWNER, MANAGER | Company attendance (paginated)                     |
-| `PATCH /workforce/attendance/{attendanceId}` | OWNER, MANAGER | Correct/manage a record                            |
+| Method & path                                | Roles             | Description                                        |
+| -------------------------------------------- | ----------------- | -------------------------------------------------- |
+| `POST /workforce/attendance/time-in`         | MANAGER, EMPLOYEE | Open attendance session (linked employee required) |
+| `POST /workforce/attendance/time-out`        | MANAGER, EMPLOYEE | Close open session                                 |
+| `GET /workforce/attendance/status`           | all               | `{ isTimedIn, openSession }`                       |
+| `GET /workforce/attendance`                  | all               | My attendance history (paginated)                  |
+| `GET /workforce/attendance/company`          | OWNER, MANAGER    | Company attendance (paginated)                     |
+| `GET /workforce/attendance/dashboard`        | OWNER, MANAGER    | All employees with today status summary            |
+| `PATCH /workforce/attendance/{attendanceId}` | OWNER, MANAGER    | Correct/manage a record                            |
 
 **Time-in / time-out body** (optional): `{ "note": "..." }`.
 
@@ -286,34 +288,54 @@ deletedAt }`.
 correctionNote, adjustedTimeInAt, adjustedTimeOutAt, createdAt, updatedAt }` where `status` is
 `OPEN` | `CLOSED`.
 
+**Company attendance list** items also include `firstName`, `lastName`, and `employeeNumber`.
+
 **My history query params**: `page`, `limit`, `sortBy` (`timeInAt` \| `createdAt`), `sortOrder`,
 `fromDate`, `toDate`.
 
 **Company list** adds `employeeId` filter.
 
-> **Required before creating transactions**: the acting user must be a linked employee who is
-> currently timed in (`isTimedIn: true`), otherwise transaction create returns `409`.
+**Attendance dashboard** (`GET /workforce/attendance/dashboard`) returns per-employee quick details for
+the requested `date` (defaults to today UTC): `status` (`ABSENT` | `ON_TIME` | `LATE` | `TIMED_OUT`
+| `ON_LEAVE`), `isTimedIn`, `isLate`, `isAbsent`, `onLeave`, `timeInToday`, `timeOutToday`, plus a
+company `summary` (`present`, `late`, `absent`, `onLeave`, `timedIn`). Late is computed against a
+default 09:00 UTC start time.
+
+> **Role rules**: Owners are exempt from time-in/out and are always operationally ready for
+> transactions. Managers and employees must time in before creating transactions.
 
 ---
 
 ## 10. Workforce — Leave
 
-| Method & path                      | Roles          | Description                     |
-| ---------------------------------- | -------------- | ------------------------------- |
-| `POST /workforce/leave`            | all            | Request leave (linked employee) |
-| `GET /workforce/leave`             | all            | My leave history (paginated)    |
-| `GET /workforce/leave/company`     | OWNER, MANAGER | Company leave records           |
-| `PATCH /workforce/leave/{leaveId}` | OWNER, MANAGER | Approve/reject/cancel           |
+| Method & path                      | Roles                    | Description                       |
+| ---------------------------------- | ------------------------ | --------------------------------- |
+| `POST /workforce/leave`            | OWNER, MANAGER, EMPLOYEE | Request leave (self or on behalf) |
+| `GET /workforce/leave`             | all                      | My leave history (paginated)      |
+| `GET /workforce/leave/company`     | OWNER, MANAGER           | Company leave records             |
+| `GET /workforce/leave/dashboard`   | OWNER, MANAGER           | All employees leave summary       |
+| `PATCH /workforce/leave/{leaveId}` | OWNER, MANAGER           | Approve/reject/cancel/edit        |
 
 **Request body**:
 
 ```json
-{ "leaveType": "FULL_DAY", "leaveDate": "2026-07-08", "reason": "optional" }
+{
+  "leaveType": "FULL_DAY",
+  "leaveDate": "2026-07-08",
+  "reason": "optional",
+  "employeeId": "uuid (required for owners; optional for managers)"
+}
 ```
 
 `leaveType`: `HALF_DAY` | `FULL_DAY`. **Status**: `PENDING` | `APPROVED` | `REJECTED` | `CANCELLED`.
 
-**Manage body**: `{ "status", "managerNote?" }`.
+**Manage body**: `{ "status?", "managerNote?", "leaveType?", "leaveDate?", "reason?" }` — at least one field required.
+
+**Company leave list** items include `firstName`, `lastName`, and `employeeNumber` alongside leave fields.
+
+**Leave dashboard** (`GET /workforce/leave/dashboard`) returns per-employee pending leave counts,
+today's approved leave, and company summary (`pendingRequests`, `onLeaveToday`,
+`approvedThisWeek`). Owners cannot request leave for themselves; owners and managers can create leave on behalf of employees.
 
 ---
 
@@ -513,7 +535,33 @@ directionLabel, partyName, transactionDate, items, grandTotal, paidByDisplayName
 
 ---
 
-## 15. Typical frontend flows
+## 15. Trip Management
+
+Trip Management (`/api/v1/trips`) coordinates employees and vehicles for operational work outside company locations.
+
+**Trip Number** is server-assigned and immutable: `TRIP-YYYYMMDD-000001`.
+
+### Endpoints
+
+| Method & path                               | Roles                    | Notes                                    |
+| ------------------------------------------- | ------------------------ | ---------------------------------------- |
+| `POST /trips`                               | OWNER, MANAGER           | Create Draft trip (**201**)              |
+| `PATCH /trips/{tripId}`                     | OWNER, MANAGER           | Draft-only header edits                  |
+| `GET /trips/{tripId}`                       | OWNER, MANAGER, EMPLOYEE | Employee is restricted to assigned trips |
+| `GET /trips`                                | OWNER, MANAGER           | Company trip list                        |
+| `GET /trips/mine`                           | EMPLOYEE                 | Employee assigned trips                  |
+| `GET /trips/by-number/{tripNumber}`         | OWNER, MANAGER, EMPLOYEE | Lookup by business trip number           |
+| `POST /trips/{tripId}/start`                | OWNER, MANAGER           | Draft → Started                          |
+| `POST /trips/{tripId}/complete`             | OWNER, MANAGER           | Started → Completed                      |
+| `POST /trips/{tripId}/cancel`               | OWNER, MANAGER           | Draft → Cancelled                        |
+| `POST /trips/{tripId}/archive`              | OWNER, MANAGER           | Archive Completed/Cancelled              |
+| `POST /trips/{tripId}/members`              | OWNER, MANAGER           | Add member                               |
+| `PATCH /trips/{tripId}/members/{memberId}`  | OWNER, MANAGER           | Update member role                       |
+| `DELETE /trips/{tripId}/members/{memberId}` | OWNER, MANAGER           | Remove member                            |
+
+---
+
+## 16. Typical frontend flows
 
 ### App bootstrap (after login)
 

@@ -144,4 +144,45 @@ describe('UpdateTransactionUseCase', () => {
     );
     expect(result.partyName).toBe('Edited by assignee');
   });
+
+  it('allows managers to edit ready-for-payment transactions', async () => {
+    const f = await buildFixture();
+    await f.transactionRepository.update(f.transactionId, f.companyId, {
+      status: 'READY_FOR_PAYMENT',
+      submittedAt: new Date(),
+      submittedByUserId: randomUUID(),
+    });
+
+    const result = await f.useCase.execute(f.transactionId, managerAuth(f.companyId), {
+      partyName: 'Manager correction',
+    });
+    expect(result.partyName).toBe('Manager correction');
+    expect(result.status).toBe('READY_FOR_PAYMENT');
+  });
+
+  it('blocks employees from editing ready-for-payment transactions', async () => {
+    const f = await buildFixture();
+    const userId = randomUUID();
+    await f.userRepository.create({
+      id: userId,
+      companyId: f.companyId,
+      email: 'locked@scrappy.test',
+      passwordHash: 'hashed',
+      role: 'EMPLOYEE',
+    });
+    await f.userRepository.linkEmployee(userId, f.assignedEmployeeId);
+    await f.transactionRepository.update(f.transactionId, f.companyId, {
+      status: 'READY_FOR_PAYMENT',
+      submittedAt: new Date(),
+      submittedByUserId: userId,
+    });
+
+    await expect(
+      f.useCase.execute(
+        f.transactionId,
+        { companyId: f.companyId, userId, role: 'EMPLOYEE' },
+        { partyName: 'Blocked' },
+      ),
+    ).rejects.toThrow(ForbiddenError);
+  });
 });

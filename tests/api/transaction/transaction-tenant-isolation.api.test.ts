@@ -76,5 +76,38 @@ describe('transaction tenant isolation api', () => {
       .set(outsiderAuth)
       .attach('file', Buffer.from('bytes'), { filename: 'x.jpg', contentType: 'image/jpeg' });
     expect(addAttachment.status).toBe(404);
+
+    const finish = await request(app)
+      .post(`/api/v1/transactions/${transactionId}/finish`)
+      .set(outsiderAuth);
+    expect(finish.status).toBe(404);
+
+    const settle = await request(app)
+      .post(`/api/v1/transactions/${transactionId}/settle`)
+      .set(outsiderAuth)
+      .send({});
+    expect(settle.status).toBe(404);
+
+    const returnToDraft = await request(app)
+      .post(`/api/v1/transactions/${transactionId}/return-to-draft`)
+      .set(outsiderAuth)
+      .send({});
+    expect(returnToDraft.status).toBe(404);
+
+    const reopen = await request(app)
+      .post(`/api/v1/transactions/${transactionId}/reopen`)
+      .set(outsiderAuth)
+      .send({ reason: 'Cross company' });
+    expect(reopen.status).toBe(404);
+
+    const receipt = await request(app)
+      .get(`/api/v1/transactions/${transactionId}/receipt`)
+      .set(outsiderAuth);
+    expect(receipt.status).toBe(404);
+
+    const byNumber = await request(app)
+      .get(`/api/v1/transactions/by-number/${create.body.data.transactionNumber}`)
+      .set(outsiderAuth);
+    expect(byNumber.status).toBe(404);
   });
 });

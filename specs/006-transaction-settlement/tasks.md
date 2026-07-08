@@ -69,7 +69,7 @@ P005 extends P004 modular Clean Architecture:
 - [x] T022 Extend `CreateTransactionUseCase` to allocate `transactionNumber` atomically via `TransactionNumberService` before persist in `src/modules/transaction/application/use-cases/create-transaction.use-case.ts`
 - [x] T023 [P] Create unit tests for `transaction-lifecycle.ts` transition matrix (valid and invalid transitions) in `tests/unit/transaction/transaction-lifecycle.test.ts`
 - [x] T024 [P] Create unit tests for `transaction-number.ts` and `transaction-number-format.ts` formatting/parsing in `tests/unit/transaction/transaction-number.test.ts`
-- [ ] T025 [P] Create integration tests for concurrent sequence allocation producing unique sequential numbers in `tests/integration/transaction/transaction-number-sequence.persistence.test.ts`
+- [x] T025 [P] Create integration tests for concurrent sequence allocation producing unique sequential numbers in `tests/integration/transaction/transaction-number-sequence.persistence.test.ts`
 - [x] T026 [P] Extend `transaction.entity.test.ts` and `transaction-rules.test.ts` for new status helpers and finish/settle assertions in `tests/unit/transaction/transaction.entity.test.ts` and `tests/unit/transaction/transaction-rules.test.ts`
 - [x] T027 Register `TransactionNumberSequenceRepository`, `TransactionNumberService`, and extended repository bindings in `src/modules/transaction/index.ts` and `src/config/container.ts`
 
@@ -85,7 +85,7 @@ P005 extends P004 modular Clean Architecture:
 
 ### Tests for User Story 1
 
-- [ ] T028 [P] [US1] Create unit tests for `FinishTransactionUseCase` (draft-only, completeness, assignment, positive total) in `tests/unit/transaction/finish-transaction.use-case.test.ts`
+- [x] T028 [P] [US1] Create unit tests for `FinishTransactionUseCase` (draft-only, completeness, assignment, positive total) in `tests/unit/transaction/finish-transaction.use-case.test.ts`
 - [x] T029 [P] [US1] Create API tests for `POST /api/v1/transactions/{id}/finish` success, incomplete rejection, and Employee lockout in `tests/api/transaction/transaction-finish.api.test.ts`
 - [x] T030 [P] [US1] Extend `transaction-create.api.test.ts` to assert `transactionNumber` format on create in `tests/api/transaction/transaction-create.api.test.ts`
 
@@ -109,8 +109,8 @@ P005 extends P004 modular Clean Architecture:
 
 ### Tests for User Story 2
 
-- [ ] T036 [P] [US2] Create unit tests for `ReturnToDraftUseCase` and extended `UpdateTransactionUseCase` READY_FOR_PAYMENT edit rules in `tests/unit/transaction/return-to-draft.use-case.test.ts` and `tests/unit/transaction/update-transaction.use-case.test.ts`
-- [ ] T037 [P] [US2] Extend item/attachment use case unit tests for Manager edit on `READY_FOR_PAYMENT` in `tests/unit/transaction/transaction-item.use-cases.test.ts` and `tests/unit/transaction/transaction-attachment.use-cases.test.ts`
+- [x] T036 [P] [US2] Create unit tests for `ReturnToDraftUseCase` and extended `UpdateTransactionUseCase` READY_FOR_PAYMENT edit rules in `tests/unit/transaction/return-to-draft.use-case.test.ts` and `tests/unit/transaction/update-transaction.use-case.test.ts`
+- [x] T037 [P] [US2] Extend item/attachment use case unit tests for Manager edit on `READY_FOR_PAYMENT` in `tests/unit/transaction/transaction-item.use-cases.test.ts` and `tests/unit/transaction/transaction-attachment.use-cases.test.ts`
 - [x] T038 [P] [US2] Create API tests for Manager edit, Employee forbidden edit, and return-to-draft in `tests/api/transaction/transaction-return-draft.api.test.ts` and extend `transaction-update.api.test.ts`
 
 ### Implementation for User Story 2
@@ -133,9 +133,9 @@ P005 extends P004 modular Clean Architecture:
 
 ### Tests for User Story 3
 
-- [ ] T044 [P] [US3] Create unit tests for `SettleTransactionUseCase` and extended `CancelTransactionUseCase` in `tests/unit/transaction/settle-transaction.use-case.test.ts` and `tests/unit/transaction/cancel-archive.use-cases.test.ts`
-- [ ] T045 [P] [US3] Create integration tests for settlement persistence and paid-field invariants in `tests/integration/transaction/transaction-settlement.persistence.test.ts`
-- [ ] T046 [P] [US3] Create API tests for settle success, duplicate settle, Employee forbidden, and cancel from submitted in `tests/api/transaction/transaction-settle.api.test.ts`
+- [x] T044 [P] [US3] Create unit tests for `SettleTransactionUseCase` and extended `CancelTransactionUseCase` in `tests/unit/transaction/settle-transaction.use-case.test.ts` and `tests/unit/transaction/cancel-archive.use-cases.test.ts`
+- [x] T045 [P] [US3] Create integration tests for settlement persistence and paid-field invariants in `tests/integration/transaction/transaction-settlement.persistence.test.ts`
+- [x] T046 [P] [US3] Create API tests for settle success, duplicate settle, Employee forbidden, and cancel from submitted in `tests/api/transaction/transaction-settle.api.test.ts`
 
 ### Implementation for User Story 3
 
@@ -157,8 +157,8 @@ P005 extends P004 modular Clean Architecture:
 
 ### Tests for User Story 4
 
-- [ ] T052 [P] [US4] Create unit tests for `ReopenTransactionUseCase` (owner-only, paid-only, metadata clearing) in `tests/unit/transaction/reopen-transaction.use-case.test.ts`
-- [ ] T053 [P] [US4] Create API tests for Owner reopen, Manager forbidden, and re-settle cycle in `tests/api/transaction/transaction-reopen.api.test.ts`
+- [x] T052 [P] [US4] Create unit tests for `ReopenTransactionUseCase` (owner-only, paid-only, metadata clearing) in `tests/unit/transaction/reopen-transaction.use-case.test.ts`
+- [x] T053 [P] [US4] Create API tests for Owner reopen, Manager forbidden, and re-settle cycle in `tests/api/transaction/transaction-reopen.api.test.ts`
 
 ### Implementation for User Story 4
 
@@ -179,8 +179,8 @@ P005 extends P004 modular Clean Architecture:
 
 ### Tests for User Story 5
 
-- [ ] T058 [P] [US5] Create unit tests for `ReceiptAssemblerService` field assembly and paid-only guard in `tests/unit/transaction/receipt-assembler.service.test.ts`
-- [ ] T059 [P] [US5] Create API tests for receipt success and not-paid rejection in `tests/api/transaction/transaction-receipt.api.test.ts`
+- [x] T058 [P] [US5] Create unit tests for `ReceiptAssemblerService` field assembly and paid-only guard in `tests/unit/transaction/receipt-assembler.service.test.ts`
+- [x] T059 [P] [US5] Create API tests for receipt success and not-paid rejection in `tests/api/transaction/transaction-receipt.api.test.ts`
 
 ### Implementation for User Story 5
 
@@ -203,9 +203,9 @@ P005 extends P004 modular Clean Architecture:
 
 ### Tests for User Story 6
 
-- [ ] T066 [P] [US6] Create unit tests for `GetTransactionByNumberUseCase` and extended list filters in `tests/unit/transaction/get-transaction-by-number.use-case.test.ts` and `tests/unit/transaction/list-transactions.use-cases.test.ts`
+- [x] T066 [P] [US6] Create unit tests for `GetTransactionByNumberUseCase` and extended list filters in `tests/unit/transaction/get-transaction-by-number.use-case.test.ts` and `tests/unit/transaction/list-transactions.use-cases.test.ts`
 - [x] T067 [P] [US6] Create API tests for by-number lookup, prefix search, and tenant isolation in `tests/api/transaction/transaction-by-number.api.test.ts`
-- [ ] T068 [P] [US6] Extend list API tests for `status=READY_FOR_PAYMENT|PAID` and `transactionNumber` query in `tests/api/transaction/transaction-list.api.test.ts`
+- [x] T068 [P] [US6] Extend list API tests for `status=READY_FOR_PAYMENT|PAID` and `transactionNumber` query in `tests/api/transaction/transaction-list.api.test.ts`
 
 ### Implementation for User Story 6
 
@@ -223,13 +223,13 @@ P005 extends P004 modular Clean Architecture:
 
 **Purpose**: Authorization matrix coverage, workflow E2E, regression safety, documentation, and quickstart validation.
 
-- [ ] T074 [P] Create settlement authorization matrix API tests (finish, settle, return, reopen, receipt) in `tests/api/transaction/transaction-settlement-auth.api.test.ts`
-- [ ] T075 [P] Create invalid transition and error scenario API tests in `tests/api/transaction/transaction-settlement-errors.api.test.ts`
-- [ ] T076 Create end-to-end workflow API test (create → finish → settle → receipt → reopen → re-settle) in `tests/api/transaction/transaction-settlement-workflow.api.test.ts`
-- [ ] T077 [P] Extend tenant isolation API tests for settlement endpoints in `tests/api/transaction/transaction-tenant-isolation.api.test.ts`
-- [ ] T078 Extend transaction audit service with finish, settle, reopen, and return-to-draft events in `src/modules/transaction/application/services/transaction-audit.service.ts`
+- [x] T074 [P] Create settlement authorization matrix API tests (finish, settle, return, reopen, receipt) in `tests/api/transaction/transaction-settlement-auth.api.test.ts`
+- [x] T075 [P] Create invalid transition and error scenario API tests in `tests/api/transaction/transaction-settlement-errors.api.test.ts`
+- [x] T076 Create end-to-end workflow API test (create → finish → settle → receipt → reopen → re-settle) in `tests/api/transaction/transaction-settlement-workflow.api.test.ts`
+- [x] T077 [P] Extend tenant isolation API tests for settlement endpoints in `tests/api/transaction/transaction-tenant-isolation.api.test.ts`
+- [x] T078 Extend transaction audit service with finish, settle, reopen, and return-to-draft events in `src/modules/transaction/application/services/transaction-audit.service.ts`
 - [x] T079 [P] Update settlement endpoints and Transaction Number documentation in `docs/api-reference.md`
-- [ ] T080 Run full validation per `specs/006-transaction-settlement/quickstart.md` (all 10 scenarios)
+- [x] T080 Run full validation per `specs/006-transaction-settlement/quickstart.md` (all 10 scenarios)
 - [x] T081 Run `pnpm run lint`, `pnpm exec tsc --noEmit`, and full `pnpm test` ensuring P004 regression suites remain green
 
 **Checkpoint**: P005 settlement feature complete, documented, and regression-safe.

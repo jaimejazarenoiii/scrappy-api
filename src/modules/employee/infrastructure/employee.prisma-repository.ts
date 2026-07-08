@@ -88,4 +88,12 @@ export class EmployeePrismaRepository implements EmployeeRepository {
     });
     return records.map(toDomain);
   }
+
+  async findByIds(employeeIds: string[], companyId: string): Promise<EmployeeEntity[]> {
+    if (employeeIds.length === 0) return [];
+    const records = await prisma.employee.findMany({
+      where: { id: { in: employeeIds }, companyId, deletedAt: null },
+    });
+    return records.map(toDomain);
+  }
 }

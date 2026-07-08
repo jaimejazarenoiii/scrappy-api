@@ -57,6 +57,53 @@ describe('ListTransactionsUseCase', () => {
     expect(result.items[0]!.direction).toBe('OUTBOUND');
   });
 
+  it('filters by transaction number prefix and settlement statuses', async () => {
+    const companyId = randomUUID();
+    const store = new InMemoryTransactionStore();
+    const repo = new InMemoryTransactionRepository(store);
+    const inbound = await repo.create(
+      baseCreate(companyId, {
+        direction: 'INBOUND',
+        transactionNumber: 'IN-20260708-000001',
+      }),
+    );
+    const outbound = await repo.create(
+      baseCreate(companyId, {
+        direction: 'OUTBOUND',
+        transactionNumber: 'OUT-20260708-000001',
+      }),
+    );
+    await repo.update(inbound.transaction.id, companyId, { status: 'READY_FOR_PAYMENT' });
+    await repo.update(outbound.transaction.id, companyId, {
+      status: 'PAID',
+      paidAt: new Date(),
+      paidByUserId: randomUUID(),
+    });
+
+    const useCase = new ListTransactionsUseCase(repo);
+    const auth: AuthorizationContext = { companyId, userId: randomUUID(), role: 'MANAGER' };
+
+    const byNumber = await useCase.execute(auth, {
+      page: 1,
+      limit: 20,
+      transactionNumber: 'IN-2026',
+    });
+    expect(byNumber.items).toHaveLength(1);
+    expect(byNumber.items[0]!.transactionNumber).toBe('IN-20260708-000001');
+
+    const ready = await useCase.execute(auth, {
+      page: 1,
+      limit: 20,
+      status: 'READY_FOR_PAYMENT',
+    });
+    expect(ready.items).toHaveLength(1);
+    expect(ready.items[0]!.status).toBe('READY_FOR_PAYMENT');
+
+    const paid = await useCase.execute(auth, { page: 1, limit: 20, status: 'PAID' });
+    expect(paid.items).toHaveLength(1);
+    expect(paid.items[0]!.status).toBe('PAID');
+  });
+
   it('forbids employees from listing company transactions', async () => {
     const companyId = randomUUID();
     const store = new InMemoryTransactionStore();

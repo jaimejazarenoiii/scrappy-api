@@ -20,7 +20,9 @@ import { TimeOutUseCase } from '../modules/attendance/application/use-cases/time
 import { GetAttendanceStatusUseCase } from '../modules/attendance/application/use-cases/get-attendance-status.use-case.js';
 import { ListMyAttendanceUseCase } from '../modules/attendance/application/use-cases/list-my-attendance.use-case.js';
 import { ListCompanyAttendanceUseCase } from '../modules/attendance/application/use-cases/list-company-attendance.use-case.js';
+import { GetAttendanceDashboardUseCase } from '../modules/attendance/application/use-cases/get-attendance-dashboard.use-case.js';
 import { ManageAttendanceUseCase } from '../modules/attendance/application/use-cases/manage-attendance.use-case.js';
+import { AttendanceDayStatusService } from '../modules/attendance/application/services/attendance-day-status.service.js';
 import { WorkforceDashboardController } from '../modules/workforce-dashboard/presentation/workforce-dashboard.controller.js';
 import { GetWorkforceDashboardUseCase } from '../modules/workforce-dashboard/application/use-cases/get-workforce-dashboard.use-case.js';
 import { DashboardVisibilityService } from '../modules/workforce-dashboard/application/services/dashboard-visibility.service.js';
@@ -61,6 +63,7 @@ import { LeaveController } from '../modules/leave/presentation/leave.controller.
 import { RequestLeaveUseCase } from '../modules/leave/application/use-cases/request-leave.use-case.js';
 import { ListMyLeaveUseCase } from '../modules/leave/application/use-cases/list-my-leave.use-case.js';
 import { ListCompanyLeaveUseCase } from '../modules/leave/application/use-cases/list-company-leave.use-case.js';
+import { GetLeaveDashboardUseCase } from '../modules/leave/application/use-cases/get-leave-dashboard.use-case.js';
 import { ManageLeaveUseCase } from '../modules/leave/application/use-cases/manage-leave.use-case.js';
 import type { TokenProvider } from '../shared/auth/token-provider.interface.js';
 import type { PasswordHasher } from '../shared/auth/password-hasher.interface.js';
@@ -243,7 +246,8 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
     leaveController: new LeaveController(
       new RequestLeaveUseCase(leaveRecordRepository, employeeRepository, userRepository),
       new ListMyLeaveUseCase(leaveRecordRepository, userRepository),
-      new ListCompanyLeaveUseCase(leaveRecordRepository),
+      new ListCompanyLeaveUseCase(leaveRecordRepository, employeeRepository),
+      new GetLeaveDashboardUseCase(employeeRepository, leaveRecordRepository),
       new ManageLeaveUseCase(leaveRecordRepository),
     ),
     attendanceController: new AttendanceController(
@@ -251,7 +255,13 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
       new TimeOutUseCase(attendanceSessionRepository, userRepository),
       new GetAttendanceStatusUseCase(attendanceSessionRepository, userRepository),
       new ListMyAttendanceUseCase(attendanceSessionRepository, userRepository),
-      new ListCompanyAttendanceUseCase(attendanceSessionRepository),
+      new ListCompanyAttendanceUseCase(attendanceSessionRepository, employeeRepository),
+      new GetAttendanceDashboardUseCase(
+        employeeRepository,
+        attendanceSessionRepository,
+        leaveRecordRepository,
+        new AttendanceDayStatusService(),
+      ),
       new ManageAttendanceUseCase(attendanceSessionRepository),
     ),
     workforceDashboardController: new WorkforceDashboardController(
