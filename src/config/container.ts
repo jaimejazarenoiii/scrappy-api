@@ -97,6 +97,10 @@ import { TransactionNumberSequencePrismaRepository } from '../modules/transactio
 import { LocalFileStorage } from '../modules/transaction/infrastructure/file-storage/local-file-storage.js';
 import { buildTransactionController } from '../modules/transaction/index.js';
 import type { TransactionController } from '../modules/transaction/presentation/transaction.controller.js';
+import { AnalyticsPrismaQueryRepository } from '../modules/analytics/infrastructure/analytics.prisma-query-repository.js';
+import { buildAnalyticsController } from '../modules/analytics/index.js';
+import type { AnalyticsController } from '../modules/analytics/presentation/analytics.controller.js';
+import type { AnalyticsQueryRepository } from '../modules/analytics/domain/analytics-query.repository.js';
 import type { TransactionRepository } from '../modules/transaction/domain/transaction.repository.js';
 import type { TransactionItemRepository } from '../modules/transaction/domain/transaction-item.repository.js';
 import type { TransactionAttachmentRepository } from '../modules/transaction/domain/transaction-attachment.repository.js';
@@ -119,6 +123,7 @@ export interface Container {
   attendanceController: AttendanceController;
   workforceDashboardController: WorkforceDashboardController;
   transactionController: TransactionController;
+  analyticsController: AnalyticsController;
   healthIndicator?: { check: () => Promise<boolean> };
 }
 
@@ -142,6 +147,7 @@ export interface ContainerOverrides {
   transactionSuggestionRepository?: TransactionSuggestionRepository;
   transactionNumberSequenceRepository?: TransactionNumberSequenceRepository;
   fileStorage?: FileStorage;
+  analyticsQueryRepository?: AnalyticsQueryRepository;
   healthIndicator?: { check: () => Promise<boolean> };
 }
 
@@ -175,6 +181,8 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
     overrides.transactionNumberSequenceRepository ??
     new TransactionNumberSequencePrismaRepository();
   const fileStorage = overrides.fileStorage ?? new LocalFileStorage();
+  const analyticsQueryRepository =
+    overrides.analyticsQueryRepository ?? new AnalyticsPrismaQueryRepository();
 
   return {
     tokenProvider,
@@ -287,6 +295,13 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
       attendanceRepository: attendanceSessionRepository,
       branchRepository,
       warehouseRepository,
+    }),
+    analyticsController: buildAnalyticsController({
+      analyticsQueryRepository,
+      branchRepository,
+      warehouseRepository,
+      vehicleRepository,
+      employeeRepository,
     }),
   };
 }

@@ -115,7 +115,8 @@ export const transactionOpenApiPaths = {
   '/api/v1/transactions/{transactionId}/finish': {
     post: protectedOperation({
       tags: [TRANSACTIONS_TAG],
-      summary: 'Submit a draft transaction for settlement',
+      summary:
+        'Submit a draft transaction for settlement (employee assigned, or any owner/manager)',
       parameters: [uuidPathParam('transactionId', 'Transaction identifier')],
       responses: { ...successResponse('TransactionDetail', 'Submitted transaction') },
     }),
@@ -250,6 +251,34 @@ export const transactionOpenApiPaths = {
         uuidPathParam('attachmentId', 'Attachment identifier'),
       ],
       responses: { ...successResponse('DeletionResult', 'Attachment removed') },
+    }),
+  },
+  '/api/v1/transactions/{transactionId}/attachments/{attachmentId}/content': {
+    get: protectedOperation({
+      tags: [ATTACHMENTS_TAG],
+      summary: 'Download a transaction attachment',
+      parameters: [
+        uuidPathParam('transactionId', 'Transaction identifier'),
+        uuidPathParam('attachmentId', 'Attachment identifier'),
+        {
+          name: 'access_token',
+          in: 'query',
+          required: false,
+          schema: { type: 'string' },
+          description:
+            'JWT access token for browser image requests that cannot send Authorization headers',
+        },
+      ],
+      responses: {
+        '200': {
+          description: 'Attachment binary content',
+          content: {
+            'image/jpeg': { schema: { type: 'string', format: 'binary' } },
+            'image/png': { schema: { type: 'string', format: 'binary' } },
+            'image/webp': { schema: { type: 'string', format: 'binary' } },
+          },
+        },
+      },
     }),
   },
 };

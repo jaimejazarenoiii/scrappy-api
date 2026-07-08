@@ -1,0 +1,786 @@
+openapi: 3.0.3
+info:
+  title: Scrappy API - Analytics (P008)
+  version: 1.0.0
+  description: |
+    P008 Analytics contracts. Read-only operational and business intelligence dashboards for
+    Owners and Managers. Employees are denied all analytics resources.
+
+servers:
+  - url: /api/v1
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    AnalyticsPeriod:
+      type: string
+      enum: [TODAY, YESTERDAY, THIS_WEEK, THIS_MONTH, THIS_YEAR, CUSTOM]
+
+    AnalyticsFilterQuery:
+      type: object
+      properties:
+        period:
+          $ref: '#/components/schemas/AnalyticsPeriod'
+        from:
+          type: string
+          format: date-time
+          description: Required when period is CUSTOM
+        to:
+          type: string
+          format: date-time
+          description: Required when period is CUSTOM
+        branchId:
+          type: string
+          format: uuid
+        warehouseId:
+          type: string
+          format: uuid
+        vehicleId:
+          type: string
+          format: uuid
+        employeeId:
+          type: string
+          format: uuid
+        includeArchived:
+          type: boolean
+          default: false
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 25
+          default: 10
+          description: Max items in ranked lists
+
+    AppliedAnalyticsFilters:
+      type: object
+      required: [period, from, to, includeArchived]
+      properties:
+        period:
+          $ref: '#/components/schemas/AnalyticsPeriod'
+        from:
+          type: string
+          format: date-time
+        to:
+          type: string
+          format: date-time
+        branchId:
+          type: string
+          format: uuid
+          nullable: true
+        warehouseId:
+          type: string
+          format: uuid
+          nullable: true
+        vehicleId:
+          type: string
+          format: uuid
+          nullable: true
+        employeeId:
+          type: string
+          format: uuid
+          nullable: true
+        includeArchived:
+          type: boolean
+
+    RankedMetricItem:
+      type: object
+      required: [label, value, rank]
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+        label:
+          type: string
+        value:
+          type: number
+        unit:
+          type: string
+          nullable: true
+        rank:
+          type: integer
+
+    CompanyAnalytics:
+      type: object
+      required:
+        - totalInboundTransactions
+        - totalOutboundTransactions
+        - totalTransactionAmount
+        - totalExpenses
+        - totalPayroll
+        - netOperationalAmount
+        - activeEmployees
+        - activeTrips
+        - activeVehicles
+        - appliedFilters
+        - generatedAt
+      properties:
+        totalInboundTransactions:
+          type: integer
+        totalOutboundTransactions:
+          type: integer
+        totalTransactionAmount:
+          type: number
+        totalExpenses:
+          type: number
+        totalPayroll:
+          type: number
+        netOperationalAmount:
+          type: number
+        activeEmployees:
+          type: integer
+        activeTrips:
+          type: integer
+        activeVehicles:
+          type: integer
+        appliedFilters:
+          $ref: '#/components/schemas/AppliedAnalyticsFilters'
+        generatedAt:
+          type: string
+          format: date-time
+
+    TransactionAnalytics:
+      type: object
+      required:
+        - totalInbound
+        - totalOutbound
+        - totalTransactionAmount
+        - transactionCount
+        - averageTransactionValue
+        - topMaterials
+        - mostActiveEmployees
+        - mostActiveBranches
+        - mostActiveWarehouses
+        - appliedFilters
+        - generatedAt
+      properties:
+        totalInbound:
+          type: integer
+        totalOutbound:
+          type: integer
+        totalTransactionAmount:
+          type: number
+        transactionCount:
+          type: integer
+        averageTransactionValue:
+          type: number
+        topMaterials:
+          type: array
+          items:
+            $ref: '#/components/schemas/RankedMetricItem'
+        mostActiveEmployees:
+          type: array
+          items:
+            $ref: '#/components/schemas/RankedMetricItem'
+        mostActiveBranches:
+          type: array
+          items:
+            $ref: '#/components/schemas/RankedMetricItem'
+        mostActiveWarehouses:
+          type: array
+          items:
+            $ref: '#/components/schemas/RankedMetricItem'
+        appliedFilters:
+          $ref: '#/components/schemas/AppliedAnalyticsFilters'
+        generatedAt:
+          type: string
+          format: date-time
+
+    TripAnalytics:
+      type: object
+      required:
+        - totalTrips
+        - activeTrips
+        - completedTrips
+        - cancelledTrips
+        - averageTripDurationMinutes
+        - vehicleUtilization
+        - mostActiveVehicles
+        - mostActiveDrivers
+        - appliedFilters
+        - generatedAt
+      properties:
+        totalTrips:
+          type: integer
+        activeTrips:
+          type: integer
+        completedTrips:
+          type: integer
+        cancelledTrips:
+          type: integer
+        averageTripDurationMinutes:
+          type: number
+        vehicleUtilization:
+          type: array
+          items:
+            type: object
+            properties:
+              vehicleId:
+                type: string
+                format: uuid
+              label:
+                type: string
+              tripCount:
+                type: integer
+              utilizationRate:
+                type: number
+                nullable: true
+        mostActiveVehicles:
+          type: array
+          items:
+            $ref: '#/components/schemas/RankedMetricItem'
+        mostActiveDrivers:
+          type: array
+          items:
+            $ref: '#/components/schemas/RankedMetricItem'
+        appliedFilters:
+          $ref: '#/components/schemas/AppliedAnalyticsFilters'
+        generatedAt:
+          type: string
+          format: date-time
+
+    ExpenseAnalytics:
+      type: object
+      required:
+        - totalExpenses
+        - expensesByCategory
+        - expensesByBranch
+        - expensesByWarehouse
+        - expensesByVehicle
+        - expensesByTrip
+        - monthlyExpenseTrend
+        - appliedFilters
+        - generatedAt
+      properties:
+        totalExpenses:
+          type: number
+        expensesByCategory:
+          type: array
+          items:
+            $ref: '#/components/schemas/RankedMetricItem'
+        expensesByBranch:
+          type: array
+          items:
+            $ref: '#/components/schemas/RankedMetricItem'
+        expensesByWarehouse:
+          type: array
+          items:
+            $ref: '#/components/schemas/RankedMetricItem'
+        expensesByVehicle:
+          type: array
+          items:
+            $ref: '#/components/schemas/RankedMetricItem'
+        expensesByTrip:
+          type: array
+          items:
+            $ref: '#/components/schemas/RankedMetricItem'
+        monthlyExpenseTrend:
+          type: array
+          items:
+            type: object
+            properties:
+              month:
+                type: string
+                example: '2026-07'
+              amount:
+                type: number
+        appliedFilters:
+          $ref: '#/components/schemas/AppliedAnalyticsFilters'
+        generatedAt:
+          type: string
+          format: date-time
+
+    WorkforceAnalytics:
+      type: object
+      required:
+        - attendanceSummary
+        - payrollSummary
+        - leaveSummary
+        - cashAdvanceSummary
+        - employeeActivity
+        - mostActiveEmployees
+        - appliedFilters
+        - generatedAt
+      properties:
+        attendanceSummary:
+          type: object
+          properties:
+            sessionsCount:
+              type: integer
+            totalHours:
+              type: number
+            openSessions:
+              type: integer
+        payrollSummary:
+          type: object
+          properties:
+            recordsCount:
+              type: integer
+            totalGross:
+              type: number
+            totalNetPay:
+              type: number
+        leaveSummary:
+          type: object
+          properties:
+            approvedDays:
+              type: integer
+            pendingCount:
+              type: integer
+            rejectedCount:
+              type: integer
+        cashAdvanceSummary:
+          type: object
+          properties:
+            outstandingTotal:
+              type: number
+            advancesCount:
+              type: integer
+            deductedTotal:
+              type: number
+        employeeActivity:
+          type: array
+          items:
+            type: object
+            properties:
+              employeeId:
+                type: string
+                format: uuid
+              label:
+                type: string
+              activityScore:
+                type: number
+        mostActiveEmployees:
+          type: array
+          items:
+            $ref: '#/components/schemas/RankedMetricItem'
+        appliedFilters:
+          $ref: '#/components/schemas/AppliedAnalyticsFilters'
+        generatedAt:
+          type: string
+          format: date-time
+
+    OrganizationAnalytics:
+      type: object
+      required:
+        - branchPerformance
+        - warehousePerformance
+        - vehicleUtilization
+        - appliedFilters
+        - generatedAt
+      properties:
+        branchPerformance:
+          type: array
+          items:
+            type: object
+            properties:
+              branchId:
+                type: string
+                format: uuid
+              label:
+                type: string
+              transactionCount:
+                type: integer
+              transactionAmount:
+                type: number
+              expenseAmount:
+                type: number
+        warehousePerformance:
+          type: array
+          items:
+            type: object
+            properties:
+              warehouseId:
+                type: string
+                format: uuid
+              label:
+                type: string
+              transactionCount:
+                type: integer
+              transactionAmount:
+                type: number
+        vehicleUtilization:
+          type: array
+          items:
+            type: object
+            properties:
+              vehicleId:
+                type: string
+                format: uuid
+              label:
+                type: string
+              tripCount:
+                type: integer
+              utilizationRate:
+                type: number
+                nullable: true
+        appliedFilters:
+          $ref: '#/components/schemas/AppliedAnalyticsFilters'
+        generatedAt:
+          type: string
+          format: date-time
+
+paths:
+  /analytics/company:
+    get:
+      tags: [Analytics]
+      summary: Company analytics dashboard
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema:
+            $ref: '#/components/schemas/AnalyticsPeriod'
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: branchId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: warehouseId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: vehicleId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: employeeId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: includeArchived
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Company analytics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/CompanyAnalytics'
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden (Employee role)
+
+  /analytics/transactions:
+    get:
+      tags: [Analytics]
+      summary: Transaction analytics dashboard
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema:
+            $ref: '#/components/schemas/AnalyticsPeriod'
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: branchId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: warehouseId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: vehicleId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: employeeId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: includeArchived
+          in: query
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Transaction analytics
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+
+  /analytics/trips:
+    get:
+      tags: [Analytics]
+      summary: Trip analytics dashboard
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema:
+            $ref: '#/components/schemas/AnalyticsPeriod'
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: branchId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: warehouseId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: vehicleId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: employeeId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: includeArchived
+          in: query
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Trip analytics
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+
+  /analytics/expenses:
+    get:
+      tags: [Analytics]
+      summary: Expense analytics dashboard
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema:
+            $ref: '#/components/schemas/AnalyticsPeriod'
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: branchId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: warehouseId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: vehicleId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: employeeId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: includeArchived
+          in: query
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Expense analytics
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+
+  /analytics/workforce:
+    get:
+      tags: [Analytics]
+      summary: Workforce analytics dashboard
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema:
+            $ref: '#/components/schemas/AnalyticsPeriod'
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: branchId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: warehouseId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: vehicleId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: employeeId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: includeArchived
+          in: query
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Workforce analytics
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+
+  /analytics/organization:
+    get:
+      tags: [Analytics]
+      summary: Organization analytics dashboard
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema:
+            $ref: '#/components/schemas/AnalyticsPeriod'
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: branchId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: warehouseId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: vehicleId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: employeeId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: includeArchived
+          in: query
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Organization analytics
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden

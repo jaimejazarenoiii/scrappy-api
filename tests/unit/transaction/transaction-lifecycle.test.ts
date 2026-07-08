@@ -5,6 +5,8 @@ import { assertTransition } from '../../../src/modules/transaction/domain/transa
 describe('transaction lifecycle transitions', () => {
   it('allows valid transitions', () => {
     expect(() => assertTransition('DRAFT', 'finish', 'EMPLOYEE')).not.toThrow();
+    expect(() => assertTransition('DRAFT', 'finish', 'MANAGER')).not.toThrow();
+    expect(() => assertTransition('DRAFT', 'finish', 'OWNER')).not.toThrow();
     expect(() => assertTransition('READY_FOR_PAYMENT', 'return_to_draft', 'MANAGER')).not.toThrow();
     expect(() => assertTransition('READY_FOR_PAYMENT', 'settle', 'OWNER')).not.toThrow();
     expect(() => assertTransition('PAID', 'reopen', 'OWNER')).not.toThrow();

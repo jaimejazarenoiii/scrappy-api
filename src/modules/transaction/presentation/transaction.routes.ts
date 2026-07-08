@@ -182,6 +182,13 @@ export function createTransactionRoutes(controller: TransactionController): Rout
     controller.addAttachment,
   );
 
+  router.get(
+    '/transactions/:transactionId/attachments/:attachmentId/content',
+    authorize([...ALL_ROLES]),
+    validate(transactionAttachmentParamsSchema, 'params'),
+    controller.getAttachmentContent,
+  );
+
   router.delete(
     '/transactions/:transactionId/attachments/:attachmentId',
     authorize([...ALL_ROLES]),

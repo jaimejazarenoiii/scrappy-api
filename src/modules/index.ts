@@ -15,6 +15,7 @@ import { createPayrollRoutes } from './payroll/presentation/payroll.routes.js';
 import { createAttendanceRoutes } from './attendance/presentation/attendance.routes.js';
 import { createWorkforceDashboardRoutes } from './workforce-dashboard/presentation/workforce-dashboard.routes.js';
 import { createTransactionRoutes } from './transaction/index.js';
+import { createAnalyticsRoutes } from './analytics/index.js';
 
 export function registerModuleRoutes(app: Express, container: Container): void {
   const authn = createAuthenticationMiddleware(container.tokenProvider);
@@ -85,5 +86,11 @@ export function registerModuleRoutes(app: Express, container: Container): void {
     authn,
     companyResolutionMiddleware,
     createTransactionRoutes(container.transactionController),
+  );
+  app.use(
+    '/api/v1',
+    authn,
+    companyResolutionMiddleware,
+    createAnalyticsRoutes(container.analyticsController),
   );
 }

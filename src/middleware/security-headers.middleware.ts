@@ -8,6 +8,7 @@ export function createSecurityHeadersMiddleware(): RequestHandler {
 
   const helmetMiddleware = helmet({
     hsts: isProduction,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
     contentSecurityPolicy: isProduction
       ? undefined
       : {

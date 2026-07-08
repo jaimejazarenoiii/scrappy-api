@@ -51,4 +51,23 @@ describe('transaction finish api', () => {
       .set(otherEmployee.auth);
     expect(finish.status).toBe(403);
   });
+
+  it('lets owner finish a draft without being assigned', async () => {
+    const { app, userRepository, employeeRepository } = createTestContext();
+    const { owner, employee } = await setupTransactionActors(
+      app,
+      userRepository,
+      employeeRepository,
+    );
+
+    const create = await createDraftTransaction(app, employee.auth, [employee.employeeId]);
+    const transactionId = create.body.data.id as string;
+
+    const finish = await request(app)
+      .post(`/api/v1/transactions/${transactionId}/finish`)
+      .set(owner.auth);
+    expect(finish.status).toBe(200);
+    expect(finish.body.data.status).toBe('READY_FOR_PAYMENT');
+    expect(finish.body.data.submittedByUserId).toBe(owner.userId);
+  });
 });

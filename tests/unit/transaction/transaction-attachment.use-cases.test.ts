@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { AddTransactionAttachmentUseCase } from '../../../src/modules/transaction/application/use-cases/add-transaction-attachment.use-case.js';
 import { ListTransactionAttachmentsUseCase } from '../../../src/modules/transaction/application/use-cases/list-transaction-attachments.use-case.js';
+import { GetTransactionAttachmentContentUseCase } from '../../../src/modules/transaction/application/use-cases/get-transaction-attachment-content.use-case.js';
 import { RemoveTransactionAttachmentUseCase } from '../../../src/modules/transaction/application/use-cases/remove-transaction-attachment.use-case.js';
 import { MAX_TRANSACTION_PHOTOS } from '../../../src/modules/transaction/domain/attachment-constraints.js';
 import type { AuthorizationContext } from '../../../src/shared/policy/authorization-context.js';
@@ -69,6 +70,12 @@ async function buildFixture() {
       attachmentRepository,
       userRepository,
     ),
+    getContent: new GetTransactionAttachmentContentUseCase(
+      transactionRepository,
+      attachmentRepository,
+      fileStorage,
+      userRepository,
+    ),
     remove: new RemoveTransactionAttachmentUseCase(
       transactionRepository,
       attachmentRepository,
@@ -89,6 +96,18 @@ describe('transaction attachment use cases', () => {
 
     const list = await f.list.execute(f.transactionId, f.auth);
     expect(list).toHaveLength(1);
+    expect(list[0].downloadUrl).toBe(
+      `/api/v1/transactions/${f.transactionId}/attachments/${attachment.id}/content`,
+    );
+  });
+
+  it('downloads attachment content for authorized users', async () => {
+    const f = await buildFixture();
+    const attachment = await f.add.execute(f.transactionId, f.auth, photo());
+    const content = await f.getContent.execute(f.transactionId, attachment.id, f.auth);
+    expect(content.mimeType).toBe('image/jpeg');
+    expect(content.fileName).toBe('receipt.jpg');
+    expect(content.buffer).toEqual(Buffer.from('bytes'));
   });
 
   it('removes an attachment and deletes the stored file', async () => {

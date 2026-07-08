@@ -20,12 +20,13 @@ describe('transaction settlement authorization matrix api', () => {
     const ownerFinish = await request(app)
       .post(`/api/v1/transactions/${transactionId}/finish`)
       .set(owner.auth);
-    expect(ownerFinish.status).toBe(403);
+    expect(ownerFinish.status).toBe(200);
+    expect(ownerFinish.body.data.status).toBe('READY_FOR_PAYMENT');
 
-    const finish = await request(app)
+    const managerFinish = await request(app)
       .post(`/api/v1/transactions/${transactionId}/finish`)
-      .set(employee.auth);
-    expect(finish.status).toBe(200);
+      .set(manager.auth);
+    expect(managerFinish.status).toBe(409);
 
     const employeeSettle = await request(app)
       .post(`/api/v1/transactions/${transactionId}/settle`)
@@ -45,7 +46,10 @@ describe('transaction settlement authorization matrix api', () => {
       .send({ reason: 'Need fix' });
     expect(managerReturn.status).toBe(200);
 
-    await request(app).post(`/api/v1/transactions/${transactionId}/finish`).set(employee.auth);
+    const finish = await request(app)
+      .post(`/api/v1/transactions/${transactionId}/finish`)
+      .set(employee.auth);
+    expect(finish.status).toBe(200);
 
     const settle = await request(app)
       .post(`/api/v1/transactions/${transactionId}/settle`)

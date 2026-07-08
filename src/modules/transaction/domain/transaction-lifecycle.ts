@@ -17,9 +17,6 @@ export function assertTransition(
     if (from !== 'DRAFT') {
       throw new LifecycleConflictError('Only draft transactions can be submitted for settlement.');
     }
-    if (role !== 'EMPLOYEE') {
-      throw new LifecycleConflictError('Only employees can submit draft transactions.');
-    }
     return;
   }
 

@@ -46,9 +46,7 @@ export function assertCanManageDraft(
 }
 
 export function assertCanFinish(auth: AuthorizationContext, opts: { isAssigned: boolean }): void {
-  if (auth.role !== 'EMPLOYEE') {
-    throw new ForbiddenError('Only employees can submit transactions for settlement.');
-  }
+  if (isManagerOrOwner(auth)) return;
   assertEmployeeAssigned(opts.isAssigned);
 }
 

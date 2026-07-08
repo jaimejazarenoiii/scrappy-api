@@ -15,6 +15,7 @@ import type { ListTransactionItemsUseCase } from '../application/use-cases/list-
 import type { AddTransactionAttachmentUseCase } from '../application/use-cases/add-transaction-attachment.use-case.js';
 import type { ListTransactionAttachmentsUseCase } from '../application/use-cases/list-transaction-attachments.use-case.js';
 import type { RemoveTransactionAttachmentUseCase } from '../application/use-cases/remove-transaction-attachment.use-case.js';
+import type { GetTransactionAttachmentContentUseCase } from '../application/use-cases/get-transaction-attachment-content.use-case.js';
 import type { GetMaterialSuggestionsUseCase } from '../application/use-cases/get-material-suggestions.use-case.js';
 import type { GetPriceSuggestionsUseCase } from '../application/use-cases/get-price-suggestions.use-case.js';
 import type { FinishTransactionUseCase } from '../application/use-cases/finish-transaction.use-case.js';
@@ -48,6 +49,7 @@ export class TransactionController {
     private readonly addTransactionAttachmentUseCase: AddTransactionAttachmentUseCase,
     private readonly listTransactionAttachmentsUseCase: ListTransactionAttachmentsUseCase,
     private readonly removeTransactionAttachmentUseCase: RemoveTransactionAttachmentUseCase,
+    private readonly getTransactionAttachmentContentUseCase: GetTransactionAttachmentContentUseCase,
     private readonly getMaterialSuggestionsUseCase: GetMaterialSuggestionsUseCase,
     private readonly getPriceSuggestionsUseCase: GetPriceSuggestionsUseCase,
     private readonly finishTransactionUseCase: FinishTransactionUseCase,
@@ -259,6 +261,22 @@ export class TransactionController {
         authContext(req),
       );
       res.json(success({ deleted: true }));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getAttachmentContent: RequestHandler = async (req, res, next) => {
+    try {
+      const content = await this.getTransactionAttachmentContentUseCase.execute(
+        String(req.params.transactionId),
+        String(req.params.attachmentId),
+        authContext(req),
+      );
+      res
+        .type(content.mimeType)
+        .set('Content-Disposition', `inline; filename="${encodeURIComponent(content.fileName)}"`)
+        .send(content.buffer);
     } catch (error) {
       next(error);
     }

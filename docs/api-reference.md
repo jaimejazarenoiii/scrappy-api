@@ -463,36 +463,39 @@ and visibility flags (`canTimeIn`, `canTimeOut`, `canCreateTransaction`, etc.).
 createdAt, updatedAt }`.
 
 **TransactionAttachment**: `{ id, transactionId, attachmentType, fileName, filePath, mimeType,
-fileSize, uploadedByUserId, createdAt }`.
+fileSize, uploadedByUserId, downloadUrl, createdAt }`. Use `downloadUrl` (not `filePath`) to
+fetch image bytes. For `<img>` tags or opening in a new tab, append your JWT:
+`{downloadUrl}?access_token={accessToken}` (same token as `Authorization: Bearer`).
 
 ### Endpoints
 
-| Method & path                                          | Roles          | Notes                                                                                         |
-| ------------------------------------------------------ | -------------- | --------------------------------------------------------------------------------------------- |
-| `POST /transactions`                                   | all\*          | Create draft. \*Timed-in linked employee required. **201**                                    |
-| `GET /transactions/by-number/{transactionNumber}`      | all\*\*        | Lookup by business transaction number                                                         |
-| `GET /transactions/{transactionId}`                    | all\*\*        | Full detail                                                                                   |
-| `PATCH /transactions/{transactionId}`                  | all\*\*        | Partial update / auto-save. Draft for employees; draft or ready-for-payment for owner/manager |
-| `GET /transactions`                                    | OWNER, MANAGER | Paginated company list                                                                        |
-| `GET /transactions/assigned`                           | all            | Paginated list for acting employee                                                            |
-| `POST /transactions/{id}/finish`                       | EMPLOYEE\*\*   | Draft → ready for payment                                                                     |
-| `POST /transactions/{id}/return-to-draft`              | OWNER, MANAGER | Ready for payment → draft                                                                     |
-| `POST /transactions/{id}/settle`                       | OWNER, MANAGER | Ready for payment → paid                                                                      |
-| `POST /transactions/{id}/cancel`                       | all\*\*        | Draft/ready-for-payment → cancelled                                                           |
-| `POST /transactions/{id}/reopen`                       | OWNER          | Paid → ready for payment                                                                      |
-| `GET /transactions/{id}/receipt`                       | all\*\*        | Receipt for paid transaction only                                                             |
-| `POST /transactions/{id}/archive`                      | OWNER, MANAGER | Soft-delete                                                                                   |
-| `GET /transactions/{id}/items`                         | all\*\*        | List items                                                                                    |
-| `POST /transactions/{id}/items`                        | all\*\*        | Add item. **201**                                                                             |
-| `PATCH /transactions/{id}/items/{itemId}`              | all\*\*        | Update item                                                                                   |
-| `DELETE /transactions/{id}/items/{itemId}`             | all\*\*        | Remove item → `{ deleted: true }`                                                             |
-| `GET /transactions/{id}/attachments`                   | all\*\*        | List photos                                                                                   |
-| `POST /transactions/{id}/attachments`                  | all\*\*        | Upload photo (`multipart/form-data`, field `file`)                                            |
-| `DELETE /transactions/{id}/attachments/{attachmentId}` | all\*\*        | Remove photo                                                                                  |
-| `GET /transactions/suggestions/materials`              | all            | Material autocomplete                                                                         |
-| `GET /transactions/suggestions/prices`                 | all            | Price autocomplete for a material                                                             |
+| Method & path                                               | Roles                        | Notes                                                                                         |
+| ----------------------------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------- |
+| `POST /transactions`                                        | all\*                        | Create draft. \*Timed-in linked employee required. **201**                                    |
+| `GET /transactions/by-number/{transactionNumber}`           | all\*\*                      | Lookup by business transaction number                                                         |
+| `GET /transactions/{transactionId}`                         | all\*\*                      | Full detail                                                                                   |
+| `PATCH /transactions/{transactionId}`                       | all\*\*                      | Partial update / auto-save. Draft for employees; draft or ready-for-payment for owner/manager |
+| `GET /transactions`                                         | OWNER, MANAGER               | Paginated company list                                                                        |
+| `GET /transactions/assigned`                                | all                          | Paginated list for acting employee                                                            |
+| `POST /transactions/{id}/finish`                            | OWNER, MANAGER, EMPLOYEE\*\* | Draft → ready for payment                                                                     |
+| `POST /transactions/{id}/return-to-draft`                   | OWNER, MANAGER               | Ready for payment → draft                                                                     |
+| `POST /transactions/{id}/settle`                            | OWNER, MANAGER               | Ready for payment → paid                                                                      |
+| `POST /transactions/{id}/cancel`                            | all\*\*                      | Draft/ready-for-payment → cancelled                                                           |
+| `POST /transactions/{id}/reopen`                            | OWNER                        | Paid → ready for payment                                                                      |
+| `GET /transactions/{id}/receipt`                            | all\*\*                      | Receipt for paid transaction only                                                             |
+| `POST /transactions/{id}/archive`                           | OWNER, MANAGER               | Soft-delete                                                                                   |
+| `GET /transactions/{id}/items`                              | all\*\*                      | List items                                                                                    |
+| `POST /transactions/{id}/items`                             | all\*\*                      | Add item. **201**                                                                             |
+| `PATCH /transactions/{id}/items/{itemId}`                   | all\*\*                      | Update item                                                                                   |
+| `DELETE /transactions/{id}/items/{itemId}`                  | all\*\*                      | Remove item → `{ deleted: true }`                                                             |
+| `GET /transactions/{id}/attachments`                        | all\*\*                      | List photos                                                                                   |
+| `POST /transactions/{id}/attachments`                       | all\*\*                      | Upload photo (`multipart/form-data`, field `file`)                                            |
+| `GET /transactions/{id}/attachments/{attachmentId}/content` | all\*\*                      | Download photo bytes (`image/jpeg`, `image/png`, or `image/webp`)                             |
+| `DELETE /transactions/{id}/attachments/{attachmentId}`      | all\*\*                      | Remove photo                                                                                  |
+| `GET /transactions/suggestions/materials`                   | all                          | Material autocomplete                                                                         |
+| `GET /transactions/suggestions/prices`                      | all                          | Price autocomplete for a material                                                             |
 
-\*\* Employees must be assigned to the transaction (else `403`).
+\*\* Employees must be assigned to the transaction (else `403`). Owners and managers may finish any company draft.
 
 **Create body**:
 
@@ -561,7 +564,44 @@ Trip Management (`/api/v1/trips`) coordinates employees and vehicles for operati
 
 ---
 
-## 16. Typical frontend flows
+## 16. Analytics
+
+Read-only analytics dashboards under `/api/v1/analytics/*` for **Owner** and **Manager** roles. **Employee** receives **403**.
+
+All endpoints share the same query parameters and return `appliedFilters` plus `generatedAt` in the response envelope.
+
+### Shared query parameters
+
+| Parameter         | Type    | Default      | Notes                                                                  |
+| ----------------- | ------- | ------------ | ---------------------------------------------------------------------- |
+| `period`          | enum    | `THIS_MONTH` | `TODAY`, `YESTERDAY`, `THIS_WEEK`, `THIS_MONTH`, `THIS_YEAR`, `CUSTOM` |
+| `from`            | ISO8601 | —            | Required when `period=CUSTOM`                                          |
+| `to`              | ISO8601 | —            | Required when `period=CUSTOM`; max 366-day span                        |
+| `branchId`        | uuid    | —            | Tenant-scoped branch filter                                            |
+| `warehouseId`     | uuid    | —            | Tenant-scoped warehouse filter                                         |
+| `vehicleId`       | uuid    | —            | Tenant-scoped vehicle filter                                           |
+| `employeeId`      | uuid    | —            | Tenant-scoped employee filter                                          |
+| `includeArchived` | boolean | `false`      | Include soft-deleted operational records                               |
+| `limit`           | integer | `10`         | Ranking list size (1–25)                                               |
+
+### Endpoints
+
+| Method & path                 | Roles          | Response highlights                                                                                                     |
+| ----------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `GET /analytics/company`      | OWNER, MANAGER | Inbound/outbound counts, transaction amount, expenses, payroll, net operational amount, active employees/trips/vehicles |
+| `GET /analytics/transactions` | OWNER, MANAGER | Transaction counts, totals, average value, top materials, most active employees/branches/warehouses                     |
+| `GET /analytics/trips`        | OWNER, MANAGER | Trip totals, duration, vehicle utilization, active vehicles/drivers                                                     |
+| `GET /analytics/expenses`     | OWNER, MANAGER | Expense totals and breakdowns (zeros until expense module is live)                                                      |
+| `GET /analytics/workforce`    | OWNER, MANAGER | Attendance, payroll, leave, and cash-advance summaries                                                                  |
+| `GET /analytics/organization` | OWNER, MANAGER | Branch/warehouse performance and vehicle utilization                                                                    |
+
+**Net operational amount** = `totalTransactionAmount - totalExpenses - totalPayroll`.
+
+Cancelled transactions are excluded. Archived records are excluded unless `includeArchived=true`.
+
+---
+
+## 17. Typical frontend flows
 
 ### App bootstrap (after login)
 

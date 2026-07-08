@@ -24,6 +24,7 @@ import {
   InMemoryTransactionNumberSequenceRepository,
   InMemoryFileStorage,
 } from './in-memory-repositories.js';
+import { InMemoryAnalyticsQueryRepository } from './in-memory-analytics-query-repository.js';
 
 export function setupTestEnv(): void {
   process.env.PORT = '3000';
@@ -70,6 +71,17 @@ export function createTestContext() {
     transactionStore,
   );
   const fileStorage = new InMemoryFileStorage();
+  const analyticsQueryRepository = new InMemoryAnalyticsQueryRepository(
+    transactionStore,
+    employeeRepository,
+    branchRepository,
+    warehouseRepository,
+    vehicleRepository,
+    attendanceRepository,
+    payrollRepository,
+    leaveRepository,
+    cashAdvanceRepository,
+  );
   const container = createContainer({
     companyRepository,
     userRepository,
@@ -90,6 +102,7 @@ export function createTestContext() {
     transactionSuggestionRepository,
     transactionNumberSequenceRepository,
     fileStorage,
+    analyticsQueryRepository,
   });
   const app = createApp(container);
   return {

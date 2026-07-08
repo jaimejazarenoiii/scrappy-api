@@ -27,7 +27,17 @@ describe('transaction attachment api', () => {
       });
     expect(upload.status).toBe(201);
     expect(upload.body.data.fileName).toBe('receipt.jpg');
+    expect(upload.body.data.downloadUrl).toBe(
+      `/api/v1/transactions/${transactionId}/attachments/${upload.body.data.id}/content`,
+    );
     const attachmentId = upload.body.data.id as string;
+
+    const content = await request(app)
+      .get(`/api/v1/transactions/${transactionId}/attachments/${attachmentId}/content`)
+      .set(employee.auth);
+    expect(content.status).toBe(200);
+    expect(content.headers['content-type']).toMatch(/image\/jpeg/);
+    expect(content.body).toEqual(Buffer.from('fake-image'));
 
     const list = await request(app)
       .get(`/api/v1/transactions/${transactionId}/attachments`)
@@ -66,6 +76,49 @@ describe('transaction attachment api', () => {
       .post(`/api/v1/transactions/${transactionId}/attachments`)
       .set(employee.auth);
     expect(upload.status).toBe(400);
+  });
+
+  it('rejects unauthenticated attachment download', async () => {
+    const { app, userRepository, employeeRepository } = createTestContext();
+    const { employee } = await setupTransactionActors(app, userRepository, employeeRepository);
+    const transactionId = await createDraft(app, employee.auth, employee.employeeId);
+
+    const upload = await request(app)
+      .post(`/api/v1/transactions/${transactionId}/attachments`)
+      .set(employee.auth)
+      .attach('file', Buffer.from('fake-image'), {
+        filename: 'receipt.jpg',
+        contentType: 'image/jpeg',
+      });
+    const attachmentId = upload.body.data.id as string;
+
+    const content = await request(app).get(
+      `/api/v1/transactions/${transactionId}/attachments/${attachmentId}/content`,
+    );
+    expect(content.status).toBe(401);
+  });
+
+  it('downloads attachment content via access_token query param', async () => {
+    const { app, userRepository, employeeRepository } = createTestContext();
+    const { employee } = await setupTransactionActors(app, userRepository, employeeRepository);
+    const transactionId = await createDraft(app, employee.auth, employee.employeeId);
+    const accessToken = employee.auth.Authorization.replace('Bearer ', '');
+
+    const upload = await request(app)
+      .post(`/api/v1/transactions/${transactionId}/attachments`)
+      .set(employee.auth)
+      .attach('file', Buffer.from('fake-image'), {
+        filename: 'receipt.jpg',
+        contentType: 'image/jpeg',
+      });
+    const attachmentId = upload.body.data.id as string;
+
+    const content = await request(app).get(
+      `/api/v1/transactions/${transactionId}/attachments/${attachmentId}/content?access_token=${encodeURIComponent(accessToken)}`,
+    );
+    expect(content.status).toBe(200);
+    expect(content.headers['content-type']).toMatch(/image\/jpeg/);
+    expect(content.body).toEqual(Buffer.from('fake-image'));
   });
 
   it('rejects uploads to a cancelled transaction', async () => {

@@ -32,6 +32,7 @@ describe('LocalFileStorage', () => {
     const absolute = storage.resolvePath(saved.filePath);
     await expect(access(absolute)).resolves.toBeUndefined();
     expect((await readFile(absolute)).equals(content)).toBe(true);
+    expect((await storage.read(saved.filePath)).equals(content)).toBe(true);
 
     await storage.delete(saved.filePath);
     await expect(access(absolute)).rejects.toThrow();

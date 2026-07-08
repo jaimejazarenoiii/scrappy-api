@@ -13,6 +13,7 @@ export interface SavedFile {
 
 export interface FileStorage {
   save(params: SaveFileParams): Promise<SavedFile>;
+  read(filePath: string): Promise<Buffer>;
   delete(filePath: string): Promise<void>;
   resolvePath(filePath: string): string;
 }

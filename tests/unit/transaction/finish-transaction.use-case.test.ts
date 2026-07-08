@@ -141,4 +141,44 @@ describe('FinishTransactionUseCase', () => {
       }),
     ).rejects.toThrow(ForbiddenError);
   });
+
+  it('allows owner to finish any company draft without assignment', async () => {
+    const f = await buildFixture();
+    const ownerUserId = randomUUID();
+    await f.userRepository.create({
+      id: ownerUserId,
+      companyId: f.companyId,
+      email: 'owner-finish@scrappy.test',
+      passwordHash: 'hashed',
+      role: 'OWNER',
+    });
+
+    const result = await f.useCase.execute(f.transactionId, {
+      companyId: f.companyId,
+      userId: ownerUserId,
+      role: 'OWNER',
+    });
+    expect(result.status).toBe('READY_FOR_PAYMENT');
+    expect(result.submittedByUserId).toBe(ownerUserId);
+  });
+
+  it('allows manager to finish any company draft without assignment', async () => {
+    const f = await buildFixture();
+    const managerUserId = randomUUID();
+    await f.userRepository.create({
+      id: managerUserId,
+      companyId: f.companyId,
+      email: 'manager-finish@scrappy.test',
+      passwordHash: 'hashed',
+      role: 'MANAGER',
+    });
+
+    const result = await f.useCase.execute(f.transactionId, {
+      companyId: f.companyId,
+      userId: managerUserId,
+      role: 'MANAGER',
+    });
+    expect(result.status).toBe('READY_FOR_PAYMENT');
+    expect(result.submittedByUserId).toBe(managerUserId);
+  });
 });

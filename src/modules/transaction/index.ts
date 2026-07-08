@@ -22,6 +22,7 @@ import { ListTransactionItemsUseCase } from './application/use-cases/list-transa
 import { AddTransactionAttachmentUseCase } from './application/use-cases/add-transaction-attachment.use-case.js';
 import { ListTransactionAttachmentsUseCase } from './application/use-cases/list-transaction-attachments.use-case.js';
 import { RemoveTransactionAttachmentUseCase } from './application/use-cases/remove-transaction-attachment.use-case.js';
+import { GetTransactionAttachmentContentUseCase } from './application/use-cases/get-transaction-attachment-content.use-case.js';
 import { GetMaterialSuggestionsUseCase } from './application/use-cases/get-material-suggestions.use-case.js';
 import { GetPriceSuggestionsUseCase } from './application/use-cases/get-price-suggestions.use-case.js';
 import { CancelTransactionUseCase } from './application/use-cases/cancel-transaction.use-case.js';
@@ -117,6 +118,12 @@ export function buildTransactionController(
       deps.userRepository,
     ),
     new RemoveTransactionAttachmentUseCase(
+      deps.transactionRepository,
+      deps.transactionAttachmentRepository,
+      deps.fileStorage,
+      deps.userRepository,
+    ),
+    new GetTransactionAttachmentContentUseCase(
       deps.transactionRepository,
       deps.transactionAttachmentRepository,
       deps.fileStorage,

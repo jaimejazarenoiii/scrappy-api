@@ -197,7 +197,11 @@ describe('transaction settlement quickstart scenarios', () => {
     const matrixId = matrixDraft.body.data.id as string;
     expect(
       (await request(app).post(`/api/v1/transactions/${matrixId}/finish`).set(manager.auth)).status,
-    ).toBe(403);
+    ).toBe(200);
+    await request(app)
+      .post(`/api/v1/transactions/${matrixId}/return-to-draft`)
+      .set(manager.auth)
+      .send({});
     await request(app).post(`/api/v1/transactions/${matrixId}/finish`).set(employee.auth);
     expect(
       (

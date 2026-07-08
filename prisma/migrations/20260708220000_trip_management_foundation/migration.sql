@@ -92,5 +92,5 @@ ALTER TABLE "Transaction" ADD CONSTRAINT "Transaction_tripId_fkey" FOREIGN KEY (
 
 -- One active STARTED trip per vehicle (per company). Cancelled/completed are allowed.
 CREATE UNIQUE INDEX "Trip_companyId_vehicleId_started_unique" ON "Trip"("companyId", "vehicleId")
-WHERE status = 'STARTED' AND deletedAt IS NULL;
+WHERE "status" = 'STARTED' AND "deletedAt" IS NULL;
 

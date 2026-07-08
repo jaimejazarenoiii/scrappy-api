@@ -1127,6 +1127,14 @@ export class InMemoryFileStorage implements FileStorage {
     return { filePath, fileSize: params.content.length };
   }
 
+  async read(filePath: string): Promise<Buffer> {
+    const content = this.files.get(filePath);
+    if (!content) {
+      throw new Error(`File not found: ${filePath}`);
+    }
+    return content;
+  }
+
   async delete(filePath: string): Promise<void> {
     this.files.delete(filePath);
   }
