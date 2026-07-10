@@ -8,6 +8,7 @@ import type { BranchRepository } from '../../../branch/domain/branch.repository.
 import type { EmployeeRepository } from '../../../employee/domain/employee.repository.js';
 import type { UserRepository } from '../../../user/domain/user.repository.js';
 import type { WarehouseRepository } from '../../../warehouse/domain/warehouse.repository.js';
+import type { TripRepository } from '../../../trip/domain/trip.repository.js';
 import type {
   TransactionRepository,
   UpdateTransactionInput,
@@ -21,6 +22,7 @@ import {
 } from '../dto/transaction-detail.response.js';
 import type { UpdateTransactionRequestDto } from '../dto/update-transaction.request.js';
 import { resolveIsAssigned } from '../services/transaction-access.service.js';
+import { validateTripLocationReference } from '../services/transaction-trip-location.service.js';
 import { logTransactionAudit } from '../services/transaction-audit.service.js';
 
 export class UpdateTransactionUseCase {
@@ -30,6 +32,7 @@ export class UpdateTransactionUseCase {
     private readonly employeeRepository: EmployeeRepository,
     private readonly branchRepository: BranchRepository,
     private readonly warehouseRepository: WarehouseRepository,
+    private readonly tripRepository: TripRepository,
   ) {}
 
   async execute(
@@ -60,6 +63,7 @@ export class UpdateTransactionUseCase {
         : current.outsideLocationName;
     const mergedOutsideAddress =
       input.outsideAddress !== undefined ? input.outsideAddress : current.outsideAddress;
+    const mergedTripId = input.tripId !== undefined ? input.tripId : current.tripId;
 
     assertLocationFields({
       locationType: mergedLocationType,
@@ -67,11 +71,26 @@ export class UpdateTransactionUseCase {
       warehouseId: mergedWarehouseId,
       outsideLocationName: mergedOutsideName,
       outsideAddress: mergedOutsideAddress,
+      tripId: mergedTripId,
     });
     await this.validateLocationReferences(auth.companyId, mergedLocationType, {
       branchId: mergedBranchId,
       warehouseId: mergedWarehouseId,
+      tripId: mergedTripId,
     });
+
+    const assignedEmployeeIds =
+      input.assignedEmployeeIds ??
+      (await this.loadAssignedEmployeeIds(transactionId, auth.companyId));
+
+    if (mergedLocationType === 'TRIP' && mergedTripId) {
+      await validateTripLocationReference(
+        this.tripRepository,
+        auth.companyId,
+        mergedTripId,
+        assignedEmployeeIds,
+      );
+    }
 
     if (input.assignedEmployeeIds) {
       await this.validateAssignedEmployees(auth.companyId, input.assignedEmployeeIds);
@@ -82,7 +101,6 @@ export class UpdateTransactionUseCase {
       partyName: input.partyName,
       partyContactNumber: input.partyContactNumber,
       transactionDate: input.transactionDate,
-      tripId: input.tripId,
       notes: input.notes,
       assignedEmployeeIds: input.assignedEmployeeIds,
     };
@@ -95,12 +113,14 @@ export class UpdateTransactionUseCase {
         mergedLocationType === 'OUTSIDE' ? (mergedOutsideName ?? null) : null;
       update.outsideAddress =
         mergedLocationType === 'OUTSIDE' ? (mergedOutsideAddress ?? null) : null;
+      update.tripId = mergedLocationType === 'TRIP' ? (mergedTripId ?? null) : null;
     } else {
       if (input.branchId !== undefined) update.branchId = input.branchId;
       if (input.warehouseId !== undefined) update.warehouseId = input.warehouseId;
       if (input.outsideLocationName !== undefined)
         update.outsideLocationName = input.outsideLocationName;
       if (input.outsideAddress !== undefined) update.outsideAddress = input.outsideAddress;
+      if (input.tripId !== undefined) update.tripId = input.tripId;
     }
 
     const detail = await this.transactionRepository.update(transactionId, auth.companyId, update);
@@ -119,7 +139,7 @@ export class UpdateTransactionUseCase {
   private async validateLocationReferences(
     companyId: string,
     locationType: TransactionLocationType,
-    refs: { branchId?: string | null; warehouseId?: string | null },
+    refs: { branchId?: string | null; warehouseId?: string | null; tripId?: string | null },
   ): Promise<void> {
     if (locationType === 'BRANCH' && refs.branchId) {
       const branch = await this.branchRepository.findById(refs.branchId, companyId);
@@ -129,6 +149,21 @@ export class UpdateTransactionUseCase {
       const warehouse = await this.warehouseRepository.findById(refs.warehouseId, companyId);
       if (!warehouse) throw new ResourceNotFoundError('Warehouse not found');
     }
+    if (locationType === 'TRIP' && refs.tripId) {
+      const trip = await this.tripRepository.findById(refs.tripId, companyId);
+      if (!trip) throw new ResourceNotFoundError('Trip not found');
+    }
+  }
+
+  private async loadAssignedEmployeeIds(
+    transactionId: string,
+    companyId: string,
+  ): Promise<string[]> {
+    const detail = await this.transactionRepository.findDetailById(transactionId, companyId, {
+      includeArchived: true,
+    });
+    if (!detail) throw new ResourceNotFoundError('Transaction not found');
+    return detail.assignments.map((assignment) => assignment.employeeId);
   }
 
   private async validateAssignedEmployees(companyId: string, employeeIds: string[]): Promise<void> {

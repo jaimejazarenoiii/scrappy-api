@@ -21,6 +21,9 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
+    "db:create-company": "tsx scripts/create-company.ts",
+    "db:disable-company": "tsx scripts/set-company-access.ts --disable",
+    "db:enable-company": "tsx scripts/set-company-access.ts --enable",
     "db:reset": "prisma migrate reset --force",
     "prepare": "husky",
     "test:unit": "vitest run tests/unit",
@@ -29,14 +32,17 @@
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",
+    "@types/pdfkit": "^0.17.6",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^16.5.0",
+    "exceljs": "^4.4.0",
     "express": "^5.1.0",
     "express-rate-limit": "^8.5.2",
     "helmet": "^8.2.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.2.0",
+    "pdfkit": "^0.19.1",
     "pino": "^9.7.0",
     "pino-http": "^10.4.0",
     "swagger-jsdoc": "^6.2.8",
@@ -71,8 +77,5 @@
       "eslint --fix",
       "prettier --write"
     ]
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
   }
 }

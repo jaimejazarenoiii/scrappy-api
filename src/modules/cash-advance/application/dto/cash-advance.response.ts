@@ -9,6 +9,7 @@ export interface CashAdvanceResponseDto {
   remainingAmount: number;
   status: CashAdvanceStatus;
   reason: string | null;
+  issuedAt: Date;
   createdAt: Date;
   updatedAt: Date;
 }

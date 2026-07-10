@@ -14,7 +14,7 @@ export interface PayrollDeductionResult {
 
 function sortFifo(advances: CashAdvanceEntity[]): CashAdvanceEntity[] {
   return [...advances].sort(
-    (a, b) => a.toPrimitives().createdAt.getTime() - b.toPrimitives().createdAt.getTime(),
+    (a, b) => a.toPrimitives().issuedAt.getTime() - b.toPrimitives().issuedAt.getTime(),
   );
 }
 

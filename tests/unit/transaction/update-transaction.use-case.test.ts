@@ -14,6 +14,7 @@ import {
   InMemoryUserRepository,
   InMemoryWarehouseRepository,
 } from '../../setup/in-memory-repositories.js';
+import { InMemoryTripRepository } from '../../setup/in-memory-trip-repository.js';
 import { setupTestEnv } from '../../setup/test-app.js';
 
 async function buildFixture() {
@@ -22,6 +23,7 @@ async function buildFixture() {
   const employeeRepository = new InMemoryEmployeeRepository();
   const branchRepository = new InMemoryBranchRepository();
   const warehouseRepository = new InMemoryWarehouseRepository();
+  const tripRepository = new InMemoryTripRepository();
   const store = new InMemoryTransactionStore();
   const transactionRepository = new InMemoryTransactionRepository(store);
 
@@ -54,6 +56,7 @@ async function buildFixture() {
     employeeRepository,
     branchRepository,
     warehouseRepository,
+    tripRepository,
   );
 
   return {

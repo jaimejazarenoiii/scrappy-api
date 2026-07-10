@@ -42,6 +42,7 @@ function buildListWhere(
   if (query.locationType) where.locationType = query.locationType;
   if (query.branchId) where.branchId = query.branchId;
   if (query.warehouseId) where.warehouseId = query.warehouseId;
+  if (query.tripId) where.tripId = query.tripId;
   if (query.fromDate || query.toDate) {
     where.transactionDate = {};
     if (query.fromDate) where.transactionDate.gte = query.fromDate;

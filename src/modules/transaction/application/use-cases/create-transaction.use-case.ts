@@ -10,6 +10,7 @@ import type { BranchRepository } from '../../../branch/domain/branch.repository.
 import type { EmployeeRepository } from '../../../employee/domain/employee.repository.js';
 import type { UserRepository } from '../../../user/domain/user.repository.js';
 import type { WarehouseRepository } from '../../../warehouse/domain/warehouse.repository.js';
+import type { TripRepository } from '../../../trip/domain/trip.repository.js';
 import type {
   CreateTransactionInput,
   TransactionRepository,
@@ -26,6 +27,7 @@ import {
 } from '../dto/transaction-detail.response.js';
 import type { CreateTransactionRequestDto } from '../dto/create-transaction.request.js';
 import { resolveActingEmployeeIdForUser } from '../services/transaction-access.service.js';
+import { validateTripLocationReference } from '../services/transaction-trip-location.service.js';
 import { logTransactionAudit } from '../services/transaction-audit.service.js';
 import type { TransactionNumberService } from '../services/transaction-number.service.js';
 
@@ -37,6 +39,7 @@ export class CreateTransactionUseCase {
     private readonly attendanceRepository: AttendanceSessionRepository,
     private readonly branchRepository: BranchRepository,
     private readonly warehouseRepository: WarehouseRepository,
+    private readonly tripRepository: TripRepository,
     private readonly transactionNumberService: TransactionNumberService,
   ) {}
 
@@ -71,6 +74,7 @@ export class CreateTransactionUseCase {
       warehouseId: input.warehouseId,
       outsideLocationName: input.outsideLocationName,
       outsideAddress: input.outsideAddress,
+      tripId: input.tripId,
     });
     await this.validateLocationReferences(companyId, input);
 
@@ -79,6 +83,15 @@ export class CreateTransactionUseCase {
       input.assignedEmployeeIds,
       actingEmployeeId,
     );
+
+    if (input.locationType === 'TRIP' && input.tripId) {
+      await validateTripLocationReference(
+        this.tripRepository,
+        companyId,
+        input.tripId,
+        assignedEmployeeIds,
+      );
+    }
 
     const items: CreateTransactionInput['items'] = input.items.map((item) => {
       assertItemTotal(item.weight, item.price, item.total);
@@ -115,7 +128,7 @@ export class CreateTransactionUseCase {
       outsideLocationName:
         input.locationType === 'OUTSIDE' ? (input.outsideLocationName ?? null) : null,
       outsideAddress: input.locationType === 'OUTSIDE' ? (input.outsideAddress ?? null) : null,
-      tripId: input.tripId ?? null,
+      tripId: input.locationType === 'TRIP' ? (input.tripId ?? null) : null,
       notes: input.notes ?? null,
       assignedEmployeeIds,
       items,
@@ -134,7 +147,7 @@ export class CreateTransactionUseCase {
 
   private async validateLocationReferences(
     companyId: string,
-    input: { locationType: string; branchId?: string; warehouseId?: string },
+    input: { locationType: string; branchId?: string; warehouseId?: string; tripId?: string },
   ): Promise<void> {
     if (input.locationType === 'BRANCH' && input.branchId) {
       const branch = await this.branchRepository.findById(input.branchId, companyId);
@@ -143,6 +156,10 @@ export class CreateTransactionUseCase {
     if (input.locationType === 'WAREHOUSE' && input.warehouseId) {
       const warehouse = await this.warehouseRepository.findById(input.warehouseId, companyId);
       if (!warehouse) throw new ResourceNotFoundError('Warehouse not found');
+    }
+    if (input.locationType === 'TRIP' && input.tripId) {
+      const trip = await this.tripRepository.findById(input.tripId, companyId);
+      if (!trip) throw new ResourceNotFoundError('Trip not found');
     }
   }
 

@@ -13,15 +13,15 @@ function buildWhere(companyId: string, query: ListCashAdvanceQuery): Prisma.Cash
   if (query.employeeId) where.employeeId = query.employeeId;
   if (query.status) where.status = query.status;
   if (query.fromDate || query.toDate) {
-    where.createdAt = {};
-    if (query.fromDate) where.createdAt.gte = query.fromDate;
-    if (query.toDate) where.createdAt.lte = query.toDate;
+    where.issuedAt = {};
+    if (query.fromDate) where.issuedAt.gte = query.fromDate;
+    if (query.toDate) where.issuedAt.lte = query.toDate;
   }
   return where;
 }
 
 function resolveOrderBy(query: ListCashAdvanceQuery): Prisma.CashAdvanceOrderByWithRelationInput {
-  const sortBy = query.sortBy ?? 'createdAt';
+  const sortBy = query.sortBy ?? 'issuedAt';
   const sortOrder = query.sortOrder ?? 'desc';
   return { [sortBy]: sortOrder };
 }
@@ -37,6 +37,7 @@ export class CashAdvancePrismaRepository implements CashAdvanceRepository {
         deductedAmount: 0,
         remainingAmount: input.amount,
         reason: input.reason ?? null,
+        issuedAt: input.issuedAt,
         createdByUserId: input.createdByUserId ?? null,
       },
     });
@@ -89,7 +90,7 @@ export class CashAdvancePrismaRepository implements CashAdvanceRepository {
   async listOutstandingByEmployee(employeeId: string, companyId: string) {
     const records = await prisma.cashAdvance.findMany({
       where: { employeeId, companyId, status: 'OUTSTANDING' },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { issuedAt: 'asc' },
     });
     return records.map(toCashAdvanceDomain);
   }

@@ -9,6 +9,7 @@ export const createCashAdvanceSchema = z.object({
   employeeId: z.string().uuid(),
   amount: positiveAmountSchema,
   reason: optionalNoteSchema,
+  issuedAt: z.coerce.date().optional(),
 });
 
 export const listCashAdvanceQuerySchema = cashAdvanceListQuerySchema;

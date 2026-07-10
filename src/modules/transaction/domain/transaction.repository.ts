@@ -79,6 +79,7 @@ export interface ListTransactionsQuery {
   locationType?: TransactionLocationType;
   branchId?: string;
   warehouseId?: string;
+  tripId?: string;
   fromDate?: Date;
   toDate?: Date;
   includeArchived?: boolean;

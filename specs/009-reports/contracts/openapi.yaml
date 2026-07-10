@@ -1,0 +1,868 @@
+openapi: 3.0.3
+info:
+  title: Scrappy API - Reports (P009)
+  version: 1.0.0
+  description: |
+    P009 Reports contracts. Read-only operational detail reports for Owners and Managers.
+    Employees are denied all report resources. Eleven list endpoints + eleven export endpoints.
+
+servers:
+  - url: /api/v1
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    reportFrom:
+      name: from
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date-time
+      description: Inclusive range start (required for date-bound reports)
+    reportTo:
+      name: to
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date-time
+      description: Inclusive range end (required for date-bound reports)
+    reportBranchId:
+      name: branchId
+      in: query
+      schema:
+        type: string
+        format: uuid
+    reportWarehouseId:
+      name: warehouseId
+      in: query
+      schema:
+        type: string
+        format: uuid
+    reportVehicleId:
+      name: vehicleId
+      in: query
+      schema:
+        type: string
+        format: uuid
+    reportEmployeeId:
+      name: employeeId
+      in: query
+      schema:
+        type: string
+        format: uuid
+    reportTripId:
+      name: tripId
+      in: query
+      schema:
+        type: string
+        format: uuid
+    reportIncludeArchived:
+      name: includeArchived
+      in: query
+      schema:
+        type: boolean
+        default: false
+    reportSearch:
+      name: search
+      in: query
+      schema:
+        type: string
+        minLength: 2
+    reportPage:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    reportLimit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    reportSortOrder:
+      name: sortOrder
+      in: query
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: desc
+    exportFormat:
+      name: format
+      in: query
+      required: true
+      schema:
+        type: string
+        enum: [csv, xlsx, pdf]
+    exportDisposition:
+      name: disposition
+      in: query
+      schema:
+        type: string
+        enum: [attachment, inline]
+        default: attachment
+
+  schemas:
+    ExportFormat:
+      type: string
+      enum: [csv, xlsx, pdf]
+
+    ReportPaginationMeta:
+      type: object
+      required: [page, limit, total, totalPages]
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+
+    AppliedReportCriteria:
+      type: object
+      required: [generatedAt, includeArchived]
+      properties:
+        from:
+          type: string
+          format: date-time
+          nullable: true
+        to:
+          type: string
+          format: date-time
+          nullable: true
+        branchId:
+          type: string
+          format: uuid
+          nullable: true
+        warehouseId:
+          type: string
+          format: uuid
+          nullable: true
+        vehicleId:
+          type: string
+          format: uuid
+          nullable: true
+        employeeId:
+          type: string
+          format: uuid
+          nullable: true
+        tripId:
+          type: string
+          format: uuid
+          nullable: true
+        search:
+          type: string
+          nullable: true
+        sortBy:
+          type: string
+          nullable: true
+        sortOrder:
+          type: string
+          enum: [asc, desc]
+          nullable: true
+        includeArchived:
+          type: boolean
+
+    TransactionReportItem:
+      type: object
+      properties:
+        materialName:
+          type: string
+        weight:
+          type: number
+        unit:
+          type: string
+        price:
+          type: number
+        total:
+          type: number
+
+    TransactionReportRow:
+      type: object
+      required:
+        - transactionId
+        - transactionNumber
+        - direction
+        - status
+        - partyName
+        - grandTotal
+        - createdAt
+      properties:
+        transactionId:
+          type: string
+          format: uuid
+        transactionNumber:
+          type: string
+        direction:
+          type: string
+          enum: [INBOUND, OUTBOUND]
+        status:
+          type: string
+          enum: [DRAFT, READY_FOR_PAYMENT, PAID, CANCELLED]
+        partyName:
+          type: string
+        partyContactNumber:
+          type: string
+          nullable: true
+        assignedEmployees:
+          type: array
+          items:
+            type: string
+        location:
+          type: object
+          properties:
+            type:
+              type: string
+            label:
+              type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionReportItem'
+        grandTotal:
+          type: number
+        settlement:
+          type: object
+          properties:
+            submittedAt:
+              type: string
+              format: date-time
+              nullable: true
+            submittedBy:
+              type: string
+              nullable: true
+            paidAt:
+              type: string
+              format: date-time
+              nullable: true
+            paidBy:
+              type: string
+              nullable: true
+            paymentReference:
+              type: string
+              nullable: true
+        createdBy:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    TransactionReportList:
+      type: object
+      required: [items, appliedCriteria, generatedAt]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionReportRow'
+        appliedCriteria:
+          $ref: '#/components/schemas/AppliedReportCriteria'
+        generatedAt:
+          type: string
+          format: date-time
+
+    TripReportRow:
+      type: object
+      required: [tripId, tripNumber, status, scheduledStart, origin, destination]
+      properties:
+        tripId:
+          type: string
+          format: uuid
+        tripNumber:
+          type: string
+        vehicle:
+          type: object
+          properties:
+            plateNumber:
+              type: string
+            description:
+              type: string
+        members:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              role:
+                type: string
+        status:
+          type: string
+        scheduledStart:
+          type: string
+          format: date-time
+        actualStart:
+          type: string
+          format: date-time
+          nullable: true
+        actualEnd:
+          type: string
+          format: date-time
+          nullable: true
+        origin:
+          type: string
+        destination:
+          type: string
+
+    ExpenseReportRow:
+      type: object
+      properties:
+        expenseId:
+          type: string
+          format: uuid
+        category:
+          type: string
+        amount:
+          type: number
+        referenceType:
+          type: string
+        reference:
+          type: string
+        addedBy:
+          type: string
+        date:
+          type: string
+          format: date-time
+
+    AttendanceReportRow:
+      type: object
+      properties:
+        attendanceId:
+          type: string
+          format: uuid
+        employee:
+          type: object
+        date:
+          type: string
+          format: date
+        timeIn:
+          type: string
+          format: date-time
+        timeOut:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [OPEN, CLOSED]
+
+    LeaveReportRow:
+      type: object
+      properties:
+        leaveId:
+          type: string
+          format: uuid
+        employee:
+          type: object
+        leaveType:
+          type: string
+        leaveDate:
+          type: string
+          format: date
+
+    CashAdvanceReportRow:
+      type: object
+      properties:
+        cashAdvanceId:
+          type: string
+          format: uuid
+        employee:
+          type: object
+        amount:
+          type: number
+        issuedBy:
+          type: string
+        issuedAt:
+          type: string
+          format: date-time
+
+    PayrollReportRow:
+      type: object
+      properties:
+        payrollId:
+          type: string
+          format: uuid
+        employee:
+          type: object
+        payPeriodStart:
+          type: string
+          format: date
+        payPeriodEnd:
+          type: string
+          format: date
+        salary:
+          type: number
+        cashAdvanceDeduction:
+          type: number
+        totalAmount:
+          type: number
+        status:
+          type: string
+        paidBy:
+          type: string
+          nullable: true
+        paidAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    EmployeeReportRow:
+      type: object
+      properties:
+        employeeId:
+          type: string
+          format: uuid
+        employeeNumber:
+          type: string
+          nullable: true
+        displayName:
+          type: string
+        contactNumber:
+          type: string
+          nullable: true
+        weeklySalary:
+          type: number
+        status:
+          type: string
+        linkedUserEmail:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    BranchReportRow:
+      type: object
+      properties:
+        branchId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        address:
+          type: string
+        contactNumber:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        transactionCountInPeriod:
+          type: integer
+          nullable: true
+
+    WarehouseReportRow:
+      type: object
+      properties:
+        warehouseId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        address:
+          type: string
+        contactNumber:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        transactionCountInPeriod:
+          type: integer
+          nullable: true
+
+    VehicleReportRow:
+      type: object
+      properties:
+        vehicleId:
+          type: string
+          format: uuid
+        plateNumber:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        tripCountInPeriod:
+          type: integer
+          nullable: true
+
+  responses:
+    ReportListSuccess:
+      description: Paginated report rows
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              data:
+                type: object
+              meta:
+                $ref: '#/components/schemas/ReportPaginationMeta'
+    ExportSuccess:
+      description: Exported file stream
+      content:
+        text/csv:
+          schema:
+            type: string
+            format: binary
+        application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+          schema:
+            type: string
+            format: binary
+        application/pdf:
+          schema:
+            type: string
+            format: binary
+    ReportForbidden:
+      description: Employee or unauthorized role
+    ReportValidationError:
+      description: Invalid filters, search, sort, or export format
+    ExportLimitExceeded:
+      description: More than 10,000 rows match export criteria
+
+paths:
+  /reports/transactions:
+    get:
+      tags: [Reports]
+      summary: Transaction report (paginated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/reportFrom'
+        - $ref: '#/components/parameters/reportTo'
+        - $ref: '#/components/parameters/reportBranchId'
+        - $ref: '#/components/parameters/reportWarehouseId'
+        - $ref: '#/components/parameters/reportEmployeeId'
+        - $ref: '#/components/parameters/reportTripId'
+        - $ref: '#/components/parameters/reportIncludeArchived'
+        - $ref: '#/components/parameters/reportSearch'
+        - $ref: '#/components/parameters/reportPage'
+        - $ref: '#/components/parameters/reportLimit'
+        - $ref: '#/components/parameters/reportSortOrder'
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [transactionDate, grandTotal, status, partyName]
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum: [INBOUND, OUTBOUND]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [DRAFT, READY_FOR_PAYMENT, PAID, CANCELLED]
+        - name: transactionNumber
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/ReportListSuccess'
+        '400':
+          $ref: '#/components/responses/ReportValidationError'
+        '403':
+          $ref: '#/components/responses/ReportForbidden'
+
+  /reports/transactions/export:
+    get:
+      tags: [Reports]
+      summary: Export transaction report
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/reportFrom'
+        - $ref: '#/components/parameters/reportTo'
+        - $ref: '#/components/parameters/exportFormat'
+        - $ref: '#/components/parameters/exportDisposition'
+      responses:
+        '200':
+          $ref: '#/components/responses/ExportSuccess'
+        '422':
+          $ref: '#/components/responses/ExportLimitExceeded'
+
+  /reports/trips:
+    get:
+      tags: [Reports]
+      summary: Trip report (paginated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/reportFrom'
+        - $ref: '#/components/parameters/reportTo'
+        - $ref: '#/components/parameters/reportVehicleId'
+        - $ref: '#/components/parameters/reportEmployeeId'
+        - $ref: '#/components/parameters/reportSearch'
+        - $ref: '#/components/parameters/reportPage'
+        - $ref: '#/components/parameters/reportLimit'
+      responses:
+        '200':
+          $ref: '#/components/responses/ReportListSuccess'
+
+  /reports/trips/export:
+    get:
+      tags: [Reports]
+      summary: Export trip report
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/exportFormat'
+      responses:
+        '200':
+          $ref: '#/components/responses/ExportSuccess'
+
+  /reports/expenses:
+    get:
+      tags: [Reports]
+      summary: Expense report (paginated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/reportFrom'
+        - $ref: '#/components/parameters/reportTo'
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: referenceType
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/ReportListSuccess'
+
+  /reports/expenses/export:
+    get:
+      tags: [Reports]
+      summary: Export expense report
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/exportFormat'
+      responses:
+        '200':
+          $ref: '#/components/responses/ExportSuccess'
+
+  /reports/attendance:
+    get:
+      tags: [Reports]
+      summary: Attendance report (paginated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/reportFrom'
+        - $ref: '#/components/parameters/reportTo'
+        - $ref: '#/components/parameters/reportEmployeeId'
+      responses:
+        '200':
+          $ref: '#/components/responses/ReportListSuccess'
+
+  /reports/attendance/export:
+    get:
+      tags: [Reports]
+      summary: Export attendance report
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/exportFormat'
+      responses:
+        '200':
+          $ref: '#/components/responses/ExportSuccess'
+
+  /reports/leave:
+    get:
+      tags: [Reports]
+      summary: Leave report (paginated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/reportFrom'
+        - $ref: '#/components/parameters/reportTo'
+      responses:
+        '200':
+          $ref: '#/components/responses/ReportListSuccess'
+
+  /reports/leave/export:
+    get:
+      tags: [Reports]
+      summary: Export leave report
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/exportFormat'
+      responses:
+        '200':
+          $ref: '#/components/responses/ExportSuccess'
+
+  /reports/cash-advances:
+    get:
+      tags: [Reports]
+      summary: Cash advance report (paginated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/reportFrom'
+        - $ref: '#/components/parameters/reportTo'
+      responses:
+        '200':
+          $ref: '#/components/responses/ReportListSuccess'
+
+  /reports/cash-advances/export:
+    get:
+      tags: [Reports]
+      summary: Export cash advance report
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/exportFormat'
+      responses:
+        '200':
+          $ref: '#/components/responses/ExportSuccess'
+
+  /reports/payroll:
+    get:
+      tags: [Reports]
+      summary: Payroll report (paginated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/reportFrom'
+        - $ref: '#/components/parameters/reportTo'
+      responses:
+        '200':
+          $ref: '#/components/responses/ReportListSuccess'
+
+  /reports/payroll/export:
+    get:
+      tags: [Reports]
+      summary: Export payroll report
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/exportFormat'
+      responses:
+        '200':
+          $ref: '#/components/responses/ExportSuccess'
+
+  /reports/employees:
+    get:
+      tags: [Reports]
+      summary: Employee report (paginated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/reportSearch'
+        - $ref: '#/components/parameters/reportPage'
+        - $ref: '#/components/parameters/reportLimit'
+      responses:
+        '200':
+          $ref: '#/components/responses/ReportListSuccess'
+
+  /reports/employees/export:
+    get:
+      tags: [Reports]
+      summary: Export employee report
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/exportFormat'
+      responses:
+        '200':
+          $ref: '#/components/responses/ExportSuccess'
+
+  /reports/branches:
+    get:
+      tags: [Reports]
+      summary: Branch report (paginated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/reportSearch'
+        - $ref: '#/components/parameters/reportPage'
+        - $ref: '#/components/parameters/reportLimit'
+      responses:
+        '200':
+          $ref: '#/components/responses/ReportListSuccess'
+
+  /reports/branches/export:
+    get:
+      tags: [Reports]
+      summary: Export branch report
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/exportFormat'
+      responses:
+        '200':
+          $ref: '#/components/responses/ExportSuccess'
+
+  /reports/warehouses:
+    get:
+      tags: [Reports]
+      summary: Warehouse report (paginated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/reportSearch'
+      responses:
+        '200':
+          $ref: '#/components/responses/ReportListSuccess'
+
+  /reports/warehouses/export:
+    get:
+      tags: [Reports]
+      summary: Export warehouse report
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/exportFormat'
+      responses:
+        '200':
+          $ref: '#/components/responses/ExportSuccess'
+
+  /reports/vehicles:
+    get:
+      tags: [Reports]
+      summary: Vehicle report (paginated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/reportSearch'
+      responses:
+        '200':
+          $ref: '#/components/responses/ReportListSuccess'
+
+  /reports/vehicles/export:
+    get:
+      tags: [Reports]
+      summary: Export vehicle report
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/exportFormat'
+      responses:
+        '200':
+          $ref: '#/components/responses/ExportSuccess'

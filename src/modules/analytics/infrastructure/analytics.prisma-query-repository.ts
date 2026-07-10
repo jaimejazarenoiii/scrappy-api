@@ -14,6 +14,7 @@ import type {
 import {
   buildAttendanceWhere,
   buildCashAdvanceWhere,
+  buildExpenseWhere,
   buildLeaveWhere,
   buildPayrollWhere,
   buildTransactionWhere,
@@ -377,8 +378,155 @@ export class AnalyticsPrismaQueryRepository implements AnalyticsQueryRepository 
     });
   }
 
-  async getExpenseMetrics(_filter: AnalyticsFilter): Promise<ExpenseMetricsProjection> {
-    return emptyExpenseMetrics();
+  async getExpenseMetrics(filter: AnalyticsFilter): Promise<ExpenseMetricsProjection> {
+    if (!Object.prototype.hasOwnProperty.call(prisma, 'expense')) {
+      return emptyExpenseMetrics();
+    }
+    return withTiming('expenses', async () => {
+      const where = buildExpenseWhere(filter);
+      const [totalAgg, byCategory, byBranch, byWarehouse, byVehicle, byTrip, expenses] =
+        await Promise.all([
+          prisma.expense.aggregate({ _sum: { amount: true }, where }),
+          prisma.expense.groupBy({
+            by: ['category'],
+            where,
+            _sum: { amount: true },
+            orderBy: { _sum: { amount: 'desc' } },
+            take: 10,
+          }),
+          prisma.expense.groupBy({
+            by: ['branchId'],
+            where: { ...where, branchId: { not: null } },
+            _sum: { amount: true },
+            orderBy: { _sum: { amount: 'desc' } },
+            take: 10,
+          }),
+          prisma.expense.groupBy({
+            by: ['warehouseId'],
+            where: { ...where, warehouseId: { not: null } },
+            _sum: { amount: true },
+            orderBy: { _sum: { amount: 'desc' } },
+            take: 10,
+          }),
+          prisma.expense.groupBy({
+            by: ['vehicleId'],
+            where: { ...where, vehicleId: { not: null } },
+            _sum: { amount: true },
+            orderBy: { _sum: { amount: 'desc' } },
+            take: 10,
+          }),
+          prisma.expense.groupBy({
+            by: ['tripId'],
+            where: { ...where, tripId: { not: null } },
+            _sum: { amount: true },
+            orderBy: { _sum: { amount: 'desc' } },
+            take: 10,
+          }),
+          prisma.expense.findMany({
+            where,
+            select: { expenseDate: true, amount: true },
+          }),
+        ]);
+
+      const branchIds = byBranch
+        .map((row) => row.branchId)
+        .filter((id): id is string => Boolean(id));
+      const warehouseIds = byWarehouse
+        .map((row) => row.warehouseId)
+        .filter((id): id is string => Boolean(id));
+      const vehicleIds = byVehicle
+        .map((row) => row.vehicleId)
+        .filter((id): id is string => Boolean(id));
+      const tripIds = byTrip.map((row) => row.tripId).filter((id): id is string => Boolean(id));
+
+      const [branches, warehouses, vehicles, trips] = await Promise.all([
+        branchIds.length
+          ? prisma.branch.findMany({
+              where: { id: { in: branchIds } },
+              select: { id: true, name: true },
+            })
+          : Promise.resolve([]),
+        warehouseIds.length
+          ? prisma.warehouse.findMany({
+              where: { id: { in: warehouseIds } },
+              select: { id: true, name: true },
+            })
+          : Promise.resolve([]),
+        vehicleIds.length
+          ? prisma.vehicle.findMany({
+              where: { id: { in: vehicleIds } },
+              select: { id: true, plateNumber: true },
+            })
+          : Promise.resolve([]),
+        tripIds.length
+          ? prisma.trip.findMany({
+              where: { id: { in: tripIds } },
+              select: { id: true, tripNumber: true },
+            })
+          : Promise.resolve([]),
+      ]);
+
+      const branchLabelById = new Map(branches.map((b) => [b.id, b.name]));
+      const warehouseLabelById = new Map(warehouses.map((w) => [w.id, w.name]));
+      const vehicleLabelById = new Map(vehicles.map((v) => [v.id, v.plateNumber]));
+      const tripLabelById = new Map(trips.map((t) => [t.id, t.tripNumber]));
+
+      const monthlyBuckets = new Map<string, number>();
+      for (const expense of expenses) {
+        const month = expense.expenseDate.toISOString().slice(0, 7);
+        monthlyBuckets.set(
+          month,
+          (monthlyBuckets.get(month) ?? 0) + decimalToNumber(expense.amount),
+        );
+      }
+
+      return {
+        totalExpenses: roundMoney(decimalToNumber(totalAgg._sum.amount)),
+        expensesByCategory: assignRanks(
+          byCategory.map((row) => ({
+            id: row.category,
+            label: row.category,
+            value: roundMoney(decimalToNumber(row._sum.amount)),
+            unit: 'PHP',
+          })),
+        ),
+        expensesByBranch: assignRanks(
+          byBranch.map((row) => ({
+            id: row.branchId!,
+            label: branchLabelById.get(row.branchId!) ?? row.branchId!,
+            value: roundMoney(decimalToNumber(row._sum.amount)),
+            unit: 'PHP',
+          })),
+        ),
+        expensesByWarehouse: assignRanks(
+          byWarehouse.map((row) => ({
+            id: row.warehouseId!,
+            label: warehouseLabelById.get(row.warehouseId!) ?? row.warehouseId!,
+            value: roundMoney(decimalToNumber(row._sum.amount)),
+            unit: 'PHP',
+          })),
+        ),
+        expensesByVehicle: assignRanks(
+          byVehicle.map((row) => ({
+            id: row.vehicleId!,
+            label: vehicleLabelById.get(row.vehicleId!) ?? row.vehicleId!,
+            value: roundMoney(decimalToNumber(row._sum.amount)),
+            unit: 'PHP',
+          })),
+        ),
+        expensesByTrip: assignRanks(
+          byTrip.map((row) => ({
+            id: row.tripId!,
+            label: tripLabelById.get(row.tripId!) ?? row.tripId!,
+            value: roundMoney(decimalToNumber(row._sum.amount)),
+            unit: 'PHP',
+          })),
+        ),
+        monthlyExpenseTrend: [...monthlyBuckets.entries()]
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([month, amount]) => ({ month, amount: roundMoney(amount) })),
+      };
+    });
   }
 
   async getWorkforceMetrics(filter: AnalyticsFilter): Promise<WorkforceMetricsProjection> {

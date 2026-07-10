@@ -9,6 +9,7 @@ export interface CashAdvanceProps {
   remainingAmount: number;
   status: CashAdvanceStatus;
   reason: string | null;
+  issuedAt: Date;
   createdByUserId: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -20,6 +21,7 @@ export interface CreateCashAdvanceProps {
   employeeId: string;
   amount: number;
   reason?: string | null;
+  issuedAt?: Date;
   createdByUserId?: string | null;
 }
 
@@ -32,6 +34,7 @@ export class CashAdvanceEntity {
 
   static createNew(props: CreateCashAdvanceProps): CashAdvanceEntity {
     const now = new Date();
+    const issuedAt = props.issuedAt ?? now;
     return CashAdvanceEntity.create({
       id: props.id,
       companyId: props.companyId,
@@ -41,6 +44,7 @@ export class CashAdvanceEntity {
       remainingAmount: props.amount,
       status: 'OUTSTANDING',
       reason: props.reason ?? null,
+      issuedAt,
       createdByUserId: props.createdByUserId ?? null,
       createdAt: now,
       updatedAt: now,
@@ -67,6 +71,9 @@ export class CashAdvanceEntity {
   }
   get status(): CashAdvanceStatus {
     return this.props.status;
+  }
+  get issuedAt(): Date {
+    return this.props.issuedAt;
   }
 
   isOutstanding(): boolean {

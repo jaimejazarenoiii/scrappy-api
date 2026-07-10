@@ -1,9 +1,14 @@
 import type { Request } from 'express';
 
+const ATTACHMENT_CONTENT_PATH = /\/(transactions|expenses)\/[^/]+\/attachments\/[^/]+\/content$/;
+
+export function isAttachmentContentRequest(req: Request): boolean {
+  return req.method === 'GET' && ATTACHMENT_CONTENT_PATH.test(req.path);
+}
+
+/** @deprecated Use {@link isAttachmentContentRequest} */
 export function isTransactionAttachmentContentRequest(req: Request): boolean {
-  return (
-    req.method === 'GET' && /\/transactions\/[^/]+\/attachments\/[^/]+\/content$/.test(req.path)
-  );
+  return isAttachmentContentRequest(req);
 }
 
 export function extractAccessToken(req: Request): string | undefined {
@@ -12,7 +17,7 @@ export function extractAccessToken(req: Request): string | undefined {
     return header.slice('Bearer '.length);
   }
 
-  if (!isTransactionAttachmentContentRequest(req)) {
+  if (!isAttachmentContentRequest(req)) {
     return undefined;
   }
 

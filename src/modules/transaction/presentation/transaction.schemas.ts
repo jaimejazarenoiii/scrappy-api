@@ -3,7 +3,7 @@ import { transactionListQuerySchema } from '../../../validations/common-query.sc
 import { TRANSACTION_ITEM_UNITS } from '../domain/transaction-item-unit.js';
 
 const directionSchema = z.enum(['INBOUND', 'OUTBOUND', 'BUY', 'SELL']);
-const locationTypeSchema = z.enum(['BRANCH', 'WAREHOUSE', 'OUTSIDE']);
+const locationTypeSchema = z.enum(['BRANCH', 'WAREHOUSE', 'OUTSIDE', 'TRIP']);
 const unitSchema = z.enum(TRANSACTION_ITEM_UNITS);
 
 const itemInputSchema = z.object({
@@ -17,11 +17,12 @@ const itemInputSchema = z.object({
 
 function assertLocationShape(
   value: {
-    locationType: 'BRANCH' | 'WAREHOUSE' | 'OUTSIDE';
+    locationType: 'BRANCH' | 'WAREHOUSE' | 'OUTSIDE' | 'TRIP';
     branchId?: string;
     warehouseId?: string;
     outsideLocationName?: string;
     outsideAddress?: string;
+    tripId?: string;
   },
   ctx: z.RefinementCtx,
 ): void {
@@ -54,6 +55,20 @@ function assertLocationShape(
         message: 'outsideAddress is required for OUTSIDE transactions.',
       });
     }
+  }
+  if (value.locationType === 'TRIP' && !value.tripId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['tripId'],
+      message: 'tripId is required for TRIP transactions.',
+    });
+  }
+  if (value.locationType !== 'TRIP' && value.tripId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['tripId'],
+      message: 'tripId is only allowed when locationType is TRIP.',
+    });
   }
 }
 

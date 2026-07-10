@@ -643,6 +643,7 @@ function matchesTransactionFilters(
   if (query.locationType && props.locationType !== query.locationType) return false;
   if (query.branchId && props.branchId !== query.branchId) return false;
   if (query.warehouseId && props.warehouseId !== query.warehouseId) return false;
+  if (query.tripId && props.tripId !== query.tripId) return false;
   if (query.fromDate && props.transactionDate < query.fromDate) return false;
   if (query.toDate && props.transactionDate > query.toDate) return false;
   if (query.search) {
@@ -1339,6 +1340,7 @@ export class InMemoryCashAdvanceRepository implements CashAdvanceRepository {
       remainingAmount: input.amount,
       status: 'OUTSTANDING',
       reason: input.reason ?? null,
+      issuedAt: input.issuedAt,
       createdByUserId: input.createdByUserId ?? null,
       createdAt: now,
       updatedAt: now,
@@ -1360,7 +1362,7 @@ export class InMemoryCashAdvanceRepository implements CashAdvanceRepository {
     if (query.status) {
       items = items.filter((advance) => advance.toPrimitives().status === query.status);
     }
-    items = filterByDateRange(items, query, (advance) => advance.toPrimitives().createdAt);
+    items = filterByDateRange(items, query, (advance) => advance.toPrimitives().issuedAt);
     return paginateAndSort(items, query, (advance, field) => {
       const value = advance.toPrimitives()[field as keyof ReturnType<typeof advance.toPrimitives>];
       return value instanceof Date ? value.getTime() : String(value);
@@ -1375,6 +1377,7 @@ export class InMemoryCashAdvanceRepository implements CashAdvanceRepository {
     if (query.status) {
       items = items.filter((advance) => advance.toPrimitives().status === query.status);
     }
+    items = filterByDateRange(items, query, (advance) => advance.toPrimitives().issuedAt);
     return paginateAndSort(items, query, (advance, field) => {
       const value = advance.toPrimitives()[field as keyof ReturnType<typeof advance.toPrimitives>];
       return value instanceof Date ? value.getTime() : String(value);
@@ -1400,7 +1403,7 @@ export class InMemoryCashAdvanceRepository implements CashAdvanceRepository {
           advance.companyId === companyId &&
           advance.toPrimitives().status === 'OUTSTANDING',
       )
-      .sort((a, b) => a.toPrimitives().createdAt.getTime() - b.toPrimitives().createdAt.getTime());
+      .sort((a, b) => a.toPrimitives().issuedAt.getTime() - b.toPrimitives().issuedAt.getTime());
   }
 
   async applyDeduction(cashAdvanceId: string, companyId: string, amount: number) {

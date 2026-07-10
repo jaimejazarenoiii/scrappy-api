@@ -85,6 +85,11 @@ describe('assertLocationFields', () => {
       }),
     ).not.toThrow();
   });
+
+  it('requires tripId for TRIP transactions', () => {
+    expect(() => assertLocationFields({ locationType: 'TRIP' })).toThrow(ValidationAppError);
+    expect(() => assertLocationFields({ locationType: 'TRIP', tripId: 't1' })).not.toThrow();
+  });
 });
 
 describe('assertItemTotal', () => {

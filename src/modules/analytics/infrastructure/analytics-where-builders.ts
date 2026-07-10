@@ -38,6 +38,20 @@ export function buildTripWhere(filter: AnalyticsFilter): Prisma.TripWhereInput {
   return where;
 }
 
+export function buildExpenseWhere(filter: AnalyticsFilter): Prisma.ExpenseWhereInput {
+  const where: Prisma.ExpenseWhereInput = {
+    companyId: filter.companyId,
+    status: 'RECORDED',
+    expenseDate: { gte: filter.from, lte: filter.to },
+    ...archivedPredicate(filter.includeArchived),
+  };
+  if (filter.branchId) where.branchId = filter.branchId;
+  if (filter.warehouseId) where.warehouseId = filter.warehouseId;
+  if (filter.vehicleId) where.vehicleId = filter.vehicleId;
+  if (filter.employeeId) where.createdByEmployeeId = filter.employeeId;
+  return where;
+}
+
 export function buildEmployeeWhere(filter: AnalyticsFilter): Prisma.EmployeeWhereInput {
   const where: Prisma.EmployeeWhereInput = {
     companyId: filter.companyId,
@@ -76,7 +90,7 @@ export function buildLeaveWhere(filter: AnalyticsFilter): Prisma.LeaveRecordWher
 export function buildCashAdvanceWhere(filter: AnalyticsFilter): Prisma.CashAdvanceWhereInput {
   const where: Prisma.CashAdvanceWhereInput = {
     companyId: filter.companyId,
-    createdAt: { gte: filter.from, lte: filter.to },
+    issuedAt: { gte: filter.from, lte: filter.to },
   };
   if (filter.employeeId) where.employeeId = filter.employeeId;
   return where;

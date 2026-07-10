@@ -1,15 +1,12 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { InvalidCredentialsError } from '../../../../shared/errors/http-exceptions.js';
 import type { PasswordHasher } from '../../../../shared/auth/password-hasher.interface.js';
 import type { TokenProvider } from '../../../../shared/auth/token-provider.interface.js';
-import {
-  InvalidCredentialsError,
-  ResourceNotFoundError,
-} from '../../../../shared/errors/http-exceptions.js';
 import type { CompanyRepository } from '../../../company/domain/company.repository.js';
 import type { SessionRepository } from '../../../session/domain/session.repository.js';
 import type { UserRepository } from '../../../user/domain/user.repository.js';
 import type { AuthResponseDto } from '../dto/auth.response.js';
-import { assertValidLoginUser } from '../services/login-policy.service.js';
+import { assertValidLoginCompany, assertValidLoginUser } from '../services/login-policy.service.js';
 
 export class LoginUseCase {
   constructor(
@@ -24,8 +21,7 @@ export class LoginUseCase {
     const user = assertValidLoginUser(await this.userRepository.findByEmail(identifier));
     const valid = await this.passwordHasher.compare(password, user.passwordHash);
     if (!valid) throw new InvalidCredentialsError();
-    const company = await this.companyRepository.findById(user.companyId);
-    if (!company) throw new ResourceNotFoundError('Company not found');
+    const company = assertValidLoginCompany(await this.companyRepository.findById(user.companyId));
     const sessionId = randomUUID();
     const payload = {
       sub: user.id,

@@ -46,6 +46,7 @@ export const cashAdvanceListQuerySchema = paginationQuerySchema.extend({
   fromDate: dateFilterSchema,
   toDate: dateFilterSchema,
   employeeId: z.string().uuid().optional(),
+  sortBy: z.enum(['issuedAt', 'createdAt']).optional(),
 });
 
 export const payrollListQuerySchema = paginationQuerySchema.extend({
@@ -65,9 +66,26 @@ export const transactionListQuerySchema = paginationQuerySchema.extend({
   direction: z.enum(['INBOUND', 'OUTBOUND']).optional(),
   status: z.enum(['DRAFT', 'READY_FOR_PAYMENT', 'PAID', 'CANCELLED']).optional(),
   transactionNumber: z.string().max(32).optional(),
-  locationType: z.enum(['BRANCH', 'WAREHOUSE', 'OUTSIDE']).optional(),
+  locationType: z.enum(['BRANCH', 'WAREHOUSE', 'OUTSIDE', 'TRIP']).optional(),
   branchId: z.string().uuid().optional(),
   warehouseId: z.string().uuid().optional(),
+  tripId: z.string().uuid().optional(),
+  fromDate: dateFilterSchema,
+  toDate: dateFilterSchema,
+  includeArchived: booleanFlagSchema,
+});
+
+export const expenseListQuerySchema = paginationQuerySchema.extend({
+  sortBy: z.enum(['expenseDate', 'createdAt', 'expenseNumber', 'amount']).optional(),
+  status: z.enum(['DRAFT', 'RECORDED', 'CANCELLED']).optional(),
+  category: z.string().max(200).optional(),
+  contextType: z.enum(['COMPANY', 'BRANCH', 'WAREHOUSE', 'VEHICLE', 'TRIP']).optional(),
+  branchId: z.string().uuid().optional(),
+  warehouseId: z.string().uuid().optional(),
+  vehicleId: z.string().uuid().optional(),
+  tripId: z.string().uuid().optional(),
+  employeeId: z.string().uuid().optional(),
+  expenseNumber: z.string().max(32).optional(),
   fromDate: dateFilterSchema,
   toDate: dateFilterSchema,
   includeArchived: booleanFlagSchema,

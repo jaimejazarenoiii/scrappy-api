@@ -17,6 +17,7 @@ import {
   InMemoryUserRepository,
   InMemoryWarehouseRepository,
 } from '../../setup/in-memory-repositories.js';
+import { InMemoryTripRepository } from '../../setup/in-memory-trip-repository.js';
 import { setupTestEnv } from '../../setup/test-app.js';
 import { TransactionNumberService } from '../../../src/modules/transaction/application/services/transaction-number.service.js';
 
@@ -27,6 +28,7 @@ async function buildFixture() {
   const attendanceRepository = new InMemoryAttendanceRepository();
   const branchRepository = new InMemoryBranchRepository();
   const warehouseRepository = new InMemoryWarehouseRepository();
+  const tripRepository = new InMemoryTripRepository();
   const store = new InMemoryTransactionStore();
   const transactionRepository = new InMemoryTransactionRepository(store);
   const transactionNumberSequenceRepository = new InMemoryTransactionNumberSequenceRepository(
@@ -58,6 +60,7 @@ async function buildFixture() {
     attendanceRepository,
     branchRepository,
     warehouseRepository,
+    tripRepository,
     new TransactionNumberService(transactionNumberSequenceRepository),
   );
 
@@ -70,6 +73,7 @@ async function buildFixture() {
     attendanceRepository,
     branchRepository,
     warehouseRepository,
+    tripRepository,
     transactionRepository,
     transactionNumberSequenceRepository,
     useCase,
@@ -193,5 +197,54 @@ describe('CreateTransactionUseCase', () => {
         items: [{ materialName: 'Copper', weight: 10, unit: 'KG', price: 250, total: 1 }],
       }),
     ).rejects.toThrow(BusinessRuleViolationError);
+  });
+
+  it('requires tripId for TRIP location type', async () => {
+    const f = await buildFixture();
+    await timeIn(f.attendanceRepository, f.companyId, f.employeeId);
+    await expect(
+      f.useCase.execute(f.companyId, f.userId, {
+        direction: 'INBOUND',
+        partyName: 'Acme',
+        locationType: 'TRIP',
+        assignedEmployeeIds: [f.employeeId],
+        items: outsidePayload.items,
+      }),
+    ).rejects.toThrow(ValidationAppError);
+  });
+
+  it('creates a TRIP transaction linked to an existing trip', async () => {
+    const f = await buildFixture();
+    await timeIn(f.attendanceRepository, f.companyId, f.employeeId);
+
+    const tripId = randomUUID();
+    const vehicleId = randomUUID();
+    await f.tripRepository.create({
+      id: tripId,
+      companyId: f.companyId,
+      tripNumber: 'TRIP-20260709-000001',
+      vehicleId,
+      status: 'DRAFT',
+      scheduledStart: new Date(),
+      origin: 'Warehouse',
+      destination: 'Site',
+      notes: null,
+      createdByUserId: f.userId,
+      updatedByUserId: f.userId,
+      members: [{ employeeId: f.employeeId, role: 'DRIVER' }],
+    });
+
+    const result = await f.useCase.execute(f.companyId, f.userId, {
+      direction: 'INBOUND',
+      partyName: 'Acme',
+      locationType: 'TRIP',
+      tripId,
+      assignedEmployeeIds: [f.employeeId],
+      items: outsidePayload.items,
+    });
+
+    expect(result.locationType).toBe('TRIP');
+    expect(result.tripId).toBe(tripId);
+    expect(result.outsideLocationName).toBeNull();
   });
 });

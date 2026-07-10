@@ -1,0 +1,60 @@
+import type { AuthorizationContext } from '../../../../shared/policy/authorization-context.js';
+import type { ReportExportFormat } from '../../../../shared/reporting/export-filename.js';
+import type { CompanyRepository } from '../../../company/domain/company.repository.js';
+import { assertCanAccessReports } from '../../domain/report-authorization.policy.js';
+import type { ReportsQueryRepository } from '../../domain/report-query.repository.js';
+import { PAYROLL_EXPORT_COLUMNS, mapPayrollExportRow } from '../export/report-export-columns.js';
+import { logReportAccess } from '../services/report-audit.service.js';
+import type { ReportExportOrchestratorService } from '../services/report-export-orchestrator.service.js';
+import type {
+  ReportFilterPipeline,
+  ResolvedReportQuery,
+} from '../services/report-filter-pipeline.js';
+import type { ReportExportArtifact } from '../../infrastructure/export/report-exporter.interface.js';
+
+export interface PayrollReportExportQuery extends ResolvedReportQuery {
+  format: ReportExportFormat;
+  disposition?: 'attachment' | 'inline';
+}
+
+export class ExportPayrollReportUseCase {
+  constructor(
+    private readonly queryRepository: ReportsQueryRepository,
+    private readonly filterPipeline: ReportFilterPipeline,
+    private readonly exportOrchestrator: ReportExportOrchestratorService,
+    private readonly companyRepository: CompanyRepository,
+  ) {}
+
+  async execute(
+    auth: AuthorizationContext,
+    query: PayrollReportExportQuery,
+  ): Promise<ReportExportArtifact> {
+    assertCanAccessReports(auth.role);
+    const ctx = await this.filterPipeline.build(
+      auth.companyId,
+      query,
+      { required: true },
+      'payPeriodStart',
+      'desc',
+    );
+    logReportAccess('payroll', 'export', ctx.filter, auth.userId, { format: query.format });
+    const company = await this.companyRepository.findById(auth.companyId);
+    const exportParams = { filter: ctx.filter, search: ctx.search, sort: ctx.sort };
+    const totalCount = await this.queryRepository.countPayrollReports(exportParams);
+    return this.exportOrchestrator.export({
+      domain: 'payroll',
+      companyName: company?.toPrimitives().name ?? 'company',
+      title: 'Payroll Report',
+      format: query.format,
+      disposition: query.disposition,
+      from: ctx.filter.from,
+      to: ctx.filter.to,
+      search: ctx.search,
+      totalCount,
+      columns: PAYROLL_EXPORT_COLUMNS,
+      mapRow: mapPayrollExportRow,
+      fetchBatch: (skip, take) =>
+        this.queryRepository.batchPayrollReports(exportParams, skip, take),
+    });
+  }
+}

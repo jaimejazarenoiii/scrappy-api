@@ -1,0 +1,353 @@
+openapi: 3.0.3
+info:
+  title: Scrappy API - Expense Management (P007)
+  version: 1.0.0
+  description: |
+    P007 Expense Management contracts. Expenses record operational costs independent from transactions.
+    Employees create and record own drafts when timed in; Managers and Owners manage company-wide.
+
+servers:
+  - url: /api/v1
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ExpenseStatus:
+      type: string
+      enum: [DRAFT, RECORDED, CANCELLED]
+
+    ExpenseContextType:
+      type: string
+      enum: [COMPANY, BRANCH, WAREHOUSE, VEHICLE, TRIP]
+
+    ExpenseAttachmentType:
+      type: string
+      enum: [PHOTO]
+
+    ExpenseNumber:
+      type: string
+      pattern: '^EXP-\d{8}-\d{6}$'
+      example: EXP-20260709-000001
+
+    ExpenseContext:
+      type: object
+      required: [contextType]
+      properties:
+        contextType:
+          $ref: '#/components/schemas/ExpenseContextType'
+        branchId:
+          type: string
+          format: uuid
+          nullable: true
+        warehouseId:
+          type: string
+          format: uuid
+          nullable: true
+        vehicleId:
+          type: string
+          format: uuid
+          nullable: true
+        tripId:
+          type: string
+          format: uuid
+          nullable: true
+
+    ExpenseAttachment:
+      type: object
+      required: [id, expenseId, attachmentType, fileName, mimeType, fileSize, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        expenseId: { type: string, format: uuid }
+        attachmentType: { $ref: '#/components/schemas/ExpenseAttachmentType' }
+        fileName: { type: string }
+        mimeType: { type: string }
+        fileSize: { type: integer }
+        uploadedByUserId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+
+    ExpenseSummary:
+      type: object
+      required:
+        - id
+        - companyId
+        - expenseNumber
+        - expenseDate
+        - category
+        - amount
+        - description
+        - status
+        - contextType
+      properties:
+        id: { type: string, format: uuid }
+        companyId: { type: string, format: uuid }
+        expenseNumber: { $ref: '#/components/schemas/ExpenseNumber' }
+        expenseDate: { type: string, format: date-time }
+        category: { type: string }
+        amount: { type: number, format: double }
+        description: { type: string }
+        status: { $ref: '#/components/schemas/ExpenseStatus' }
+        contextType: { $ref: '#/components/schemas/ExpenseContextType' }
+        branchId: { type: string, format: uuid, nullable: true }
+        warehouseId: { type: string, format: uuid, nullable: true }
+        vehicleId: { type: string, format: uuid, nullable: true }
+        tripId: { type: string, format: uuid, nullable: true }
+        attachmentCount: { type: integer }
+        createdByEmployeeId: { type: string, format: uuid, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    ExpenseDetail:
+      allOf:
+        - { $ref: '#/components/schemas/ExpenseSummary' }
+        - type: object
+          properties:
+            recordedAt: { type: string, format: date-time, nullable: true }
+            cancelledAt: { type: string, format: date-time, nullable: true }
+            cancellationReason: { type: string, nullable: true }
+            attachments:
+              type: array
+              items: { $ref: '#/components/schemas/ExpenseAttachment' }
+            updatedAt: { type: string, format: date-time }
+
+    CreateExpenseRequest:
+      type: object
+      required: [expenseDate, category, amount, description, contextType]
+      properties:
+        expenseDate: { type: string, format: date-time }
+        category: { type: string, maxLength: 200 }
+        amount: { type: number, format: double, exclusiveMinimum: 0 }
+        description: { type: string, maxLength: 2000 }
+        contextType: { $ref: '#/components/schemas/ExpenseContextType' }
+        branchId: { type: string, format: uuid }
+        warehouseId: { type: string, format: uuid }
+        vehicleId: { type: string, format: uuid }
+        tripId: { type: string, format: uuid }
+        recordImmediately: { type: boolean, default: false, description: Manager/Owner only }
+
+    UpdateExpenseRequest:
+      type: object
+      properties:
+        expenseDate: { type: string, format: date-time }
+        category: { type: string, maxLength: 200 }
+        amount: { type: number, format: double, exclusiveMinimum: 0 }
+        description: { type: string, maxLength: 2000 }
+        contextType: { $ref: '#/components/schemas/ExpenseContextType' }
+        branchId: { type: string, format: uuid, nullable: true }
+        warehouseId: { type: string, format: uuid, nullable: true }
+        vehicleId: { type: string, format: uuid, nullable: true }
+        tripId: { type: string, format: uuid, nullable: true }
+
+    RecordExpenseRequest:
+      type: object
+      properties:
+        note: { type: string, maxLength: 500 }
+
+    CancelExpenseRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, maxLength: 500 }
+
+    ArchiveExpenseRequest:
+      type: object
+      properties:
+        reason: { type: string, maxLength: 500 }
+
+security:
+  - bearerAuth: []
+
+paths:
+  /expenses:
+    get:
+      tags: [Expenses]
+      summary: List company expenses (Manager/Owner)
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 20 } }
+        - { name: sortBy, in: query, schema: { type: string, enum: [expenseDate, createdAt, expenseNumber, amount], default: expenseDate } }
+        - { name: sortOrder, in: query, schema: { type: string, enum: [asc, desc], default: desc } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/ExpenseStatus' } }
+        - { name: category, in: query, schema: { type: string } }
+        - { name: contextType, in: query, schema: { $ref: '#/components/schemas/ExpenseContextType' } }
+        - { name: branchId, in: query, schema: { type: string, format: uuid } }
+        - { name: warehouseId, in: query, schema: { type: string, format: uuid } }
+        - { name: vehicleId, in: query, schema: { type: string, format: uuid } }
+        - { name: tripId, in: query, schema: { type: string, format: uuid } }
+        - { name: employeeId, in: query, schema: { type: string, format: uuid } }
+        - { name: fromDate, in: query, schema: { type: string, format: date } }
+        - { name: toDate, in: query, schema: { type: string, format: date } }
+        - { name: expenseNumber, in: query, schema: { type: string } }
+        - { name: search, in: query, schema: { type: string, minLength: 2 } }
+        - { name: includeArchived, in: query, schema: { type: boolean, default: false } }
+      responses:
+        '200':
+          description: Paginated expense summaries
+        '400': { description: Validation error }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden (Employee) }
+    post:
+      tags: [Expenses]
+      summary: Create expense (Draft by default)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateExpenseRequest' }
+      responses:
+        '201':
+          description: Created expense detail
+        '400': { description: Validation error }
+        '403': { description: Forbidden }
+        '409': { description: Business rule violation (not timed in, invalid trip) }
+
+  /expenses/mine:
+    get:
+      tags: [Expenses]
+      summary: List expenses created by authenticated Employee
+      parameters:
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 20 } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/ExpenseStatus' } }
+        - { name: fromDate, in: query, schema: { type: string, format: date } }
+        - { name: toDate, in: query, schema: { type: string, format: date } }
+      responses:
+        '200': { description: Paginated own expenses }
+        '403': { description: No linked employee profile }
+
+  /expenses/by-number/{expenseNumber}:
+    get:
+      tags: [Expenses]
+      summary: Get expense by Expense Number
+      parameters:
+        - name: expenseNumber
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/ExpenseNumber' }
+      responses:
+        '200': { description: Expense detail }
+        '404': { description: Not found }
+
+  /expenses/{expenseId}:
+    get:
+      tags: [Expenses]
+      summary: Get expense detail
+      parameters:
+        - { name: expenseId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Expense detail with attachments }
+        '403': { description: Employee viewing non-own expense }
+        '404': { description: Not found }
+    patch:
+      tags: [Expenses]
+      summary: Update expense header/context
+      parameters:
+        - { name: expenseId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateExpenseRequest' }
+      responses:
+        '200': { description: Updated expense }
+        '409': { description: Lifecycle conflict }
+
+  /expenses/{expenseId}/record:
+    post:
+      tags: [Expense Status]
+      summary: Record (finalize) Draft expense
+      parameters:
+        - { name: expenseId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RecordExpenseRequest' }
+      responses:
+        '200': { description: Recorded expense }
+        '409': { description: Not Draft or forbidden }
+
+  /expenses/{expenseId}/cancel:
+    post:
+      tags: [Expense Status]
+      summary: Cancel Draft or Recorded expense
+      parameters:
+        - { name: expenseId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CancelExpenseRequest' }
+      responses:
+        '200': { description: Cancelled expense }
+        '409': { description: Already cancelled or forbidden }
+
+  /expenses/{expenseId}/archive:
+    post:
+      tags: [Expenses]
+      summary: Archive Recorded or Cancelled expense
+      parameters:
+        - { name: expenseId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ArchiveExpenseRequest' }
+      responses:
+        '200': { description: Archived expense }
+        '409': { description: Not archivable status }
+
+  /expenses/{expenseId}/attachments:
+    get:
+      tags: [Expense Attachments]
+      summary: List expense attachments
+      parameters:
+        - { name: expenseId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Attachment list }
+    post:
+      tags: [Expense Attachments]
+      summary: Upload receipt photo attachment
+      parameters:
+        - { name: expenseId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201': { description: Created attachment }
+        '409': { description: Expense not editable }
+
+  /expenses/{expenseId}/attachments/{attachmentId}:
+    delete:
+      tags: [Expense Attachments]
+      summary: Remove attachment from editable expense
+      parameters:
+        - { name: expenseId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: attachmentId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Removed }
+        '409': { description: Expense not editable }
+
+  /expenses/{expenseId}/attachments/{attachmentId}/content:
+    get:
+      tags: [Expense Attachments]
+      summary: Download attachment binary content
+      parameters:
+        - { name: expenseId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: attachmentId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Binary file stream
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+        '403': { description: Forbidden }
+        '404': { description: Not found }

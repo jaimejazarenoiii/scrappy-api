@@ -26,6 +26,13 @@ const listQueryParams = [
 ];
 
 export const tripOpenApiPaths = {
+  '/api/v1/trips/dashboard': {
+    get: protectedOperation({
+      tags: [TRIPS_TAG],
+      summary: 'Trip status counts for company dashboard',
+      responses: { ...successResponse('TripDashboard', 'Trip status summary counts') },
+    }),
+  },
   '/api/v1/trips': {
     post: protectedOperation({
       tags: [TRIPS_TAG],
@@ -69,6 +76,32 @@ export const tripOpenApiPaths = {
         },
       ],
       responses: { ...successResponse('TripDetail', 'Trip detail') },
+    }),
+  },
+  '/api/v1/trips/{tripId}/history': {
+    get: protectedOperation({
+      tags: [TRIPS_TAG],
+      summary: 'Trip lifecycle history',
+      parameters: [uuidPathParam('tripId', 'Trip identifier')],
+      responses: { ...successResponse('TripHistory', 'Lifecycle events for the trip') },
+    }),
+  },
+  '/api/v1/trips/{tripId}/transactions': {
+    get: protectedOperation({
+      tags: [TRIPS_TAG],
+      summary: 'List transactions linked to a trip',
+      parameters: [
+        uuidPathParam('tripId', 'Trip identifier'),
+        queryParam('page', { type: 'integer', default: 1 }),
+        queryParam('limit', { type: 'integer', default: 20 }),
+        queryParam('sortBy', {
+          type: 'string',
+          enum: ['transactionDate', 'createdAt', 'status'],
+        }),
+        queryParam('sortOrder', { type: 'string', enum: ['asc', 'desc'] }),
+        queryParam('includeArchived', { type: 'boolean', default: false }),
+      ],
+      responses: { ...paginatedListResponse('TransactionSummary', 'Transactions linked to trip') },
     }),
   },
   '/api/v1/trips/{tripId}': {

@@ -25,6 +25,20 @@ import {
   InMemoryFileStorage,
 } from './in-memory-repositories.js';
 import { InMemoryAnalyticsQueryRepository } from './in-memory-analytics-query-repository.js';
+import { InMemoryReportsQueryRepository } from './in-memory-reports-query-repository.js';
+import {
+  InMemoryTripRepository,
+  InMemoryTripNumberSequenceRepository,
+} from './in-memory-trip-repository.js';
+import { InMemoryTripReferenceChecker } from './in-memory-trip-reference-checker.js';
+import {
+  InMemoryExpenseStore,
+  InMemoryExpenseRepository,
+  InMemoryExpenseAttachmentRepository,
+  InMemoryExpenseNumberSequenceRepository,
+  InMemoryExpenseFileStorage,
+} from './in-memory-expense-repository.js';
+import { InMemoryExpenseCategoryRepository } from './in-memory-expense-category-repository.js';
 
 export function setupTestEnv(): void {
   process.env.PORT = '3000';
@@ -82,6 +96,30 @@ export function createTestContext() {
     leaveRepository,
     cashAdvanceRepository,
   );
+  const reportsQueryRepository = new InMemoryReportsQueryRepository(
+    transactionStore,
+    employeeRepository,
+    branchRepository,
+    warehouseRepository,
+    vehicleRepository,
+    attendanceRepository,
+    payrollRepository,
+    leaveRepository,
+    cashAdvanceRepository,
+    userRepository,
+  );
+  const tripReferenceChecker = new InMemoryTripReferenceChecker();
+  const tripRepository = new InMemoryTripRepository(vehicleRepository, employeeRepository);
+  const tripNumberSequenceRepository = new InMemoryTripNumberSequenceRepository();
+  const expenseStore = new InMemoryExpenseStore();
+  const expenseAttachmentRepository = new InMemoryExpenseAttachmentRepository(expenseStore);
+  const expenseRepository = new InMemoryExpenseRepository(
+    expenseStore,
+    expenseAttachmentRepository,
+  );
+  const expenseCategoryRepository = new InMemoryExpenseCategoryRepository();
+  const expenseNumberSequenceRepository = new InMemoryExpenseNumberSequenceRepository(expenseStore);
+  const expenseFileStorage = new InMemoryExpenseFileStorage();
   const container = createContainer({
     companyRepository,
     userRepository,
@@ -103,6 +141,15 @@ export function createTestContext() {
     transactionNumberSequenceRepository,
     fileStorage,
     analyticsQueryRepository,
+    reportsQueryRepository,
+    tripReferenceChecker,
+    tripRepository,
+    tripNumberSequenceRepository,
+    expenseRepository,
+    expenseCategoryRepository,
+    expenseAttachmentRepository,
+    expenseNumberSequenceRepository,
+    expenseFileStorage,
   });
   const app = createApp(container);
   return {
@@ -127,5 +174,11 @@ export function createTestContext() {
     transactionSuggestionRepository,
     transactionNumberSequenceRepository,
     fileStorage,
+    expenseStore,
+    expenseRepository,
+    expenseAttachmentRepository,
+    expenseNumberSequenceRepository,
+    expenseFileStorage,
+    tripRepository,
   };
 }

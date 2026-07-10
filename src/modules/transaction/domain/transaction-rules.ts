@@ -18,6 +18,7 @@ export interface LocationFieldsInput {
   warehouseId?: string | null;
   outsideLocationName?: string | null;
   outsideAddress?: string | null;
+  tripId?: string | null;
 }
 
 /**
@@ -71,7 +72,7 @@ export function assertLocationFields(input: LocationFieldsInput): void {
         message: 'warehouseId is required for WAREHOUSE transactions.',
       });
     }
-  } else {
+  } else if (input.locationType === 'OUTSIDE') {
     if (!input.outsideLocationName) {
       details.push({
         path: 'outsideLocationName',
@@ -83,6 +84,10 @@ export function assertLocationFields(input: LocationFieldsInput): void {
         path: 'outsideAddress',
         message: 'outsideAddress is required for OUTSIDE transactions.',
       });
+    }
+  } else if (input.locationType === 'TRIP') {
+    if (!input.tripId) {
+      details.push({ path: 'tripId', message: 'tripId is required for TRIP transactions.' });
     }
   }
   if (details.length > 0) {

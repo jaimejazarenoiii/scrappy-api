@@ -12,7 +12,9 @@ import { workforceDashboardOpenApiPaths } from '../modules/workforce-dashboard/p
 import { transactionOpenApiPaths } from '../modules/transaction/presentation/transaction.openapi.js';
 import { payrollOpenApiPaths } from '../modules/payroll/presentation/payroll.openapi.js';
 import { tripOpenApiPaths } from '../modules/trip/presentation/trip.openapi.js';
+import { expenseOpenApiPaths } from '../modules/expense/presentation/expense.openapi.js';
 import { analyticsOpenApiPaths } from '../modules/analytics/presentation/analytics.openapi.js';
+import { reportsOpenApiPaths } from '../modules/reports/presentation/reports.openapi.js';
 import { commonSchemas } from './common-schemas.js';
 import { commonResponses } from './common-responses.js';
 
@@ -47,7 +49,9 @@ export function buildOpenApiDocument(): object {
       ...workforceDashboardOpenApiPaths,
       ...transactionOpenApiPaths,
       ...tripOpenApiPaths,
+      ...expenseOpenApiPaths,
       ...analyticsOpenApiPaths,
+      ...reportsOpenApiPaths,
     },
   };
 }

@@ -101,6 +101,29 @@ import { AnalyticsPrismaQueryRepository } from '../modules/analytics/infrastruct
 import { buildAnalyticsController } from '../modules/analytics/index.js';
 import type { AnalyticsController } from '../modules/analytics/presentation/analytics.controller.js';
 import type { AnalyticsQueryRepository } from '../modules/analytics/domain/analytics-query.repository.js';
+import { ReportsPrismaQueryRepository } from '../modules/reports/infrastructure/reports.prisma-query-repository.js';
+import { buildReportsController } from '../modules/reports/index.js';
+import type { ReportsController } from '../modules/reports/presentation/reports.controller.js';
+import type { ReportsQueryRepository } from '../modules/reports/domain/report-query.repository.js';
+import type { TripReferenceChecker } from '../modules/reports/application/services/report-filter-validator.service.js';
+import { TripPrismaRepository } from '../modules/trip/infrastructure/trip.prisma-repository.js';
+import { TripNumberSequencePrismaRepository } from '../modules/trip/infrastructure/trip-number-sequence.prisma-repository.js';
+import { buildTripController } from '../modules/trip/index.js';
+import type { TripController } from '../modules/trip/presentation/trip.controller.js';
+import type { TripRepository } from '../modules/trip/domain/trip.repository.js';
+import type { TripNumberSequenceRepository } from '../modules/trip/domain/trip-number-sequence.repository.js';
+import { ExpensePrismaRepository } from '../modules/expense/infrastructure/expense.prisma-repository.js';
+import { ExpenseCategoryPrismaRepository } from '../modules/expense/infrastructure/expense-category.prisma-repository.js';
+import { ExpenseAttachmentPrismaRepository } from '../modules/expense/infrastructure/expense-attachment.prisma-repository.js';
+import { ExpenseNumberSequencePrismaRepository } from '../modules/expense/infrastructure/expense-number-sequence.prisma-repository.js';
+import { LocalExpenseFileStorage } from '../modules/expense/infrastructure/file-storage/local-expense-file-storage.js';
+import { buildExpenseController } from '../modules/expense/index.js';
+import type { ExpenseController } from '../modules/expense/presentation/expense.controller.js';
+import type { ExpenseRepository } from '../modules/expense/domain/expense.repository.js';
+import type { ExpenseCategoryRepository } from '../modules/expense/domain/expense-category.repository.js';
+import type { ExpenseAttachmentRepository } from '../modules/expense/domain/expense-attachment.repository.js';
+import type { ExpenseNumberSequenceRepository } from '../modules/expense/domain/expense-number-sequence.repository.js';
+import type { ExpenseFileStorage } from '../modules/expense/infrastructure/file-storage/expense-file-storage.js';
 import type { TransactionRepository } from '../modules/transaction/domain/transaction.repository.js';
 import type { TransactionItemRepository } from '../modules/transaction/domain/transaction-item.repository.js';
 import type { TransactionAttachmentRepository } from '../modules/transaction/domain/transaction-attachment.repository.js';
@@ -124,6 +147,9 @@ export interface Container {
   workforceDashboardController: WorkforceDashboardController;
   transactionController: TransactionController;
   analyticsController: AnalyticsController;
+  reportsController: ReportsController;
+  tripController: TripController;
+  expenseController: ExpenseController;
   healthIndicator?: { check: () => Promise<boolean> };
 }
 
@@ -148,6 +174,15 @@ export interface ContainerOverrides {
   transactionNumberSequenceRepository?: TransactionNumberSequenceRepository;
   fileStorage?: FileStorage;
   analyticsQueryRepository?: AnalyticsQueryRepository;
+  reportsQueryRepository?: ReportsQueryRepository;
+  tripReferenceChecker?: TripReferenceChecker;
+  tripRepository?: TripRepository;
+  tripNumberSequenceRepository?: TripNumberSequenceRepository;
+  expenseRepository?: ExpenseRepository;
+  expenseCategoryRepository?: ExpenseCategoryRepository;
+  expenseAttachmentRepository?: ExpenseAttachmentRepository;
+  expenseNumberSequenceRepository?: ExpenseNumberSequenceRepository;
+  expenseFileStorage?: ExpenseFileStorage;
   healthIndicator?: { check: () => Promise<boolean> };
 }
 
@@ -183,6 +218,19 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
   const fileStorage = overrides.fileStorage ?? new LocalFileStorage();
   const analyticsQueryRepository =
     overrides.analyticsQueryRepository ?? new AnalyticsPrismaQueryRepository();
+  const reportsQueryRepository =
+    overrides.reportsQueryRepository ?? new ReportsPrismaQueryRepository();
+  const tripRepository = overrides.tripRepository ?? new TripPrismaRepository();
+  const tripNumberSequenceRepository =
+    overrides.tripNumberSequenceRepository ?? new TripNumberSequencePrismaRepository();
+  const expenseRepository = overrides.expenseRepository ?? new ExpensePrismaRepository();
+  const expenseCategoryRepository =
+    overrides.expenseCategoryRepository ?? new ExpenseCategoryPrismaRepository();
+  const expenseAttachmentRepository =
+    overrides.expenseAttachmentRepository ?? new ExpenseAttachmentPrismaRepository();
+  const expenseNumberSequenceRepository =
+    overrides.expenseNumberSequenceRepository ?? new ExpenseNumberSequencePrismaRepository();
+  const expenseFileStorage = overrides.expenseFileStorage ?? new LocalExpenseFileStorage();
 
   return {
     tokenProvider,
@@ -295,6 +343,7 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
       attendanceRepository: attendanceSessionRepository,
       branchRepository,
       warehouseRepository,
+      tripRepository,
     }),
     analyticsController: buildAnalyticsController({
       analyticsQueryRepository,
@@ -302,6 +351,36 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
       warehouseRepository,
       vehicleRepository,
       employeeRepository,
+    }),
+    reportsController: buildReportsController({
+      reportsQueryRepository,
+      branchRepository,
+      warehouseRepository,
+      vehicleRepository,
+      employeeRepository,
+      companyRepository,
+      tripReferenceChecker: overrides.tripReferenceChecker,
+    }),
+    tripController: buildTripController({
+      tripRepository,
+      tripNumberSequenceRepository,
+      vehicleRepository,
+      employeeRepository,
+      userRepository,
+      transactionRepository,
+    }),
+    expenseController: buildExpenseController({
+      expenseRepository,
+      expenseCategoryRepository,
+      expenseAttachmentRepository,
+      expenseNumberSequenceRepository,
+      expenseFileStorage,
+      userRepository,
+      attendanceRepository: attendanceSessionRepository,
+      branchRepository,
+      warehouseRepository,
+      vehicleRepository,
+      tripRepository,
     }),
   };
 }

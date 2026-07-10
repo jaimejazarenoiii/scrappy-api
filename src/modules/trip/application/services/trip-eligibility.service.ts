@@ -4,10 +4,10 @@ import type { TripEntity } from '../../domain/trip.entity.js';
 export class TripEligibilityService {
   assertTripAcceptsTransaction(trip: TripEntity): void {
     if (!trip.isStarted()) {
-      throw new BusinessRuleViolationError('Outside transactions require a Started trip.');
+      throw new BusinessRuleViolationError('Trip transactions require a Started trip.');
     }
     if (trip.isCancelled()) {
-      throw new BusinessRuleViolationError('Cancelled trips cannot accept outside transactions.');
+      throw new BusinessRuleViolationError('Cancelled trips cannot accept transactions.');
     }
   }
 

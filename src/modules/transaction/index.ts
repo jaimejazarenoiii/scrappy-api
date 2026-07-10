@@ -4,6 +4,7 @@ import type { BranchRepository } from '../branch/domain/branch.repository.js';
 import type { EmployeeRepository } from '../employee/domain/employee.repository.js';
 import type { UserRepository } from '../user/domain/user.repository.js';
 import type { WarehouseRepository } from '../warehouse/domain/warehouse.repository.js';
+import type { TripRepository } from '../trip/domain/trip.repository.js';
 import type { TransactionRepository } from './domain/transaction.repository.js';
 import type { TransactionItemRepository } from './domain/transaction-item.repository.js';
 import type { TransactionAttachmentRepository } from './domain/transaction-attachment.repository.js';
@@ -52,6 +53,7 @@ export interface TransactionModuleDependencies {
   attendanceRepository: AttendanceSessionRepository;
   branchRepository: BranchRepository;
   warehouseRepository: WarehouseRepository;
+  tripRepository: TripRepository;
 }
 
 export function buildTransactionController(
@@ -73,6 +75,7 @@ export function buildTransactionController(
       deps.attendanceRepository,
       deps.branchRepository,
       deps.warehouseRepository,
+      deps.tripRepository,
       transactionNumberService,
     ),
     new GetTransactionUseCase(deps.transactionRepository, deps.userRepository),
@@ -83,6 +86,7 @@ export function buildTransactionController(
       deps.employeeRepository,
       deps.branchRepository,
       deps.warehouseRepository,
+      deps.tripRepository,
     ),
     new ListTransactionsUseCase(deps.transactionRepository),
     new ListAssignedTransactionsUseCase(deps.transactionRepository, deps.userRepository),

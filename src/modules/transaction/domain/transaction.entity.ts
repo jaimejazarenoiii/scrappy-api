@@ -100,6 +100,10 @@ export class TransactionEntity {
     return this.props.locationType === 'OUTSIDE';
   }
 
+  isAtTrip(): boolean {
+    return this.props.locationType === 'TRIP';
+  }
+
   belongsToCompany(companyId: string): boolean {
     return this.props.companyId === companyId;
   }

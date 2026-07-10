@@ -42,6 +42,7 @@ export class CreateCashAdvanceUseCase {
       employeeId: input.employeeId,
       amount: input.amount,
       reason: input.reason ?? null,
+      issuedAt: input.issuedAt,
       createdByUserId: userId,
     });
 
@@ -51,6 +52,7 @@ export class CreateCashAdvanceUseCase {
       employeeId: advance.employeeId,
       amount: advance.amount,
       reason: advance.toPrimitives().reason,
+      issuedAt: advance.issuedAt,
       createdByUserId: userId,
     });
 
@@ -60,7 +62,11 @@ export class CreateCashAdvanceUseCase {
       resourceType: 'cash_advance',
       resourceId: created.id,
       actorUserId: userId,
-      metadata: { employeeId: input.employeeId, amount: input.amount },
+      metadata: {
+        employeeId: input.employeeId,
+        amount: input.amount,
+        issuedAt: advance.issuedAt.toISOString(),
+      },
     });
 
     return toResponse(created);

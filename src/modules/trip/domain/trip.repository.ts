@@ -24,6 +24,7 @@ export interface CreateTripInput {
   notes: string | null;
   createdByUserId: string | null;
   updatedByUserId: string | null;
+  members?: TripMemberInput[];
 }
 
 export interface UpdateTripInput {
@@ -73,6 +74,59 @@ export interface ListTripResult {
   total: number;
 }
 
+export interface TripDashboardCounts {
+  draftCount: number;
+  scheduledCount: number;
+  startedCount: number;
+  completedCount: number;
+  cancelledCount: number;
+}
+
+export interface TripVehicleSummary {
+  id: string;
+  plateNumber: string;
+  description: string | null;
+  status: string;
+}
+
+export interface TripSummaryProjection {
+  id: string;
+  companyId: string;
+  tripNumber: string;
+  status: TripStatus;
+  scheduledStart: Date;
+  actualStart: Date | null;
+  actualEnd: Date | null;
+  origin: string;
+  destination: string;
+  notes: string | null;
+  vehicle: TripVehicleSummary;
+}
+
+export interface TripMemberDetailProjection {
+  id: string;
+  tripId: string;
+  employeeId: string;
+  role: TripMemberRole;
+  firstName: string;
+  lastName: string;
+  employeeNumber: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TripDetailProjection extends TripSummaryProjection {
+  members: TripMemberDetailProjection[];
+  linkedTransactionCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ListTripSummariesResult {
+  items: TripSummaryProjection[];
+  total: number;
+}
+
 export interface TripRepository {
   create(input: CreateTripInput): Promise<TripEntity>;
   update(tripId: string, companyId: string, input: UpdateTripInput): Promise<TripEntity>;
@@ -83,9 +137,12 @@ export interface TripRepository {
 
   findById(tripId: string, companyId: string): Promise<TripEntity | null>;
   findByTripNumber(tripNumber: string, companyId: string): Promise<TripEntity | null>;
+  findDetailById(tripId: string, companyId: string): Promise<TripDetailProjection | null>;
 
   listByCompany(companyId: string, query: ListTripQuery): Promise<ListTripResult>;
+  listSummariesByCompany(companyId: string, query: ListTripQuery): Promise<ListTripSummariesResult>;
   listMine(companyId: string, employeeId: string, query: ListTripQuery): Promise<ListTripResult>;
+  getDashboardCounts(companyId: string): Promise<TripDashboardCounts>;
 
   // Members
   listMembers(tripId: string, companyId: string): Promise<TripMemberEntity[]>;

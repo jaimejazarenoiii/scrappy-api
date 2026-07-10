@@ -20,6 +20,8 @@ export const cashAdvanceOpenApiPaths = {
       parameters: [
         queryParam('page', { type: 'integer', default: 1 }),
         queryParam('limit', { type: 'integer', default: 20 }),
+        queryParam('sortBy', { type: 'string', enum: ['issuedAt', 'createdAt'] }),
+        queryParam('sortOrder', { type: 'string', enum: ['asc', 'desc'] }),
         queryParam('status', { type: 'string', enum: ['OUTSTANDING', 'SETTLED'] }),
         queryParam('fromDate', { type: 'string', format: 'date' }),
         queryParam('toDate', { type: 'string', format: 'date' }),
@@ -35,6 +37,8 @@ export const cashAdvanceOpenApiPaths = {
         queryParam('employeeId', { type: 'string', format: 'uuid' }),
         queryParam('page', { type: 'integer', default: 1 }),
         queryParam('limit', { type: 'integer', default: 20 }),
+        queryParam('sortBy', { type: 'string', enum: ['issuedAt', 'createdAt'] }),
+        queryParam('sortOrder', { type: 'string', enum: ['asc', 'desc'] }),
         queryParam('status', { type: 'string', enum: ['OUTSTANDING', 'SETTLED'] }),
         queryParam('fromDate', { type: 'string', format: 'date' }),
         queryParam('toDate', { type: 'string', format: 'date' }),

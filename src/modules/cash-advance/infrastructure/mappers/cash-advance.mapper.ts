@@ -11,6 +11,7 @@ export function toCashAdvanceDomain(record: PrismaCashAdvance): CashAdvanceEntit
     remainingAmount: Number(record.remainingAmount),
     status: record.status,
     reason: record.reason,
+    issuedAt: record.issuedAt,
     createdByUserId: record.createdByUserId,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,

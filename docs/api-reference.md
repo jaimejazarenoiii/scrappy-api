@@ -25,7 +25,10 @@ the access token carries the user's `companyId`, and every request only ever see
 13. [Workforce — Dashboard](#13-workforce--dashboard)
 14. [Transactions](#14-transactions)
 15. [Trip Management](#15-trip-management)
-16. [Typical frontend flows](#16-typical-frontend-flows)
+16. [Analytics](#16-analytics)
+17. [Reports](#17-reports)
+18. [Expense Management](#18-expense-management)
+19. [Typical frontend flows](#19-typical-frontend-flows)
 
 ---
 
@@ -272,15 +275,15 @@ deletedAt }`.
 
 ## 9. Workforce — Attendance
 
-| Method & path                                | Roles             | Description                                        |
-| -------------------------------------------- | ----------------- | -------------------------------------------------- |
-| `POST /workforce/attendance/time-in`         | MANAGER, EMPLOYEE | Open attendance session (linked employee required) |
-| `POST /workforce/attendance/time-out`        | MANAGER, EMPLOYEE | Close open session                                 |
-| `GET /workforce/attendance/status`           | all               | `{ isTimedIn, openSession }`                       |
-| `GET /workforce/attendance`                  | all               | My attendance history (paginated)                  |
-| `GET /workforce/attendance/company`          | OWNER, MANAGER    | Company attendance (paginated)                     |
-| `GET /workforce/attendance/dashboard`        | OWNER, MANAGER    | All employees with today status summary            |
-| `PATCH /workforce/attendance/{attendanceId}` | OWNER, MANAGER    | Correct/manage a record                            |
+| Method & path                                | Roles             | Description                                                |
+| -------------------------------------------- | ----------------- | ---------------------------------------------------------- |
+| `POST /workforce/attendance/time-in`         | MANAGER, EMPLOYEE | Open attendance session (linked employee profile required) |
+| `POST /workforce/attendance/time-out`        | MANAGER, EMPLOYEE | Close open session                                         |
+| `GET /workforce/attendance/status`           | all               | `{ isTimedIn, openSession }`                               |
+| `GET /workforce/attendance`                  | all               | My attendance history (paginated)                          |
+| `GET /workforce/attendance/company`          | OWNER, MANAGER    | Company attendance (paginated)                             |
+| `GET /workforce/attendance/dashboard`        | OWNER, MANAGER    | All employees with today status summary                    |
+| `PATCH /workforce/attendance/{attendanceId}` | OWNER, MANAGER    | Correct/manage a record                                    |
 
 **Time-in / time-out body** (optional): `{ "note": "..." }`.
 
@@ -347,10 +350,12 @@ today's approved leave, and company summary (`pendingRequests`, `onLeaveToday`,
 | `GET /workforce/cash-advances`         | EMPLOYEE       | My cash advances               |
 | `GET /workforce/cash-advances/company` | OWNER, MANAGER | Company cash advances          |
 
-**Create body**: `{ "employeeId": "uuid", "amount": 500, "reason?": "..." }`.
+**Create body**: `{ "employeeId": "uuid", "amount": 500, "reason?": "...", "issuedAt?": "ISO-8601" }`.
+`issuedAt` is the business issue date shown in the UI; omit it to default to server time on create.
 
 **CashAdvance shape**: `{ id, companyId, employeeId, amount, deductedAmount, remainingAmount,
-status, reason, createdAt, updatedAt }` where `status` is `OUTSTANDING` | `SETTLED`.
+status, reason, issuedAt, createdAt, updatedAt }` where `status` is `OUTSTANDING` | `SETTLED`.
+List filters `fromDate`/`toDate` and default sort use `issuedAt`.
 
 ---
 
@@ -408,10 +413,11 @@ and visibility flags (`canTimeIn`, `canTimeOut`, `canCreateTransaction`, etc.).
   - `READY_FOR_PAYMENT`: Managers, Owners
   - `PAID`: read-only, Owner may reopen
   - `CANCELLED`: read-only
-- **Location**: `locationType` is `BRANCH` | `WAREHOUSE` | `OUTSIDE` with required companion fields:
+- **Location**: `locationType` is `BRANCH` | `WAREHOUSE` | `OUTSIDE` | `TRIP` with required companion fields:
   - `BRANCH` → `branchId`
   - `WAREHOUSE` → `warehouseId`
   - `OUTSIDE` → `outsideLocationName` + `outsideAddress`
+  - `TRIP` → `tripId` (assigned employees must be trip members)
 - **Items**: `total` = `weight × price` (server-computed). Sending a mismatched `total` → `409`.
 - **Item unit**: `KG`, `G`, `TON`, `LB`, `PIECE`, `BUNDLE`, `SACK`.
 - **Archive** = soft delete. Hidden from default lists unless `includeArchived=true`.
@@ -497,7 +503,7 @@ fetch image bytes. For `<img>` tags or opening in a new tab, append your JWT:
 
 \*\* Employees must be assigned to the transaction (else `403`). Owners and managers may finish any company draft.
 
-**Create body**:
+**Create body** (`OUTSIDE`):
 
 ```jsonc
 {
@@ -511,9 +517,32 @@ fetch image bytes. For `<img>` tags or opening in a new tab, append your JWT:
 }
 ```
 
+**Create body** (`TRIP` — link transaction to a trip):
+
+```jsonc
+{
+  "direction": "BUY",
+  "partyName": "Acme Recycling",
+  "locationType": "TRIP",
+  "tripId": "65ef6c96-5edd-44e7-9bb6-ae0cafa1e552",
+  "assignedEmployeeIds": ["uuid"],
+  "items": [{ "materialName": "Copper", "weight": 10, "unit": "KG", "price": 250 }],
+}
+```
+
+`tripId` is only accepted when `locationType` is `TRIP`. For `BRANCH`, `WAREHOUSE`, and `OUTSIDE`, omit `tripId` (or send `null` on update). For `TRIP`, `outsideLocationName` and `outsideAddress` are not used.
+
+**TRIP validation errors**:
+
+| HTTP | When                                                                      |
+| ---- | ------------------------------------------------------------------------- |
+| 400  | `tripId` missing for `TRIP`, or `tripId` sent with another `locationType` |
+| 404  | `tripId` not found in company                                             |
+| 409  | Assigned employee is not a trip member                                    |
+
 **List query params**: `page`, `limit`, `sortBy` (`transactionDate` \| `createdAt` \| `status`),
-`sortOrder`, `search`, `transactionNumber`, `direction`, `status`, `locationType`, `branchId`,
-`warehouseId`, `fromDate`, `toDate`, `includeArchived`.
+`sortOrder`, `search`, `transactionNumber`, `direction`, `status`, `locationType` (`BRANCH` \| `WAREHOUSE` \| `OUTSIDE` \| `TRIP`), `branchId`,
+`warehouseId`, `tripId`, `fromDate`, `toDate`, `includeArchived`.
 
 **Settlement actions**:
 
@@ -544,23 +573,183 @@ Trip Management (`/api/v1/trips`) coordinates employees and vehicles for operati
 
 **Trip Number** is server-assigned and immutable: `TRIP-YYYYMMDD-000001`.
 
-### Endpoints
+**Implementation status**: `GET /trips`, `GET /trips/dashboard`, `POST /trips`, `GET /trips/{tripId}`, `GET /trips/{tripId}/transactions`, and `GET /trips/{tripId}/history` are live. All other endpoints in the table below are specified in P007 but not yet implemented — they will return **404** until that work ships.
 
-| Method & path                               | Roles                    | Notes                                    |
-| ------------------------------------------- | ------------------------ | ---------------------------------------- |
-| `POST /trips`                               | OWNER, MANAGER           | Create Draft trip (**201**)              |
-| `PATCH /trips/{tripId}`                     | OWNER, MANAGER           | Draft-only header edits                  |
-| `GET /trips/{tripId}`                       | OWNER, MANAGER, EMPLOYEE | Employee is restricted to assigned trips |
-| `GET /trips`                                | OWNER, MANAGER           | Company trip list                        |
-| `GET /trips/mine`                           | EMPLOYEE                 | Employee assigned trips                  |
-| `GET /trips/by-number/{tripNumber}`         | OWNER, MANAGER, EMPLOYEE | Lookup by business trip number           |
-| `POST /trips/{tripId}/start`                | OWNER, MANAGER           | Draft → Started                          |
-| `POST /trips/{tripId}/complete`             | OWNER, MANAGER           | Started → Completed                      |
-| `POST /trips/{tripId}/cancel`               | OWNER, MANAGER           | Draft → Cancelled                        |
-| `POST /trips/{tripId}/archive`              | OWNER, MANAGER           | Archive Completed/Cancelled              |
-| `POST /trips/{tripId}/members`              | OWNER, MANAGER           | Add member                               |
-| `PATCH /trips/{tripId}/members/{memberId}`  | OWNER, MANAGER           | Update member role                       |
-| `DELETE /trips/{tripId}/members/{memberId}` | OWNER, MANAGER           | Remove member                            |
+### `GET /trips` — company trip list
+
+**Roles**: Owner, Manager. **Employee** receives **403**.
+
+Paginated trip summaries for the authenticated company. `data` is an array of trip rows; pagination is in `meta`.
+
+#### Query parameters
+
+| Parameter         | Type    | Default          | Notes                                                                                                      |
+| ----------------- | ------- | ---------------- | ---------------------------------------------------------------------------------------------------------- |
+| `page`            | integer | `1`              | 1-based page number                                                                                        |
+| `limit`           | integer | `20`             | Page size (1–100)                                                                                          |
+| `sortBy`          | string  | `scheduledStart` | `scheduledStart`, `createdAt`, or `tripNumber` (`scheduledStartAt` accepted as alias for `scheduledStart`) |
+| `sortOrder`       | enum    | `desc`           | `asc` or `desc`                                                                                            |
+| `status`          | enum    | —                | `DRAFT`, `STARTED`, `COMPLETED`, `CANCELLED`                                                               |
+| `vehicleId`       | uuid    | —                | Filter by vehicle                                                                                          |
+| `employeeId`      | uuid    | —                | Filter by assigned member                                                                                  |
+| `fromDate`        | date    | —                | Inclusive scheduled-start lower bound                                                                      |
+| `toDate`          | date    | —                | Inclusive scheduled-start upper bound                                                                      |
+| `tripNumber`      | string  | —                | Partial match on trip number                                                                               |
+| `includeArchived` | boolean | `false`          | Include soft-deleted trips                                                                                 |
+
+#### Example
+
+```http
+GET /api/v1/trips?page=1&limit=10&sortBy=scheduledStart&sortOrder=desc
+```
+
+#### Response row (`TripSummary`)
+
+Each item in `data` includes: `id`, `companyId`, `tripNumber`, `status`, `scheduledStart`, `actualStart`, `actualEnd`, `origin`, `destination`, `notes`, and nested `vehicle` (`id`, `plateNumber`, `description`, `status`).
+
+---
+
+### `GET /trips/dashboard` — status counts
+
+**Roles**: Owner, Manager. **Employee** receives **403**.
+
+Returns aggregate trip counts for the company (non-archived trips only).
+
+#### Response (`data`)
+
+| Field            | Type    | Meaning                                                                  |
+| ---------------- | ------- | ------------------------------------------------------------------------ |
+| `draftCount`     | integer | `DRAFT` trips with `scheduledStart` today or in the past (ready/overdue) |
+| `scheduledCount` | integer | `DRAFT` trips with `scheduledStart` in the future (upcoming)             |
+| `startedCount`   | integer | `STARTED` trips                                                          |
+| `completedCount` | integer | `COMPLETED` trips                                                        |
+| `cancelledCount` | integer | `CANCELLED` trips                                                        |
+
+#### Example
+
+```json
+{
+  "success": true,
+  "data": {
+    "draftCount": 3,
+    "scheduledCount": 2,
+    "startedCount": 1,
+    "completedCount": 10,
+    "cancelledCount": 0
+  },
+  "meta": {},
+  "error": null
+}
+```
+
+---
+
+### `POST /trips` — create Draft trip
+
+**Roles**: Owner, Manager. **Employee** receives **403**.
+
+Creates a new trip in `DRAFT` status with a server-assigned Trip Number.
+
+#### Request body
+
+| Field            | Type    | Required | Notes                                                              |
+| ---------------- | ------- | -------- | ------------------------------------------------------------------ |
+| `vehicleId`      | uuid    | yes      | Must be an available company vehicle                               |
+| `scheduledStart` | ISO8601 | yes      | Planned departure time                                             |
+| `origin`         | string  | yes      | Max 500 characters                                                 |
+| `destination`    | string  | yes      | Max 500 characters                                                 |
+| `notes`          | string  | no       | Max 2000 characters                                                |
+| `members`        | array   | no       | `{ employeeId, role }` — `DRIVER`, `HELPER`, `BUYER`, `SUPERVISOR` |
+
+#### Response
+
+**201** with `TripDetail` in `data` (includes `tripNumber`, `vehicle`, `members`, etc.).
+
+---
+
+### `GET /trips/{tripId}` — trip detail
+
+**Roles**: Owner, Manager (any company trip); Employee (assigned members only).
+
+Returns full trip detail including members and `linkedTransactionCount`.
+
+#### Response (`TripDetail`)
+
+Includes trip header fields, nested `vehicle`, `members` array, `linkedTransactionCount`, `createdAt`, and `updatedAt`.
+
+#### Errors
+
+| Status | When                                        |
+| ------ | ------------------------------------------- |
+| `404`  | Trip not found or archived (unless exposed) |
+| `403`  | Employee not assigned to the trip           |
+
+---
+
+### `GET /trips/{tripId}/transactions` — linked transactions
+
+**Roles**: Owner, Manager (any company trip); Employee (assigned members only).
+
+Returns paginated `TransactionSummary` rows where `tripId` matches the trip. Linking is stored on the transaction (`locationType: TRIP` + `tripId`).
+
+#### Query parameters
+
+| Parameter         | Type    | Default           | Notes                                    |
+| ----------------- | ------- | ----------------- | ---------------------------------------- |
+| `page`            | integer | `1`               | 1-based page number                      |
+| `limit`           | integer | `20`              | Page size (1–100)                        |
+| `sortBy`          | string  | `transactionDate` | `transactionDate`, `createdAt`, `status` |
+| `sortOrder`       | enum    | `desc`            | `asc` or `desc`                          |
+| `includeArchived` | boolean | `false`           | Include soft-deleted transactions        |
+
+**Fallback**: `GET /transactions?tripId={tripId}&locationType=TRIP` (Owner/Manager only) returns the same filter for company transaction lists.
+
+---
+
+### `GET /trips/{tripId}/history` — lifecycle history
+
+**Roles**: Owner, Manager (any company trip); Employee (assigned members only).
+
+Returns a chronological list of lifecycle events derived from the trip record (`CREATED`, `STARTED`, `COMPLETED`, `CANCELLED`, `ARCHIVED`). This is not a full audit log; member changes are not included yet.
+
+#### Response (`data`)
+
+```jsonc
+{
+  "tripId": "uuid",
+  "events": [
+    {
+      "action": "CREATED",
+      "occurredAt": "2026-07-09T08:00:00.000Z",
+      "actorUserId": "uuid",
+      "note": null,
+    },
+  ],
+}
+```
+
+---
+
+### All endpoints (spec)
+
+| Method & path                               | Roles                    | Status / notes                              |
+| ------------------------------------------- | ------------------------ | ------------------------------------------- |
+| `GET /trips`                                | OWNER, MANAGER           | **Live** — paginated company list           |
+| `GET /trips/dashboard`                      | OWNER, MANAGER           | **Live** — status count summary             |
+| `POST /trips`                               | OWNER, MANAGER           | **Live** — create Draft trip (**201**)      |
+| `GET /trips/{tripId}`                       | OWNER, MANAGER, EMPLOYEE | **Live** — Employee restricted to assigned  |
+| `GET /trips/{tripId}/transactions`          | OWNER, MANAGER, EMPLOYEE | **Live** — transactions linked via `tripId` |
+| `GET /trips/{tripId}/history`               | OWNER, MANAGER, EMPLOYEE | **Live** — lifecycle event timeline         |
+| `PATCH /trips/{tripId}`                     | OWNER, MANAGER           | Planned — Draft-only header edits           |
+| `GET /trips/mine`                           | EMPLOYEE                 | Planned — assigned trips                    |
+| `GET /trips/by-number/{tripNumber}`         | OWNER, MANAGER, EMPLOYEE | Planned — lookup by trip number             |
+| `POST /trips/{tripId}/start`                | OWNER, MANAGER           | Planned — Draft → Started                   |
+| `POST /trips/{tripId}/complete`             | OWNER, MANAGER           | Planned — Started → Completed               |
+| `POST /trips/{tripId}/cancel`               | OWNER, MANAGER           | Planned — Draft → Cancelled                 |
+| `POST /trips/{tripId}/archive`              | OWNER, MANAGER           | Planned — archive Completed/Cancelled       |
+| `POST /trips/{tripId}/members`              | OWNER, MANAGER           | Planned — add member                        |
+| `PATCH /trips/{tripId}/members/{memberId}`  | OWNER, MANAGER           | Planned — update member role                |
+| `DELETE /trips/{tripId}/members/{memberId}` | OWNER, MANAGER           | Planned — remove member                     |
 
 ---
 
@@ -601,7 +790,167 @@ Cancelled transactions are excluded. Archived records are excluded unless `inclu
 
 ---
 
-## 17. Typical frontend flows
+## 17. Reports
+
+Read-only operational detail reports under `/api/v1/reports/*` for **Owner** and **Manager** roles. **Employee** receives **403**.
+
+List endpoints return paginated rows in `data` with `appliedCriteria`, `generatedAt`, and pagination in `meta`. Export endpoints stream CSV, Excel, or PDF files using the same filters as the list view.
+
+### Shared query parameters (list endpoints)
+
+| Parameter         | Type    | Default | Notes                                                     |
+| ----------------- | ------- | ------- | --------------------------------------------------------- |
+| `from`            | ISO8601 | —       | Required for date-bound reports; optional for org reports |
+| `to`              | ISO8601 | —       | Required for date-bound reports; max 366-day span         |
+| `branchId`        | uuid    | —       | Tenant-scoped branch filter                               |
+| `warehouseId`     | uuid    | —       | Tenant-scoped warehouse filter                            |
+| `vehicleId`       | uuid    | —       | Tenant-scoped vehicle filter                              |
+| `employeeId`      | uuid    | —       | Tenant-scoped employee filter                             |
+| `tripId`          | uuid    | —       | Trip/expense filter                                       |
+| `includeArchived` | boolean | `false` | Include soft-deleted operational records                  |
+| `search`          | string  | —       | Optional; minimum 2 characters when provided              |
+| `page`            | integer | `1`     | 1-based page number                                       |
+| `limit`           | integer | `20`    | Page size (1–100)                                         |
+| `sortBy`          | string  | —       | Allowlisted per report (see Swagger)                      |
+| `sortOrder`       | enum    | `desc`  | `asc` or `desc`                                           |
+
+### Export query parameters
+
+Same as list, plus:
+
+| Parameter     | Type | Default      | Notes                                       |
+| ------------- | ---- | ------------ | ------------------------------------------- |
+| `format`      | enum | —            | `csv`, `xlsx`, or `pdf` (required)          |
+| `disposition` | enum | `attachment` | `attachment` download or `inline` for print |
+
+Export is capped at **10,000 rows**; requests exceeding the limit return **422**.
+
+### List endpoints
+
+| Method & path                | Roles          | Description                                      |
+| ---------------------------- | -------------- | ------------------------------------------------ |
+| `GET /reports/transactions`  | OWNER, MANAGER | Transaction audit rows with items and settlement |
+| `GET /reports/trips`         | OWNER, MANAGER | Trip rows with vehicle, members, schedule        |
+| `GET /reports/expenses`      | OWNER, MANAGER | Expense rows (empty until expense module live)   |
+| `GET /reports/attendance`    | OWNER, MANAGER | Attendance session rows                          |
+| `GET /reports/leave`         | OWNER, MANAGER | Leave record rows                                |
+| `GET /reports/cash-advances` | OWNER, MANAGER | Cash advance issuance rows                       |
+| `GET /reports/payroll`       | OWNER, MANAGER | Payroll period rows                              |
+| `GET /reports/employees`     | OWNER, MANAGER | Employee profile rows                            |
+| `GET /reports/branches`      | OWNER, MANAGER | Branch registry rows                             |
+| `GET /reports/warehouses`    | OWNER, MANAGER | Warehouse registry rows                          |
+| `GET /reports/vehicles`      | OWNER, MANAGER | Vehicle registry rows                            |
+
+### Export endpoints
+
+| Method & path                       | Roles          | Description                |
+| ----------------------------------- | -------------- | -------------------------- |
+| `GET /reports/transactions/export`  | OWNER, MANAGER | Export transaction report  |
+| `GET /reports/trips/export`         | OWNER, MANAGER | Export trip report         |
+| `GET /reports/expenses/export`      | OWNER, MANAGER | Export expense report      |
+| `GET /reports/attendance/export`    | OWNER, MANAGER | Export attendance report   |
+| `GET /reports/leave/export`         | OWNER, MANAGER | Export leave report        |
+| `GET /reports/cash-advances/export` | OWNER, MANAGER | Export cash advance report |
+| `GET /reports/payroll/export`       | OWNER, MANAGER | Export payroll report      |
+| `GET /reports/employees/export`     | OWNER, MANAGER | Export employee report     |
+| `GET /reports/branches/export`      | OWNER, MANAGER | Export branch report       |
+| `GET /reports/warehouses/export`    | OWNER, MANAGER | Export warehouse report    |
+| `GET /reports/vehicles/export`      | OWNER, MANAGER | Export vehicle report      |
+
+Reports are **read-only** — no mutations. All monetary values are PHP with 2 decimal places.
+
+---
+
+## 18. Expense Management
+
+Operational expenses are tracked independently from transactions. Each expense receives an immutable
+`EXP-YYYYMMDD-000001` number. Employees create drafts when timed in; managers and owners oversee
+company-wide expenses.
+
+### Roles
+
+| Action                                       | Owner | Manager | Employee       |
+| -------------------------------------------- | ----- | ------- | -------------- |
+| Create expense                               | Yes   | Yes     | Yes (timed in) |
+| List company (`GET /expenses`)               | Yes   | Yes     | No             |
+| List own (`GET /expenses/mine`)              | Yes*  | Yes*    | Yes            |
+| View detail / by number                      | Yes   | Yes     | Own only       |
+| Edit draft                                   | Yes   | Yes     | Own only       |
+| Edit recorded                                | Yes   | Yes     | No             |
+| Record draft                                 | Yes   | Yes     | Own only       |
+| Cancel draft                                 | Yes   | Yes     | Own only       |
+| Cancel recorded                              | Yes   | Yes     | No             |
+| Manage attachments                           | Yes   | Yes     | Own draft only |
+| List categories (`GET /expenses/categories`) | Yes   | Yes     | Yes            |
+| Archive                                      | Yes   | Yes     | No             |
+
+\*When linked to an employee profile.
+
+**ExpenseAttachment**: `{ id, expenseId, attachmentType, fileName, mimeType, fileSize,
+uploadedByUserId, downloadUrl, createdAt }`. Use `downloadUrl` to fetch image bytes. For `<img>`
+tags or opening in a new tab, append your JWT: `{downloadUrl}?access_token={accessToken}` (same
+token as `Authorization: Bearer`).
+
+**Expense categories** are stored per company in `ExpenseCategory`. The seed script inserts nine
+defaults (Fuel, Maintenance, Supplies, Travel, Meals, Utilities, Rent, Salaries, Other). New
+companies created outside seed do not get categories automatically yet — `GET /expenses/categories`
+falls back to the same default list when the catalog is empty.
+
+`GET /expenses/categories` response:
+
+```json
+{
+  "success": true,
+  "data": [
+    "Fuel",
+    "Maintenance",
+    "Supplies",
+    "Travel",
+    "Meals",
+    "Utilities",
+    "Rent",
+    "Salaries",
+    "Other"
+  ],
+  "meta": {},
+  "error": null
+}
+```
+
+### Endpoints
+
+| Endpoint                                                   | Method | Purpose                                                                                                                 |
+| ---------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `/expenses`                                                | POST   | Create draft (or recorded if manager/owner + `recordImmediately`)                                                       |
+| `/expenses`                                                | GET    | Company list with filters (manager/owner)                                                                               |
+| `/expenses/mine`                                           | GET    | Employee own list                                                                                                       |
+| `/expenses/categories`                                     | GET    | Company category catalog (seeded defaults + custom values used on expenses)                                             |
+| `/expenses/by-number/{expenseNumber}`                      | GET    | Lookup by expense number                                                                                                |
+| `/expenses/{expenseId}`                                    | GET    | Detail with attachments                                                                                                 |
+| `/expenses/{expenseId}`                                    | PATCH  | Update header/context                                                                                                   |
+| `/expenses/{expenseId}/record`                             | POST   | Draft → Recorded                                                                                                        |
+| `/expenses/{expenseId}/cancel`                             | POST   | Draft/Recorded → Cancelled (reason required)                                                                            |
+| `/expenses/{expenseId}/archive`                            | POST   | Soft archive (recorded/cancelled, manager/owner)                                                                        |
+| `/expenses/{expenseId}/attachments`                        | POST   | Upload receipt photo (`multipart/form-data`, field `file`)                                                              |
+| `/expenses/{expenseId}/attachments`                        | GET    | List attachment metadata                                                                                                |
+| `/expenses/{expenseId}/attachments/{attachmentId}`         | DELETE | Remove attachment (**204** No Content)                                                                                  |
+| `/expenses/{expenseId}/attachments/{attachmentId}/content` | GET    | Download photo bytes (`image/jpeg`, `image/png`, or `image/webp`); supports `?access_token=` for browser image requests |
+
+### List query parameters
+
+`page`, `limit`, `sortBy` (`expenseDate`, `createdAt`, `expenseNumber`, `amount`), `sortOrder`
+(default `expenseDate desc` for managers), `status`, `category`, `contextType`, `branchId`,
+`warehouseId`, `vehicleId`, `tripId`, `employeeId`, `fromDate`, `toDate`, `expenseNumber`, `search`
+(min 2 chars), `includeArchived`.
+
+### Context types
+
+`COMPANY` (no FK), `BRANCH` (`branchId`), `WAREHOUSE` (`warehouseId`), `VEHICLE` (`vehicleId`),
+`TRIP` (`tripId` — only started or completed trips).
+
+---
+
+## 19. Typical frontend flows
 
 ### App bootstrap (after login)
 
@@ -643,10 +992,42 @@ Cancelled transactions are excluded. Archived records are excluded unless `inclu
 
 After `pnpm run db:seed`:
 
-| Email                   | Role     | Password      |
-| ----------------------- | -------- | ------------- |
-| `owner@example.com`     | OWNER    | `password123` |
-| `manager@example.com`   | MANAGER  | `password123` |
-| `employee1@example.com` | EMPLOYEE | `password123` |
-| `employee2@example.com` | EMPLOYEE | `password123` |
-| `employee3@example.com` | EMPLOYEE | `password123` |
+| Email                   | Role     | Password      | Notes                                      |
+| ----------------------- | -------- | ------------- | ------------------------------------------ |
+| `owner@example.com`     | OWNER    | `password123` | No employee link; time-in not required     |
+| `manager@example.com`   | MANAGER  | `password123` | Linked to employee `EMP-MGR` (can time in) |
+| `employee1@example.com` | EMPLOYEE | `password123` | Linked to `EMP-001`                        |
+| `employee2@example.com` | EMPLOYEE | `password123` | Linked to `EMP-002`                        |
+| `employee3@example.com` | EMPLOYEE | `password123` | Linked to `EMP-003`                        |
+
+### Create a blank real company (no demo data)
+
+Use this instead of `db:seed` when onboarding a client:
+
+```bash
+pnpm run db:create-company -- \
+  --name "Acme Recycling" \
+  --owner-email owner@acme.com \
+  --owner-password 'SecurePass123' \
+  --contact 09171234567 \
+  --email office@acme.com \
+  --address "Quezon City"
+```
+
+Creates only: company + OWNER user + default expense categories. The client then adds
+employees/branches/etc. in the app.
+
+### Disable / re-enable a non-paying company (no delete)
+
+```bash
+# Stop access — keeps all data
+pnpm run db:disable-company -- --name "Acme Recycling"
+# or
+pnpm run db:disable-company -- --id <company-uuid>
+
+# Restore access later
+pnpm run db:enable-company -- --name "Acme Recycling"
+```
+
+Disable sets company + all users to `INACTIVE` and revokes refresh sessions.
+Enable sets them back to `ACTIVE`. Nothing is deleted.

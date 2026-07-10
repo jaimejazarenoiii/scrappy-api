@@ -289,7 +289,7 @@ export class InMemoryAnalyticsQueryRepository implements AnalyticsQueryRepositor
     const cashAdvances = [...this.cashAdvanceRepository.advances.values()].filter((advance) => {
       const props = advance.toPrimitives();
       if (props.companyId !== filter.companyId) return false;
-      if (props.createdAt < filter.from || props.createdAt > filter.to) return false;
+      if (props.issuedAt < filter.from || props.issuedAt > filter.to) return false;
       if (filter.employeeId && props.employeeId !== filter.employeeId) return false;
       return true;
     });

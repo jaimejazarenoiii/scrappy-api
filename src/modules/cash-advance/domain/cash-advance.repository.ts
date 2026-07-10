@@ -7,13 +7,14 @@ export interface CreateCashAdvanceInput {
   employeeId: string;
   amount: number;
   reason?: string | null;
+  issuedAt: Date;
   createdByUserId?: string | null;
 }
 
 export interface ListCashAdvanceQuery {
   page: number;
   limit: number;
-  sortBy?: 'createdAt';
+  sortBy?: 'issuedAt' | 'createdAt';
   sortOrder?: 'asc' | 'desc';
   fromDate?: Date;
   toDate?: Date;

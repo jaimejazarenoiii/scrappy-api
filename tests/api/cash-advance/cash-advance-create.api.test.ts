@@ -21,6 +21,20 @@ describe('cash advance api', () => {
       .set(auth)
       .send(makeCashAdvancePayload(employee.employeeId));
     expect(create.status).toBe(201);
+    expect(create.body.data.issuedAt).toBeTruthy();
+
+    const backdated = await request(app)
+      .post('/api/v1/workforce/cash-advances')
+      .set(auth)
+      .send(
+        makeCashAdvancePayload(employee.employeeId, {
+          amount: 250,
+          issuedAt: '2026-07-01T00:00:00.000Z',
+        }),
+      );
+    expect(backdated.status).toBe(201);
+    expect(backdated.body.data.issuedAt).toBe('2026-07-01T00:00:00.000Z');
+    expect(backdated.body.data.amount).toBe(250);
 
     const employeeDenied = await request(app)
       .post('/api/v1/workforce/cash-advances')
@@ -30,6 +44,6 @@ describe('cash advance api', () => {
 
     const ownList = await request(app).get('/api/v1/workforce/cash-advances').set(employee.auth);
     expect(ownList.status).toBe(200);
-    expect(ownList.body.data.length).toBe(1);
+    expect(ownList.body.data.length).toBe(2);
   });
 });
