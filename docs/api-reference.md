@@ -475,31 +475,31 @@ fetch image bytes. For `<img>` tags or opening in a new tab, append your JWT:
 
 ### Endpoints
 
-| Method & path                                               | Roles                        | Notes                                                                                         |
-| ----------------------------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------- |
-| `POST /transactions`                                        | all\*                        | Create draft. \*Timed-in linked employee required. **201**                                    |
-| `GET /transactions/by-number/{transactionNumber}`           | all\*\*                      | Lookup by business transaction number                                                         |
-| `GET /transactions/{transactionId}`                         | all\*\*                      | Full detail                                                                                   |
-| `PATCH /transactions/{transactionId}`                       | all\*\*                      | Partial update / auto-save. Draft for employees; draft or ready-for-payment for owner/manager |
-| `GET /transactions`                                         | OWNER, MANAGER               | Paginated company list                                                                        |
-| `GET /transactions/assigned`                                | all                          | Paginated list for acting employee                                                            |
-| `POST /transactions/{id}/finish`                            | OWNER, MANAGER, EMPLOYEE\*\* | Draft → ready for payment                                                                     |
-| `POST /transactions/{id}/return-to-draft`                   | OWNER, MANAGER               | Ready for payment → draft                                                                     |
-| `POST /transactions/{id}/settle`                            | OWNER, MANAGER               | Ready for payment → paid                                                                      |
-| `POST /transactions/{id}/cancel`                            | all\*\*                      | Draft/ready-for-payment → cancelled                                                           |
-| `POST /transactions/{id}/reopen`                            | OWNER                        | Paid → ready for payment                                                                      |
-| `GET /transactions/{id}/receipt`                            | all\*\*                      | Receipt for paid transaction only                                                             |
-| `POST /transactions/{id}/archive`                           | OWNER, MANAGER               | Soft-delete                                                                                   |
-| `GET /transactions/{id}/items`                              | all\*\*                      | List items                                                                                    |
-| `POST /transactions/{id}/items`                             | all\*\*                      | Add item. **201**                                                                             |
-| `PATCH /transactions/{id}/items/{itemId}`                   | all\*\*                      | Update item                                                                                   |
-| `DELETE /transactions/{id}/items/{itemId}`                  | all\*\*                      | Remove item → `{ deleted: true }`                                                             |
-| `GET /transactions/{id}/attachments`                        | all\*\*                      | List photos                                                                                   |
-| `POST /transactions/{id}/attachments`                       | all\*\*                      | Upload photo (`multipart/form-data`, field `file`)                                            |
-| `GET /transactions/{id}/attachments/{attachmentId}/content` | all\*\*                      | Download photo bytes (`image/jpeg`, `image/png`, or `image/webp`)                             |
-| `DELETE /transactions/{id}/attachments/{attachmentId}`      | all\*\*                      | Remove photo                                                                                  |
-| `GET /transactions/suggestions/materials`                   | all                          | Material autocomplete                                                                         |
-| `GET /transactions/suggestions/prices`                      | all                          | Price autocomplete for a material                                                             |
+| Method & path                                               | Roles                        | Notes                                                                                                                        |
+| ----------------------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `POST /transactions`                                        | all\*                        | Create draft. \*Employees need a timed-in linked profile; owners/managers may create without one (assign employees). **201** |
+| `GET /transactions/by-number/{transactionNumber}`           | all\*\*                      | Lookup by business transaction number                                                                                        |
+| `GET /transactions/{transactionId}`                         | all\*\*                      | Full detail                                                                                                                  |
+| `PATCH /transactions/{transactionId}`                       | all\*\*                      | Partial update / auto-save. Draft for employees; draft or ready-for-payment for owner/manager                                |
+| `GET /transactions`                                         | OWNER, MANAGER               | Paginated company list                                                                                                       |
+| `GET /transactions/assigned`                                | all                          | Paginated list for acting employee                                                                                           |
+| `POST /transactions/{id}/finish`                            | OWNER, MANAGER, EMPLOYEE\*\* | Draft → ready for payment                                                                                                    |
+| `POST /transactions/{id}/return-to-draft`                   | OWNER, MANAGER               | Ready for payment → draft                                                                                                    |
+| `POST /transactions/{id}/settle`                            | OWNER, MANAGER               | Ready for payment → paid                                                                                                     |
+| `POST /transactions/{id}/cancel`                            | all\*\*                      | Draft/ready-for-payment → cancelled                                                                                          |
+| `POST /transactions/{id}/reopen`                            | OWNER                        | Paid → ready for payment                                                                                                     |
+| `GET /transactions/{id}/receipt`                            | all\*\*                      | Receipt for paid transaction only                                                                                            |
+| `POST /transactions/{id}/archive`                           | OWNER, MANAGER               | Soft-delete                                                                                                                  |
+| `GET /transactions/{id}/items`                              | all\*\*                      | List items                                                                                                                   |
+| `POST /transactions/{id}/items`                             | all\*\*                      | Add item. **201**                                                                                                            |
+| `PATCH /transactions/{id}/items/{itemId}`                   | all\*\*                      | Update item                                                                                                                  |
+| `DELETE /transactions/{id}/items/{itemId}`                  | all\*\*                      | Remove item → `{ deleted: true }`                                                                                            |
+| `GET /transactions/{id}/attachments`                        | all\*\*                      | List photos                                                                                                                  |
+| `POST /transactions/{id}/attachments`                       | all\*\*                      | Upload photo (`multipart/form-data`, field `file`)                                                                           |
+| `GET /transactions/{id}/attachments/{attachmentId}/content` | all\*\*                      | Download photo bytes (`image/jpeg`, `image/png`, or `image/webp`)                                                            |
+| `DELETE /transactions/{id}/attachments/{attachmentId}`      | all\*\*                      | Remove photo                                                                                                                 |
+| `GET /transactions/suggestions/materials`                   | all                          | Material autocomplete                                                                                                        |
+| `GET /transactions/suggestions/prices`                      | all                          | Price autocomplete for a material                                                                                            |
 
 \*\* Employees must be assigned to the transaction (else `403`). Owners and managers may finish any company draft.
 

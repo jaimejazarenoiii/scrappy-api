@@ -129,7 +129,7 @@ describe('CreateTransactionUseCase', () => {
     ).rejects.toThrow(BusinessRuleViolationError);
   });
 
-  it('rejects when acting user has no linked employee profile', async () => {
+  it('rejects when an employee has no linked employee profile', async () => {
     const f = await buildFixture();
     const orphanUserId = randomUUID();
     await f.userRepository.create({
@@ -145,6 +145,46 @@ describe('CreateTransactionUseCase', () => {
         assignedEmployeeIds: [f.employeeId],
       }),
     ).rejects.toThrow(ForbiddenError);
+  });
+
+  it('allows an owner without a linked employee profile to create a transaction', async () => {
+    const f = await buildFixture();
+    const ownerUserId = randomUUID();
+    await f.userRepository.create({
+      id: ownerUserId,
+      companyId: f.companyId,
+      email: 'owner@scrappy.test',
+      passwordHash: 'hashed',
+      role: 'OWNER',
+    });
+
+    const result = await f.useCase.execute(f.companyId, ownerUserId, {
+      ...outsidePayload,
+      assignedEmployeeIds: [f.employeeId],
+    });
+
+    expect(result.status).toBe('DRAFT');
+    expect(result.assignedEmployeeIds).toEqual([f.employeeId]);
+  });
+
+  it('allows a manager without a linked employee profile to create a transaction', async () => {
+    const f = await buildFixture();
+    const managerUserId = randomUUID();
+    await f.userRepository.create({
+      id: managerUserId,
+      companyId: f.companyId,
+      email: 'manager@scrappy.test',
+      passwordHash: 'hashed',
+      role: 'MANAGER',
+    });
+
+    const result = await f.useCase.execute(f.companyId, managerUserId, {
+      ...outsidePayload,
+      assignedEmployeeIds: [f.employeeId],
+    });
+
+    expect(result.status).toBe('DRAFT');
+    expect(result.assignedEmployeeIds).toEqual([f.employeeId]);
   });
 
   it('rejects invalid branch location without branchId', async () => {

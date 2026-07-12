@@ -26,7 +26,7 @@ import {
   type TransactionDetailResponseDto,
 } from '../dto/transaction-detail.response.js';
 import type { CreateTransactionRequestDto } from '../dto/create-transaction.request.js';
-import { resolveActingEmployeeIdForUser } from '../services/transaction-access.service.js';
+import { resolveActingEmployeeId } from '../../../../shared/workforce/employee-context.js';
 import { validateTripLocationReference } from '../services/transaction-trip-location.service.js';
 import { logTransactionAudit } from '../services/transaction-audit.service.js';
 import type { TransactionNumberService } from '../services/transaction-number.service.js';
@@ -48,22 +48,27 @@ export class CreateTransactionUseCase {
     userId: string,
     input: CreateTransactionRequestDto,
   ): Promise<TransactionDetailResponseDto> {
-    const actingEmployeeId = await resolveActingEmployeeIdForUser(
-      this.userRepository,
-      companyId,
-      userId,
-    );
     const actingUser = await this.userRepository.findById(userId, companyId);
     if (!actingUser) throw new ResourceNotFoundError('User not found');
-    const actingEmployee = await this.employeeRepository.findById(actingEmployeeId, companyId);
-    if (!actingEmployee) throw new ResourceNotFoundError('Employee not found');
 
-    const openSession = await this.attendanceRepository.findOpenSession(
-      actingEmployeeId,
-      companyId,
-    );
-    if (!isOperationallyReadyForRole(openSession, actingUser.role)) {
-      assertOperationallyReady(openSession);
+    // Employees must have a linked profile. Owners/managers may create without one and assign
+    // other employees (same pattern as expense create).
+    const actingEmployeeId =
+      actingUser.role === 'EMPLOYEE'
+        ? resolveActingEmployeeId(actingUser)
+        : (actingUser.employeeId ?? null);
+
+    if (actingEmployeeId) {
+      const actingEmployee = await this.employeeRepository.findById(actingEmployeeId, companyId);
+      if (!actingEmployee) throw new ResourceNotFoundError('Employee not found');
+
+      const openSession = await this.attendanceRepository.findOpenSession(
+        actingEmployeeId,
+        companyId,
+      );
+      if (!isOperationallyReadyForRole(openSession, actingUser.role)) {
+        assertOperationallyReady(openSession);
+      }
     }
 
     const direction = toCanonicalDirection(input.direction);
@@ -166,9 +171,11 @@ export class CreateTransactionUseCase {
   private async resolveAssignedEmployees(
     companyId: string,
     requestedIds: string[],
-    actingEmployeeId: string,
+    actingEmployeeId: string | null,
   ): Promise<string[]> {
-    const uniqueIds = Array.from(new Set([...requestedIds, actingEmployeeId]));
+    const uniqueIds = Array.from(
+      new Set(actingEmployeeId ? [...requestedIds, actingEmployeeId] : requestedIds),
+    );
     for (const employeeId of uniqueIds) {
       const employee = await this.employeeRepository.findById(employeeId, companyId);
       if (!employee) {
