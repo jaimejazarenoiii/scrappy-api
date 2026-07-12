@@ -31,22 +31,42 @@ pnpm prisma:generate
 pnpm dev
 ```
 
+### Docker (local or production-like)
+
+```bash
+cp .env.example .env
+# set POSTGRES_PASSWORD, JWT_* secrets, etc.
+
+docker compose up --build -d
+```
+
+Compose loads `.env` for both Postgres credentials and the API. The API `DATABASE_URL` is
+overridden to use the `postgres` service hostname. On start, the container runs
+`prisma migrate deploy` then `node dist/server.js`.
+
 ## Environment Variables
 
-| Variable                 | Required | Default            | Description                     |
-| ------------------------ | -------- | ------------------ | ------------------------------- |
-| `PORT`                   | No       | `3000`             | HTTP server port                |
-| `DATABASE_URL`           | Yes      | -                  | PostgreSQL connection string    |
-| `NODE_ENV`               | No       | `development`      | Runtime environment             |
-| `LOG_LEVEL`              | No       | `info`             | Pino log level                  |
-| `JWT_ACCESS_SECRET`      | Yes      | local dev fallback | Access-token signing secret     |
-| `JWT_REFRESH_SECRET`     | Yes      | local dev fallback | Refresh-token signing secret    |
-| `JWT_ACCESS_EXPIRES_IN`  | No       | `15m`              | Access-token TTL                |
-| `JWT_REFRESH_EXPIRES_IN` | No       | `7d`               | Refresh-token TTL               |
-| `BCRYPT_ROUNDS`          | No       | `10`               | Password hashing cost           |
-| `CORS_ORIGIN`            | No       | `*`                | Comma-separated allowed origins |
-| `RATE_LIMIT_WINDOW_MS`   | No       | `60000`            | Rate-limit window               |
-| `RATE_LIMIT_MAX`         | No       | `100`              | Rate-limit request ceiling      |
+| Variable                 | Required | Default            | Description                        |
+| ------------------------ | -------- | ------------------ | ---------------------------------- |
+| `POSTGRES_USER`          | No       | `postgres`         | Postgres user (docker-compose)     |
+| `POSTGRES_PASSWORD`      | Yes\*    | -                  | Postgres password (docker-compose) |
+| `POSTGRES_DB`            | No       | `scrappy`          | Postgres database name             |
+| `POSTGRES_PORT`          | No       | `5432`             | Host port mapped to Postgres       |
+| `PORT`                   | No       | `3000`             | HTTP server port                   |
+| `DATABASE_URL`           | Yes      | -                  | PostgreSQL connection string       |
+| `NODE_ENV`               | No       | `development`      | Runtime environment                |
+| `LOG_LEVEL`              | No       | `info`             | Pino log level                     |
+| `JWT_ACCESS_SECRET`      | Yes      | local dev fallback | Access-token signing secret        |
+| `JWT_REFRESH_SECRET`     | Yes      | local dev fallback | Refresh-token signing secret       |
+| `JWT_ACCESS_EXPIRES_IN`  | No       | `15m`              | Access-token TTL                   |
+| `JWT_REFRESH_EXPIRES_IN` | No       | `7d`               | Refresh-token TTL                  |
+| `BCRYPT_ROUNDS`          | No       | `10`               | Password hashing cost              |
+| `CORS_ORIGIN`            | No       | `*`                | Comma-separated allowed origins    |
+| `RATE_LIMIT_WINDOW_MS`   | No       | `60000`            | Rate-limit window                  |
+| `RATE_LIMIT_MAX`         | No       | `100`              | Rate-limit request ceiling         |
+| `UPLOAD_DIR`             | No       | `uploads`          | Local attachment storage path      |
+
+\*Required for docker-compose / production; change from the example default.
 
 ## Validation
 
