@@ -12,12 +12,12 @@ RUN pnpm install --frozen-lockfile
 # --- Build (generate Prisma client + compile TypeScript) ---
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
-COPY package.json pnpm-lock.yaml tsconfig.json prisma.config.ts ./
+COPY package.json pnpm-lock.yaml tsconfig.json tsconfig.build.json prisma.config.ts ./
 COPY prisma ./prisma
 COPY src ./src
 # prisma.config.ts requires DATABASE_URL; no live DB needed for generate
 ENV DATABASE_URL="postgresql://build:build@127.0.0.1:5432/build?schema=public"
-RUN pnpm exec prisma generate && pnpm exec tsc
+RUN pnpm exec prisma generate && pnpm exec tsc -p tsconfig.build.json
 
 # --- Runtime ---
 FROM base AS runner
