@@ -517,6 +517,8 @@ fetch image bytes. For `<img>` tags or opening in a new tab, append your JWT:
 }
 ```
 
+`items` may be `[]` or omitted when creating a draft; add lines later via `POST /transactions/{id}/items`. Finish rejects drafts with zero items.
+
 **Create body** (`TRIP` — link transaction to a trip):
 
 ```jsonc

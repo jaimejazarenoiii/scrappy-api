@@ -86,7 +86,8 @@ export const createTransactionSchema = z
     tripId: z.string().uuid().optional(),
     notes: z.string().max(2000).optional(),
     assignedEmployeeIds: z.array(z.string().uuid()).min(1).max(50),
-    items: z.array(itemInputSchema).min(1).max(200),
+    // Drafts may start with no line items; finish/settle enforce at least one.
+    items: z.array(itemInputSchema).max(200).default([]),
   })
   .superRefine(assertLocationShape);
 

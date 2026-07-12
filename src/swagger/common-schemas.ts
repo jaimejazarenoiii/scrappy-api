@@ -760,7 +760,7 @@ export const commonSchemas = {
 
   CreateTransactionRequest: {
     type: 'object',
-    required: ['direction', 'partyName', 'locationType', 'assignedEmployeeIds', 'items'],
+    required: ['direction', 'partyName', 'locationType', 'assignedEmployeeIds'],
     properties: {
       direction: { type: 'string', enum: ['INBOUND', 'OUTBOUND', 'BUY', 'SELL'] },
       partyName: { type: 'string', minLength: 1 },
@@ -776,7 +776,9 @@ export const commonSchemas = {
       assignedEmployeeIds: { type: 'array', items: uuid, minItems: 1 },
       items: {
         type: 'array',
-        minItems: 1,
+        description:
+          'Optional on draft create; may be empty. At least one item is required before finish.',
+        default: [],
         items: { $ref: '#/components/schemas/CreateTransactionItemRequest' },
       },
     },

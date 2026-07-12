@@ -5,7 +5,7 @@ import { createTestContext } from '../../setup/test-app.js';
 import { createDraftTransaction, setupTransactionActors } from '../../setup/transaction-helpers.js';
 
 describe('transaction error scenarios api', () => {
-  it('rejects a create payload with no items', async () => {
+  it('allows creating a draft with no items', async () => {
     const { app, userRepository, employeeRepository } = createTestContext();
     const { employee } = await setupTransactionActors(app, userRepository, employeeRepository);
 
@@ -21,7 +21,34 @@ describe('transaction error scenarios api', () => {
         assignedEmployeeIds: [employee.employeeId],
         items: [],
       });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(201);
+    expect(res.body.data.items).toEqual([]);
+  });
+
+  it('rejects finish when the draft has no items', async () => {
+    const { app, userRepository, employeeRepository } = createTestContext();
+    const { employee } = await setupTransactionActors(app, userRepository, employeeRepository);
+
+    const create = await request(app)
+      .post('/api/v1/transactions')
+      .set(employee.auth)
+      .send({
+        direction: 'INBOUND',
+        partyName: 'Acme',
+        locationType: 'OUTSIDE',
+        outsideLocationName: 'Roadside',
+        outsideAddress: '123 Lane',
+        assignedEmployeeIds: [employee.employeeId],
+        items: [],
+      });
+    expect(create.status).toBe(201);
+
+    const finish = await request(app)
+      .post(`/api/v1/transactions/${create.body.data.id}/finish`)
+      .set(employee.auth)
+      .send({});
+    expect(finish.status).toBe(400);
+    expect(finish.body.error.message).toMatch(/at least one item/i);
   });
 
   it('rejects an item total mismatch on create', async () => {
