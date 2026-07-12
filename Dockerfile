@@ -4,20 +4,24 @@ FROM node:22-alpine AS base
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /app
 
-# --- Dependencies ---
+# --- Dependencies (include devDeps so `tsc` is available in builder) ---
 FROM base AS deps
+# Railway/build hosts often set NODE_ENV=production; that would skip typescript.
+ENV NODE_ENV=development
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # --- Build (generate Prisma client + compile TypeScript) ---
 FROM base AS builder
+ENV NODE_ENV=development
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json pnpm-lock.yaml tsconfig.json tsconfig.build.json prisma.config.ts ./
 COPY prisma ./prisma
 COPY src ./src
 # prisma.config.ts requires DATABASE_URL; no live DB needed for generate
 ENV DATABASE_URL="postgresql://build:build@127.0.0.1:5432/build?schema=public"
-RUN pnpm exec prisma generate && pnpm exec tsc -p tsconfig.build.json
+RUN pnpm run build \
+  && test -f dist/server.js
 
 # --- Runtime ---
 FROM base AS runner
