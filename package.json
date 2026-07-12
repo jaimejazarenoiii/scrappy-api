@@ -9,7 +9,7 @@
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "build": "prisma generate && tsc",
     "start": "node dist/server.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -25,7 +25,7 @@
     "db:disable-company": "tsx scripts/set-company-access.ts --disable",
     "db:enable-company": "tsx scripts/set-company-access.ts --enable",
     "db:reset": "prisma migrate reset --force",
-    "prepare": "husky",
+    "prepare": "husky || true",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "test:api": "vitest run tests/api"
