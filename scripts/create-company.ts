@@ -17,7 +17,7 @@ import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
-import { DEFAULT_EXPENSE_CATEGORIES } from '../src/modules/expense/domain/expense-categories.js';
+import { DEFAULT_EXPENSE_CATEGORIES } from './lib/default-expense-categories.js';
 
 const prisma = new PrismaClient();
 const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS ?? 10);
