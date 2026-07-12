@@ -26,8 +26,9 @@ ENV PORT=3000
 
 COPY package.json pnpm-lock.yaml prisma.config.ts ./
 COPY prisma ./prisma
+COPY scripts ./scripts
 COPY --from=builder /app/dist ./dist
-# Use builder node_modules so generated Prisma client is included
+# Use builder node_modules so generated Prisma client (+ tsx) is included
 COPY --from=builder /app/node_modules ./node_modules
 COPY docker/entrypoint.sh ./docker/entrypoint.sh
 

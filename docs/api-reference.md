@@ -1017,6 +1017,26 @@ pnpm run db:create-company -- \
 Creates only: company + OWNER user + default expense categories. The client then adds
 employees/branches/etc. in the app.
 
+### Production seed (once-only, no deletes)
+
+Creates 1 company + 5 accounts (owner, manager, 3 employees) + expense categories.
+Safe to re-run: if the company name already exists, it skips.
+
+```bash
+pnpm run db:seed:prod -- \
+  --name "Acme Recycling" \
+  --password 'SecurePass123' \
+  --email-domain acme.com
+```
+
+On Railway (after deploy):
+
+```bash
+pnpm run db:seed:prod -- --name "Acme Recycling" --password 'SecurePass123' --email-domain acme.com
+```
+
+Do **not** run `pnpm run db:seed` in production — that script wipes all data.
+
 ### Disable / re-enable a non-paying company (no delete)
 
 ```bash

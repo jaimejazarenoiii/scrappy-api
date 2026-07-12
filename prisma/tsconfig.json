@@ -1,0 +1,4 @@
+{
+  "extends": "../tsconfig.json",
+  "include": ["./**/*.ts", "../src/modules/expense/domain/expense-categories.ts"]
+}
