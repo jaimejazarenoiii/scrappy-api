@@ -103,7 +103,6 @@ import { TransactionItemPrismaRepository } from '../modules/transaction/infrastr
 import { TransactionAttachmentPrismaRepository } from '../modules/transaction/infrastructure/transaction-attachment.prisma-repository.js';
 import { TransactionSuggestionPrismaRepository } from '../modules/transaction/infrastructure/transaction-suggestion.prisma-repository.js';
 import { TransactionNumberSequencePrismaRepository } from '../modules/transaction/infrastructure/transaction-number-sequence.prisma-repository.js';
-import { LocalFileStorage } from '../modules/transaction/infrastructure/file-storage/local-file-storage.js';
 import { buildTransactionController } from '../modules/transaction/index.js';
 import type { TransactionController } from '../modules/transaction/presentation/transaction.controller.js';
 import { AnalyticsPrismaQueryRepository } from '../modules/analytics/infrastructure/analytics.prisma-query-repository.js';
@@ -125,7 +124,6 @@ import { ExpensePrismaRepository } from '../modules/expense/infrastructure/expen
 import { ExpenseCategoryPrismaRepository } from '../modules/expense/infrastructure/expense-category.prisma-repository.js';
 import { ExpenseAttachmentPrismaRepository } from '../modules/expense/infrastructure/expense-attachment.prisma-repository.js';
 import { ExpenseNumberSequencePrismaRepository } from '../modules/expense/infrastructure/expense-number-sequence.prisma-repository.js';
-import { LocalExpenseFileStorage } from '../modules/expense/infrastructure/file-storage/local-expense-file-storage.js';
 import { buildExpenseController } from '../modules/expense/index.js';
 import type { ExpenseController } from '../modules/expense/presentation/expense.controller.js';
 import type { ExpenseRepository } from '../modules/expense/domain/expense.repository.js';
@@ -133,6 +131,7 @@ import type { ExpenseCategoryRepository } from '../modules/expense/domain/expens
 import type { ExpenseAttachmentRepository } from '../modules/expense/domain/expense-attachment.repository.js';
 import type { ExpenseNumberSequenceRepository } from '../modules/expense/domain/expense-number-sequence.repository.js';
 import type { ExpenseFileStorage } from '../modules/expense/infrastructure/file-storage/expense-file-storage.js';
+import { createAttachmentFileStorages } from '../shared/storage/create-attachment-file-storages.js';
 import type { TransactionRepository } from '../modules/transaction/domain/transaction.repository.js';
 import type { TransactionItemRepository } from '../modules/transaction/domain/transaction-item.repository.js';
 import type { TransactionAttachmentRepository } from '../modules/transaction/domain/transaction-attachment.repository.js';
@@ -225,7 +224,9 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
   const transactionNumberSequenceRepository =
     overrides.transactionNumberSequenceRepository ??
     new TransactionNumberSequencePrismaRepository();
-  const fileStorage = overrides.fileStorage ?? new LocalFileStorage();
+  const resolvedStorages =
+    overrides.fileStorage && overrides.expenseFileStorage ? null : createAttachmentFileStorages();
+  const fileStorage = overrides.fileStorage ?? resolvedStorages!.fileStorage;
   const analyticsQueryRepository =
     overrides.analyticsQueryRepository ?? new AnalyticsPrismaQueryRepository();
   const reportsQueryRepository =
@@ -240,7 +241,7 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
     overrides.expenseAttachmentRepository ?? new ExpenseAttachmentPrismaRepository();
   const expenseNumberSequenceRepository =
     overrides.expenseNumberSequenceRepository ?? new ExpenseNumberSequencePrismaRepository();
-  const expenseFileStorage = overrides.expenseFileStorage ?? new LocalExpenseFileStorage();
+  const expenseFileStorage = overrides.expenseFileStorage ?? resolvedStorages!.expenseFileStorage;
 
   const employeeAccountProvisioningService = new EmployeeAccountProvisioningService(
     employeeRepository,

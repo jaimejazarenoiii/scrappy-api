@@ -53,6 +53,13 @@ export function setupTestEnv(): void {
   process.env.CORS_ORIGIN = '*';
   process.env.RATE_LIMIT_WINDOW_MS = '60000';
   process.env.RATE_LIMIT_MAX = '1000';
+  process.env.FILE_STORAGE_DRIVER = 'local';
+  process.env.UPLOAD_DIR = 'uploads';
+  delete process.env.S3_BUCKET;
+  delete process.env.S3_REGION;
+  delete process.env.S3_ACCESS_KEY_ID;
+  delete process.env.S3_SECRET_ACCESS_KEY;
+  delete process.env.S3_ENDPOINT;
   resetConfigForTests();
   resetLoggerForTests();
 }

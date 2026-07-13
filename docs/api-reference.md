@@ -7,6 +7,8 @@ the access token carries the user's `companyId`, and every request only ever see
 - **Auth**: JWT Bearer token in the `Authorization` header
 - **Content-Type**: `application/json` (except photo upload → `multipart/form-data`)
 - **Interactive docs**: Swagger UI at `GET /docs` when the server is running
+- **Attachment storage**: local disk in development/test; S3 (or S3-compatible) in production.
+  Upload/download APIs are unchanged — clients still use the authenticated attachment endpoints.
 
 ## Table of contents
 
