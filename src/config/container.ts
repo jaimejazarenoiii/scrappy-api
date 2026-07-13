@@ -254,7 +254,7 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
   const expenseFileStorage = overrides.expenseFileStorage ?? resolvedStorages!.expenseFileStorage;
   const activityLogRepository =
     overrides.activityLogRepository ?? new ActivityLogPrismaRepository();
-  const activityLogRecorder = new ActivityLogRecorder(activityLogRepository);
+  const activityLogRecorder = new ActivityLogRecorder(activityLogRepository, userRepository);
   registerActivityLogRecorder(activityLogRecorder);
 
   const employeeAccountProvisioningService = new EmployeeAccountProvisioningService(

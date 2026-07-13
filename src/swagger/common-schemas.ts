@@ -1666,6 +1666,17 @@ export const commonSchemas = {
       userAgent: { type: 'string', nullable: true },
       metadata: { type: 'object', additionalProperties: true, nullable: true },
       createdAt: dateTime,
+      performedBy: {
+        type: 'object',
+        nullable: false,
+        properties: {
+          id: uuid,
+          employeeId: { ...uuid, nullable: true },
+          email: { type: 'string', format: 'email', nullable: true },
+          role: { type: 'string', enum: ['OWNER', 'MANAGER', 'EMPLOYEE'], nullable: true },
+        },
+        required: ['id', 'employeeId', 'email', 'role'],
+      },
     },
   },
 };

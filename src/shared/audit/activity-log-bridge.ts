@@ -177,7 +177,8 @@ export function persistActivityLogFromAudit(event: AuditEvent): void {
     action: event.action,
     description: taxonomy.description,
     userId: event.actorUserId,
-    employeeId: typeof metadata.employeeId === 'string' ? metadata.employeeId : null,
+    // Actor employee is resolved by ActivityLogRecorder from the user account.
+    // Do not map metadata.employeeId here — that is often the subject, not the actor.
     resourceType: event.resourceType,
     resourceId: event.resourceId,
     resourceNumber,

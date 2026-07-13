@@ -27,6 +27,37 @@ describe('ActivityLogRecorder', () => {
     expect(repo.items[0]!.metadata).not.toHaveProperty('password');
   });
 
+  it('resolves actor employeeId, email, and role from the user account', async () => {
+    const repo = new InMemoryActivityLogRepository();
+    const userRepository = {
+      findById: vi.fn().mockResolvedValue({
+        employeeId: 'emp-1',
+        email: 'actor@scrappy.test',
+        role: 'MANAGER',
+      }),
+    };
+    const recorder = new ActivityLogRecorder(repo, userRepository as never);
+
+    await recorder.record({
+      companyId: 'c1',
+      eventType: 'TRANSACTION',
+      module: 'transaction',
+      action: 'transaction.created',
+      description: 'Transaction created',
+      userId: 'u1',
+      metadata: { employeeId: 'subject-emp' },
+    });
+
+    expect(userRepository.findById).toHaveBeenCalledWith('u1', 'c1');
+    expect(repo.items[0]!.employeeId).toBe('emp-1');
+    expect(repo.items[0]!.metadata).toMatchObject({
+      employeeId: 'subject-emp',
+      actorEmail: 'actor@scrappy.test',
+      actorRole: 'MANAGER',
+      actorEmployeeId: 'emp-1',
+    });
+  });
+
   it('skips when companyId or userId missing', async () => {
     const repo = new InMemoryActivityLogRepository();
     const recorder = new ActivityLogRecorder(repo);

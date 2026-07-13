@@ -1021,9 +1021,11 @@ operations succeed. Clients **cannot** create, update, or delete activity logs.
 
 ### Response shape (item)
 
-`id`, `companyId`, `eventType`, `module`, `action`, `description`, `userId`, optional
-`employeeId` / `resourceType` / `resourceId` / `resourceNumber` / `ipAddress` / `userAgent` /
-`metadata`, and `createdAt`. Password-related metadata never includes secrets.
+`id`, `companyId`, `eventType`, `module`, `action`, `description`, `userId` (actor account),
+optional `employeeId` (actor’s linked employee when present), optional
+`resourceType` / `resourceId` / `resourceNumber` / `ipAddress` / `userAgent` / `metadata`,
+`createdAt`, and `performedBy` (`id`, `employeeId`, `email`, `role`). Password-related
+metadata never includes secrets.
 
 ---
 
