@@ -97,6 +97,8 @@ Every response (success or error) uses the same envelope.
 
 ### `POST /api/v1/auth/login` — public
 
+Tenant login for company users (`OWNER`, `MANAGER`, `EMPLOYEE`). **`SUPER_ADMIN` cannot use this endpoint** — even with a correct password the API returns `401` `INVALID_CREDENTIALS` (same as a wrong password). Use `POST /api/v1/admin/auth/login` instead.
+
 ```json
 { "identifier": "owner@example.com", "password": "password123" }
 ```
@@ -123,6 +125,26 @@ Send on every authenticated request:
 ```
 Authorization: Bearer <accessToken>
 ```
+
+### `POST /api/v1/admin/auth/login` — public
+
+Platform admin login. **Only `SUPER_ADMIN` succeeds.** Tenant roles (`OWNER`, `MANAGER`, `EMPLOYEE`) get `401` `INVALID_CREDENTIALS` even with a correct password. Skips tenant subscription and company `ACTIVE` gates so admins can manage suspended/expired companies.
+
+Create an admin account (CLI):
+
+```bash
+pnpm run db:create-super-admin -- \
+  --email admin@scrappy.com \
+  --password 'SecurePass123'
+```
+
+Optional: `--company-id <uuid>` to attach the admin to an existing company (default: create/reuse company `Scrappy Platform`).
+
+```json
+{ "identifier": "superadmin@example.com", "password": "password123" }
+```
+
+Response shape matches tenant login (`AuthResponse`), with `user.role` = `SUPER_ADMIN`.
 
 ### `POST /api/v1/auth/refresh` — public
 
@@ -993,7 +1015,49 @@ falls back to the same default list when the catalog is empty.
 
 ---
 
-## 19. Activity Logs
+## 19. Company Subscriptions
+
+Super Admin management of company subscription periods and operational entitlement status.
+Online billing is out of scope.
+
+**Company.subscriptionStatus** (operational gate): `TRIAL`, `ACTIVE`, `GRACE_PERIOD`, `EXPIRED`, `SUSPENDED`.
+Default for new companies: `TRIAL`.
+
+**Login entitlement**: Tenant users may log in only when `subscriptionStatus` is `TRIAL`, `ACTIVE`, or
+`GRACE_PERIOD`. `EXPIRED` / `SUSPENDED` returns `409` with code `SUBSCRIPTION_INACTIVE`.
+`SUPER_ADMIN` bypasses the subscription gate on `POST /admin/auth/login`. Tenant `POST /auth/login` rejects `SUPER_ADMIN` with `INVALID_CREDENTIALS`.
+
+**Cascade**: Allowed statuses set Company + all Users to `ACTIVE`. Blocked statuses set Company + all
+Users to `INACTIVE` and revoke refresh sessions.
+
+### Admin endpoints (SUPER_ADMIN only)
+
+| Path                                                          | Method | Purpose                        |
+| ------------------------------------------------------------- | ------ | ------------------------------ |
+| `/admin/companies/{companyId}/subscriptions`                  | POST   | Create subscription period     |
+| `/admin/companies/{companyId}/subscriptions/renew`            | POST   | Renew (prior ACTIVE → EXPIRED) |
+| `/admin/companies/{companyId}/subscriptions/expire`           | POST   | Expire entitlement             |
+| `/admin/companies/{companyId}/subscriptions/suspend`          | POST   | Suspend access                 |
+| `/admin/companies/{companyId}/subscriptions`                  | GET    | Paginated history              |
+| `/admin/companies/{companyId}/subscriptions/{subscriptionId}` | GET    | Period detail                  |
+| `/admin/companies/{companyId}/subscription-status`            | GET    | Current operational status     |
+
+Admin routes require JWT authentication only (no company-resolution middleware). Super Admin may
+target any `{companyId}` in the path.
+
+### Tenant read-only
+
+| Path                                | Method | Auth                           |
+| ----------------------------------- | ------ | ------------------------------ |
+| `/companies/me/subscription-status` | GET    | All tenant roles + Super Admin |
+
+### Activity Log actions
+
+`subscription.created`, `subscription.renewed`, `subscription.expired`, `subscription.suspended`
+
+---
+
+## 20. Activity Logs
 
 Append-only company audit trail. Entries are created automatically by the API when business
 operations succeed. Clients **cannot** create, update, or delete activity logs.
@@ -1029,7 +1093,7 @@ metadata never includes secrets.
 
 ---
 
-## 20. Typical frontend flows
+## 21. Typical frontend flows
 
 ### App bootstrap (after login)
 

@@ -57,6 +57,11 @@ export class UserPrismaRepository implements UserRepository {
     return record ? toDomain(record) : null;
   }
 
+  async listByCompanyId(companyId: string): Promise<UserEntity[]> {
+    const records = await prisma.user.findMany({ where: { companyId, deletedAt: null } });
+    return records.map(toDomain);
+  }
+
   async updateLastLogin(userId: string): Promise<void> {
     await prisma.user.update({ where: { id: userId }, data: { lastLoginAt: new Date() } });
   }
@@ -73,6 +78,10 @@ export class UserPrismaRepository implements UserRepository {
     const existing = await this.findById(userId, companyId);
     if (!existing) throw new ResourceNotFoundError('User not found');
     return toDomain(await prisma.user.update({ where: { id: userId }, data: { status } }));
+  }
+
+  async updateAllStatusForCompany(companyId: string, status: 'ACTIVE' | 'INACTIVE'): Promise<void> {
+    await prisma.user.updateMany({ where: { companyId, deletedAt: null }, data: { status } });
   }
 
   async updatePassword(

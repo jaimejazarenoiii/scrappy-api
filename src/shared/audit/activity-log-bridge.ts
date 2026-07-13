@@ -12,6 +12,11 @@ type Taxonomy = Pick<RecordActivityLogInput, 'eventType' | 'module' | 'descripti
 
 const ACTION_TAXONOMY: Record<string, Taxonomy> = {
   'auth.login': { eventType: 'AUTHENTICATION', module: 'auth', description: 'User logged in' },
+  'auth.admin_login': {
+    eventType: 'AUTHENTICATION',
+    module: 'auth',
+    description: 'Platform admin logged in',
+  },
   'auth.logout': { eventType: 'AUTHENTICATION', module: 'auth', description: 'User logged out' },
   'user.password_changed': {
     eventType: 'AUTHENTICATION',
@@ -141,6 +146,26 @@ const ACTION_TAXONOMY: Record<string, Taxonomy> = {
   'payroll.paid': { eventType: 'WORKFORCE', module: 'payroll', description: 'Payroll paid' },
   'payroll.marked_paid': { eventType: 'WORKFORCE', module: 'payroll', description: 'Payroll paid' },
   'payroll.mark_paid': { eventType: 'WORKFORCE', module: 'payroll', description: 'Payroll paid' },
+  'subscription.created': {
+    eventType: 'COMPANY',
+    module: 'subscription',
+    description: 'Subscription created',
+  },
+  'subscription.renewed': {
+    eventType: 'COMPANY',
+    module: 'subscription',
+    description: 'Subscription renewed',
+  },
+  'subscription.expired': {
+    eventType: 'COMPANY',
+    module: 'subscription',
+    description: 'Subscription expired',
+  },
+  'subscription.suspended': {
+    eventType: 'COMPANY',
+    module: 'subscription',
+    description: 'Subscription suspended',
+  },
 };
 function resolveTaxonomy(action: string): Taxonomy {
   if (ACTION_TAXONOMY[action]) return ACTION_TAXONOMY[action]!;

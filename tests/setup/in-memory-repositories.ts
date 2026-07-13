@@ -91,6 +91,7 @@ export class InMemoryCompanyRepository implements CompanyRepository {
       email: input.email ?? null,
       address: input.address ?? null,
       status: 'ACTIVE',
+      subscriptionStatus: 'TRIAL',
       createdAt: now,
       updatedAt: now,
       deletedAt: null,
@@ -156,6 +157,9 @@ export class InMemoryUserRepository implements UserRepository {
       null
     );
   }
+  async listByCompanyId(companyId: string): Promise<UserEntity[]> {
+    return [...this.users.values()].filter((user) => user.companyId === companyId);
+  }
   async updateLastLogin(userId: string): Promise<void> {
     const user = this.users.get(userId);
     if (user)
@@ -189,6 +193,20 @@ export class InMemoryUserRepository implements UserRepository {
     });
     this.users.set(userId, updated);
     return updated;
+  }
+  async updateAllStatusForCompany(companyId: string, status: 'ACTIVE' | 'INACTIVE'): Promise<void> {
+    for (const user of this.users.values()) {
+      if (user.companyId === companyId) {
+        this.users.set(
+          user.id,
+          UserModel.create({
+            ...user.toPrimitives(),
+            status,
+            updatedAt: new Date(),
+          }),
+        );
+      }
+    }
   }
   async updatePassword(
     userId: string,

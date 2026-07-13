@@ -1,4 +1,5 @@
 import type { CompanyResponseDto } from '../../../company/application/dto/company.response.js';
+import type { UserRole } from '../../../../shared/policy/roles.js';
 
 export interface AuthResponseDto {
   accessToken: string;
@@ -8,7 +9,7 @@ export interface AuthResponseDto {
   user: {
     id: string;
     email: string;
-    role: 'OWNER' | 'MANAGER' | 'EMPLOYEE';
+    role: UserRole;
     passwordChangeRequired: boolean;
   };
 }

@@ -1,0 +1,264 @@
+openapi: 3.0.3
+info:
+  title: Scrappy API — Company Subscription Management
+  version: 1.0.0
+  description: >
+    P011 contracts for Super-Admin subscription management and Company subscription status.
+    Online billing is out of scope. Login entitlement uses Company.subscriptionStatus.
+servers:
+  - url: /api/v1
+tags:
+  - name: Admin Subscriptions
+  - name: Company Subscription Status
+  - name: Authentication
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    CompanySubscriptionStatus:
+      type: string
+      enum: [TRIAL, ACTIVE, GRACE_PERIOD, EXPIRED, SUSPENDED]
+    SubscriptionPeriodStatus:
+      type: string
+      enum: [PENDING, ACTIVE, EXPIRED, CANCELLED]
+    CompanySubscription:
+      type: object
+      required:
+        - id
+        - companyId
+        - planName
+        - startsAt
+        - endsAt
+        - status
+        - createdBy
+        - createdAt
+        - updatedAt
+      properties:
+        id: { type: string, format: uuid }
+        companyId: { type: string, format: uuid }
+        planName: { type: string }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        status: { $ref: '#/components/schemas/SubscriptionPeriodStatus' }
+        notes: { type: string, nullable: true }
+        createdBy: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CreateSubscriptionRequest:
+      type: object
+      required: [planName, startsAt, endsAt, status]
+      properties:
+        planName: { type: string, minLength: 1, maxLength: 120 }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        status:
+          type: string
+          enum: [PENDING, ACTIVE]
+        companyStatus:
+          description: Optional Company.subscriptionStatus to set when activating
+          $ref: '#/components/schemas/CompanySubscriptionStatus'
+        notes: { type: string, maxLength: 2000 }
+    RenewSubscriptionRequest:
+      type: object
+      required: [planName, startsAt, endsAt]
+      properties:
+        planName: { type: string, minLength: 1, maxLength: 120 }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        status:
+          type: string
+          enum: [PENDING, ACTIVE]
+          default: ACTIVE
+        companyStatus:
+          $ref: '#/components/schemas/CompanySubscriptionStatus'
+        notes: { type: string, maxLength: 2000 }
+    ExpireSubscriptionRequest:
+      type: object
+      properties:
+        notes: { type: string, maxLength: 2000 }
+    SuspendCompanyRequest:
+      type: object
+      properties:
+        notes: { type: string, maxLength: 2000 }
+    SubscriptionStatusResponse:
+      type: object
+      required: [companyId, subscriptionStatus]
+      properties:
+        companyId: { type: string, format: uuid }
+        subscriptionStatus: { $ref: '#/components/schemas/CompanySubscriptionStatus' }
+paths:
+  /admin/companies/{companyId}/subscriptions:
+    get:
+      tags: [Admin Subscriptions]
+      summary: List subscription history
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: companyId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20, maximum: 100 }
+        - in: query
+          name: sortOrder
+          schema: { type: string, enum: [asc, desc], default: desc }
+      responses:
+        '200': { description: Paginated subscription history }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden (not SUPER_ADMIN) }
+        '404': { description: Company not found }
+    post:
+      tags: [Admin Subscriptions]
+      summary: Create subscription period
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: companyId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateSubscriptionRequest' }
+      responses:
+        '201': { description: Created subscription + company status }
+        '400': { description: Validation / overlap / active conflict }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+        '404': { description: Company not found }
+  /admin/companies/{companyId}/subscriptions/renew:
+    post:
+      tags: [Admin Subscriptions]
+      summary: Renew subscription (new period; prior ACTIVE → EXPIRED)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: companyId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RenewSubscriptionRequest' }
+      responses:
+        '201': { description: Renewed subscription }
+        '400': { description: Validation / overlap }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+        '404': { description: Company not found }
+  /admin/companies/{companyId}/subscriptions/expire:
+    post:
+      tags: [Admin Subscriptions]
+      summary: Expire current entitlement
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: companyId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExpireSubscriptionRequest' }
+      responses:
+        '200': { description: Company EXPIRED; period transitioned if ACTIVE }
+        '400': { description: Invalid state }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+        '404': { description: Company not found }
+  /admin/companies/{companyId}/subscriptions/suspend:
+    post:
+      tags: [Admin Subscriptions]
+      summary: Suspend company access
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: companyId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SuspendCompanyRequest' }
+      responses:
+        '200': { description: Company SUSPENDED }
+        '400': { description: Invalid state }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+        '404': { description: Company not found }
+  /admin/companies/{companyId}/subscriptions/{subscriptionId}:
+    get:
+      tags: [Admin Subscriptions]
+      summary: Get subscription by id
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: companyId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: subscriptionId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Subscription detail }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+        '404': { description: Not found }
+  /admin/companies/{companyId}/subscription-status:
+    get:
+      tags: [Admin Subscriptions]
+      summary: Get company subscription status (Super Admin)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: companyId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Current status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubscriptionStatusResponse' }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+        '404': { description: Company not found }
+  /companies/me/subscription-status:
+    get:
+      tags: [Company Subscription Status]
+      summary: Read-only current subscription status for authenticated Company users
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Current status for caller's company
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SubscriptionStatusResponse' }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login (extended — subscription entitlement)
+      description: >
+        After credential and company account checks, tenant users require
+        subscriptionStatus in TRIAL|ACTIVE|GRACE_PERIOD. SUPER_ADMIN bypasses subscription gate.
+        Expired/Suspended → error code SUBSCRIPTION_INACTIVE (no tokens). Also cascades
+        Company and User accounts to INACTIVE with session revoke; restore to Trial/Active/Grace
+        cascades accounts back to ACTIVE.
+      responses:
+        '200': { description: Auth success }
+        '401': { description: Invalid credentials }
+        '409': { description: Lifecycle conflict including subscription inactive }

@@ -30,6 +30,7 @@ export const ACTIVITY_MODULES = [
 
 export const ACTIVITY_ACTIONS = {
   AUTH_LOGIN: 'auth.login',
+  AUTH_ADMIN_LOGIN: 'auth.admin_login',
   AUTH_LOGOUT: 'auth.logout',
   PASSWORD_CHANGED: 'user.password_changed',
   PASSWORD_ADMIN_RESET: 'user.password_admin_reset',
@@ -61,4 +62,8 @@ export const ACTIVITY_ACTIONS = {
   LEAVE_RECORDED: 'leave.recorded',
   CASH_ADVANCE_CREATED: 'cash_advance.created',
   PAYROLL_PAID: 'payroll.paid',
+  SUBSCRIPTION_CREATED: 'subscription.created',
+  SUBSCRIPTION_RENEWED: 'subscription.renewed',
+  SUBSCRIPTION_EXPIRED: 'subscription.expired',
+  SUBSCRIPTION_SUSPENDED: 'subscription.suspended',
 } as const;

@@ -9,6 +9,8 @@ export interface CreateCompanyInput {
   address?: string | null;
 }
 
+import type { CompanySubscriptionStatus } from './company-subscription-status.js';
+
 export interface UpdateCompanyInput {
   name?: string;
   logoUrl?: string | null;
@@ -16,6 +18,7 @@ export interface UpdateCompanyInput {
   email?: string | null;
   address?: string | null;
   status?: 'ACTIVE' | 'INACTIVE';
+  subscriptionStatus?: CompanySubscriptionStatus;
 }
 
 export interface CompanyRepository {

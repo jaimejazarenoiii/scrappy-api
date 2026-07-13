@@ -10,6 +10,7 @@ export function createAuthRoutes(
 ): Router {
   const router = Router();
   router.post('/auth/login', validate(loginSchema), controller.login);
+  router.post('/admin/auth/login', validate(loginSchema), controller.adminLogin);
   router.post('/auth/logout', authenticationMiddleware, controller.logout);
   router.post('/auth/refresh', validate(refreshSchema), controller.refresh);
   router.post('/auth/forgot-password', validate(forgotPasswordSchema), controller.forgotPassword);

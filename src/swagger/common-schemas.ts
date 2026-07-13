@@ -1673,10 +1673,86 @@ export const commonSchemas = {
           id: uuid,
           employeeId: { ...uuid, nullable: true },
           email: { type: 'string', format: 'email', nullable: true },
-          role: { type: 'string', enum: ['OWNER', 'MANAGER', 'EMPLOYEE'], nullable: true },
+          role: {
+            type: 'string',
+            enum: ['OWNER', 'MANAGER', 'EMPLOYEE', 'SUPER_ADMIN'],
+            nullable: true,
+          },
         },
         required: ['id', 'employeeId', 'email', 'role'],
       },
+    },
+  },
+
+  CompanySubscriptionStatus: {
+    type: 'string',
+    enum: ['TRIAL', 'ACTIVE', 'GRACE_PERIOD', 'EXPIRED', 'SUSPENDED'],
+  },
+
+  SubscriptionPeriodStatus: {
+    type: 'string',
+    enum: ['PENDING', 'ACTIVE', 'EXPIRED', 'CANCELLED'],
+  },
+
+  CompanySubscription: {
+    type: 'object',
+    required: [
+      'id',
+      'companyId',
+      'planName',
+      'startsAt',
+      'endsAt',
+      'status',
+      'createdBy',
+      'createdAt',
+      'updatedAt',
+    ],
+    properties: {
+      id: uuid,
+      companyId: uuid,
+      planName: { type: 'string' },
+      startsAt: dateTime,
+      endsAt: dateTime,
+      status: { $ref: '#/components/schemas/SubscriptionPeriodStatus' },
+      notes: { type: 'string', nullable: true },
+      createdBy: uuid,
+      createdAt: dateTime,
+      updatedAt: dateTime,
+    },
+  },
+
+  CreateSubscriptionRequest: {
+    type: 'object',
+    required: ['planName', 'startsAt', 'endsAt', 'status'],
+    properties: {
+      planName: { type: 'string', minLength: 1, maxLength: 120 },
+      startsAt: dateTime,
+      endsAt: dateTime,
+      status: { type: 'string', enum: ['PENDING', 'ACTIVE'] },
+      companyStatus: { $ref: '#/components/schemas/CompanySubscriptionStatus' },
+      notes: { type: 'string', maxLength: 2000 },
+    },
+  },
+
+  RenewSubscriptionRequest: {
+    type: 'object',
+    required: ['planName', 'startsAt', 'endsAt'],
+    properties: {
+      planName: { type: 'string', minLength: 1, maxLength: 120 },
+      startsAt: dateTime,
+      endsAt: dateTime,
+      status: { type: 'string', enum: ['PENDING', 'ACTIVE'], default: 'ACTIVE' },
+      companyStatus: { $ref: '#/components/schemas/CompanySubscriptionStatus' },
+      notes: { type: 'string', maxLength: 2000 },
+    },
+  },
+
+  SubscriptionStatusResponse: {
+    type: 'object',
+    required: ['companyId', 'subscriptionStatus'],
+    properties: {
+      companyId: uuid,
+      subscriptionStatus: { $ref: '#/components/schemas/CompanySubscriptionStatus' },
     },
   },
 };

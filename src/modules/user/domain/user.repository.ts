@@ -22,9 +22,11 @@ export interface UserRepository {
   create(input: CreateUserInput): Promise<UserEntity>;
   findByEmail(email: string): Promise<UserEntity | null>;
   findById(userId: string, companyId: string): Promise<UserEntity | null>;
+  listByCompanyId(companyId: string): Promise<UserEntity[]>;
   updateLastLogin(userId: string): Promise<void>;
   linkEmployee(userId: string, employeeId: string): Promise<UserEntity>;
   updateStatus(userId: string, companyId: string, status: UserStatus): Promise<UserEntity>;
+  updateAllStatusForCompany(companyId: string, status: UserStatus): Promise<void>;
   updatePassword(
     userId: string,
     companyId: string,

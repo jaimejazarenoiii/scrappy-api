@@ -9,13 +9,51 @@ export const authOpenApiPaths = {
   '/api/v1/auth/login': {
     post: {
       tags: ['Authentication'],
-      summary: 'Login',
-      description: 'Authenticate with email and password. Returns access and refresh tokens.',
+      summary: 'Tenant login',
+      description:
+        'Tenant login with email and password. Returns access and refresh tokens. SUPER_ADMIN accounts are rejected with invalid credentials; use POST /api/v1/admin/auth/login instead.',
       requestBody: jsonRequestBody('LoginRequest'),
       responses: {
         ...successResponse('AuthResponse', 'Authenticated session'),
         '401': {
           description: 'Invalid credentials',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ApiErrorEnvelope' },
+            },
+          },
+        },
+        '409': {
+          description: 'Subscription inactive or lifecycle conflict',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ApiErrorEnvelope' },
+            },
+          },
+        },
+        '400': standardErrorResponses['400'],
+      },
+    },
+  },
+  '/api/v1/admin/auth/login': {
+    post: {
+      tags: ['Authentication', 'Admin'],
+      summary: 'Admin login',
+      description:
+        'Platform SUPER_ADMIN login. Non-admin accounts receive invalid credentials. Skips tenant subscription and company ACTIVE gates.',
+      requestBody: jsonRequestBody('LoginRequest'),
+      responses: {
+        ...successResponse('AuthResponse', 'Authenticated admin session'),
+        '401': {
+          description: 'Invalid credentials',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ApiErrorEnvelope' },
+            },
+          },
+        },
+        '409': {
+          description: 'Lifecycle conflict (inactive admin account)',
           content: {
             'application/json': {
               schema: { $ref: '#/components/schemas/ApiErrorEnvelope' },

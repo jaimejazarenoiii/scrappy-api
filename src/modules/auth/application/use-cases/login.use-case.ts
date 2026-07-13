@@ -1,12 +1,19 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { InvalidCredentialsError } from '../../../../shared/errors/http-exceptions.js';
+import {
+  InvalidCredentialsError,
+  ResourceNotFoundError,
+} from '../../../../shared/errors/http-exceptions.js';
 import type { PasswordHasher } from '../../../../shared/auth/password-hasher.interface.js';
 import type { TokenProvider } from '../../../../shared/auth/token-provider.interface.js';
 import type { CompanyRepository } from '../../../company/domain/company.repository.js';
 import type { SessionRepository } from '../../../session/domain/session.repository.js';
 import type { UserRepository } from '../../../user/domain/user.repository.js';
 import type { AuthResponseDto } from '../dto/auth.response.js';
-import { assertValidLoginCompany, assertValidLoginUser } from '../services/login-policy.service.js';
+import {
+  assertSubscriptionAllowsLogin,
+  assertValidLoginCompany,
+  assertValidLoginUser,
+} from '../services/login-policy.service.js';
 import { logAuthAudit } from '../services/auth-audit.service.js';
 
 export class LoginUseCase {
@@ -19,10 +26,22 @@ export class LoginUseCase {
   ) {}
 
   async execute(identifier: string, password: string): Promise<AuthResponseDto> {
-    const user = assertValidLoginUser(await this.userRepository.findByEmail(identifier));
-    const valid = await this.passwordHasher.compare(password, user.passwordHash);
+    const rawUser = await this.userRepository.findByEmail(identifier);
+    if (!rawUser) throw new InvalidCredentialsError();
+    const valid = await this.passwordHasher.compare(password, rawUser.passwordHash);
     if (!valid) throw new InvalidCredentialsError();
-    const company = assertValidLoginCompany(await this.companyRepository.findById(user.companyId));
+
+    const rawCompany = await this.companyRepository.findById(rawUser.companyId);
+    if (!rawCompany) throw new ResourceNotFoundError('Company not found');
+
+    // Platform admins must not use tenant login (same response as bad password).
+    if (rawUser.role === 'SUPER_ADMIN') {
+      throw new InvalidCredentialsError();
+    }
+
+    assertSubscriptionAllowsLogin(rawCompany, rawUser.role);
+    const user = assertValidLoginUser(rawUser);
+    const company = assertValidLoginCompany(rawCompany);
     const sessionId = randomUUID();
     const payload = {
       sub: user.id,

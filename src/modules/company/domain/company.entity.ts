@@ -1,4 +1,5 @@
 import type { CompanyStatus } from './company-status.js';
+import type { CompanySubscriptionStatus } from './company-subscription-status.js';
 
 export interface CompanyProps {
   id: string;
@@ -8,6 +9,7 @@ export interface CompanyProps {
   email: string | null;
   address: string | null;
   status: CompanyStatus;
+  subscriptionStatus: CompanySubscriptionStatus;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -40,6 +42,9 @@ export class CompanyEntity {
   }
   get status(): CompanyStatus {
     return this.props.status;
+  }
+  get subscriptionStatus(): CompanySubscriptionStatus {
+    return this.props.subscriptionStatus;
   }
   get deletedAt(): Date | null {
     return this.props.deletedAt;

@@ -2,6 +2,7 @@ import { BcryptPasswordHasher } from '../modules/auth/infrastructure/bcrypt-pass
 import { JwtTokenProvider } from '../modules/auth/infrastructure/jwt-token-provider.js';
 import { AuthController } from '../modules/auth/presentation/auth.controller.js';
 import { LoginUseCase } from '../modules/auth/application/use-cases/login.use-case.js';
+import { AdminLoginUseCase } from '../modules/auth/application/use-cases/admin-login.use-case.js';
 import { LogoutUseCase } from '../modules/auth/application/use-cases/logout.use-case.js';
 import { RefreshSessionUseCase } from '../modules/auth/application/use-cases/refresh-session.use-case.js';
 import { ForgotPasswordPlaceholderUseCase } from '../modules/auth/application/use-cases/forgot-password-placeholder.use-case.js';
@@ -133,6 +134,10 @@ import {
 } from '../modules/activity-log/index.js';
 import type { ActivityLogController } from '../modules/activity-log/presentation/activity-log.controller.js';
 import type { ActivityLogRepository } from '../modules/activity-log/domain/activity-log.repository.js';
+import { buildSubscriptionController } from '../modules/subscription/index.js';
+import type { SubscriptionController } from '../modules/subscription/presentation/subscription.controller.js';
+import { CompanySubscriptionPrismaRepository } from '../modules/subscription/infrastructure/company-subscription.prisma-repository.js';
+import type { CompanySubscriptionRepository } from '../modules/subscription/domain/company-subscription.repository.js';
 import { registerActivityLogRecorder } from '../shared/audit/activity-log-bridge.js';
 import type { ExpenseRepository } from '../modules/expense/domain/expense.repository.js';
 import type { ExpenseCategoryRepository } from '../modules/expense/domain/expense-category.repository.js';
@@ -168,6 +173,7 @@ export interface Container {
   tripController: TripController;
   expenseController: ExpenseController;
   activityLogController: ActivityLogController;
+  subscriptionController: SubscriptionController;
   healthIndicator?: { check: () => Promise<boolean> };
 }
 
@@ -202,6 +208,7 @@ export interface ContainerOverrides {
   expenseNumberSequenceRepository?: ExpenseNumberSequenceRepository;
   expenseFileStorage?: ExpenseFileStorage;
   activityLogRepository?: ActivityLogRepository;
+  companySubscriptionRepository?: CompanySubscriptionRepository;
   healthIndicator?: { check: () => Promise<boolean> };
 }
 
@@ -254,6 +261,8 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
   const expenseFileStorage = overrides.expenseFileStorage ?? resolvedStorages!.expenseFileStorage;
   const activityLogRepository =
     overrides.activityLogRepository ?? new ActivityLogPrismaRepository();
+  const companySubscriptionRepository =
+    overrides.companySubscriptionRepository ?? new CompanySubscriptionPrismaRepository();
   const activityLogRecorder = new ActivityLogRecorder(activityLogRepository, userRepository);
   registerActivityLogRecorder(activityLogRecorder);
 
@@ -274,6 +283,13 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
     ),
     authController: new AuthController(
       new LoginUseCase(
+        userRepository,
+        companyRepository,
+        sessionRepository,
+        passwordHasher,
+        tokenProvider,
+      ),
+      new AdminLoginUseCase(
         userRepository,
         companyRepository,
         sessionRepository,
@@ -428,5 +444,11 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
       tripRepository,
     }),
     activityLogController: buildActivityLogController({ activityLogRepository }),
+    subscriptionController: buildSubscriptionController({
+      companyRepository,
+      companySubscriptionRepository,
+      userRepository,
+      sessionRepository,
+    }),
   };
 }

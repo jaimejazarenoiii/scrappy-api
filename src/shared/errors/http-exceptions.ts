@@ -55,6 +55,12 @@ export class LifecycleConflictError extends AppError {
   }
 }
 
+export class SubscriptionInactiveError extends AppError {
+  constructor(message = 'Company subscription does not allow access') {
+    super(message, 409, ERROR_CODES.SUBSCRIPTION_INACTIVE);
+  }
+}
+
 export class BusinessRuleViolationError extends AppError {
   constructor(message = 'Business rule violation', details: Record<string, unknown>[] = []) {
     super(message, 409, ERROR_CODES.BUSINESS_RULE_VIOLATION, details);

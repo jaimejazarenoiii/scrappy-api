@@ -40,6 +40,7 @@ import {
 } from './in-memory-expense-repository.js';
 import { InMemoryExpenseCategoryRepository } from './in-memory-expense-category-repository.js';
 import { InMemoryActivityLogRepository } from './in-memory-activity-log-repository.js';
+import { InMemoryCompanySubscriptionRepository } from './subscription-helpers.js';
 
 export function setupTestEnv(): void {
   process.env.PORT = '3000';
@@ -129,6 +130,7 @@ export function createTestContext() {
   const expenseNumberSequenceRepository = new InMemoryExpenseNumberSequenceRepository(expenseStore);
   const expenseFileStorage = new InMemoryExpenseFileStorage();
   const activityLogRepository = new InMemoryActivityLogRepository();
+  const companySubscriptionRepository = new InMemoryCompanySubscriptionRepository();
   const container = createContainer({
     companyRepository,
     userRepository,
@@ -160,6 +162,7 @@ export function createTestContext() {
     expenseNumberSequenceRepository,
     expenseFileStorage,
     activityLogRepository,
+    companySubscriptionRepository,
   });
   const app = createApp(container);
   return {
@@ -191,5 +194,6 @@ export function createTestContext() {
     expenseFileStorage,
     tripRepository,
     activityLogRepository,
+    companySubscriptionRepository,
   };
 }

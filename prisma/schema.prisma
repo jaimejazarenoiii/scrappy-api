@@ -16,6 +16,22 @@ enum UserRole {
   OWNER
   MANAGER
   EMPLOYEE
+  SUPER_ADMIN
+}
+
+enum CompanySubscriptionStatus {
+  TRIAL
+  ACTIVE
+  GRACE_PERIOD
+  EXPIRED
+  SUSPENDED
+}
+
+enum SubscriptionPeriodStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  CANCELLED
 }
 
 enum UserStatus {
@@ -144,10 +160,12 @@ model Company {
   contactNumber      String?
   email              String?
   address            String?
-  status             CompanyStatus       @default(ACTIVE)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  status             CompanyStatus             @default(ACTIVE)
+  subscriptionStatus CompanySubscriptionStatus @default(TRIAL)
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
   deletedAt          DateTime?
+  subscriptions      CompanySubscription[]
   users              User[]
   employees          Employee[]
   branches           Branch[]
@@ -655,4 +673,21 @@ model ActivityLog {
   @@index([companyId, eventType, createdAt])
   @@index([companyId, resourceType, resourceId])
   @@index([companyId, resourceNumber])
+}
+
+model CompanySubscription {
+  id        String                   @id @default(uuid())
+  companyId String
+  planName  String
+  startsAt  DateTime
+  endsAt    DateTime
+  status    SubscriptionPeriodStatus
+  notes     String?
+  createdBy String
+  createdAt DateTime                 @default(now())
+  updatedAt DateTime                 @updatedAt
+  company   Company                  @relation(fields: [companyId], references: [id])
+
+  @@index([companyId, startsAt])
+  @@index([companyId, status])
 }

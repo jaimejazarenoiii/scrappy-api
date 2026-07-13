@@ -16,6 +16,7 @@ function toDomain(record: Company): CompanyEntity {
     email: record.email,
     address: record.address,
     status: record.status,
+    subscriptionStatus: record.subscriptionStatus,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
     deletedAt: record.deletedAt,

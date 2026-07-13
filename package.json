@@ -23,6 +23,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:prod": "tsx scripts/seed-prod.ts",
     "db:create-company": "tsx scripts/create-company.ts",
+    "db:create-super-admin": "tsx scripts/create-super-admin.ts",
     "db:disable-company": "tsx scripts/set-company-access.ts --disable",
     "db:enable-company": "tsx scripts/set-company-access.ts --enable",
     "db:reset": "prisma migrate reset --force",
