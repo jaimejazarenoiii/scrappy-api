@@ -30,7 +30,8 @@ the access token carries the user's `companyId`, and every request only ever see
 16. [Analytics](#16-analytics)
 17. [Reports](#17-reports)
 18. [Expense Management](#18-expense-management)
-19. [Typical frontend flows](#19-typical-frontend-flows)
+19. [Activity Logs](#19-activity-logs)
+20. [Typical frontend flows](#20-typical-frontend-flows)
 
 ---
 
@@ -992,7 +993,41 @@ falls back to the same default list when the catalog is empty.
 
 ---
 
-## 19. Typical frontend flows
+## 19. Activity Logs
+
+Append-only company audit trail. Entries are created automatically by the API when business
+operations succeed. Clients **cannot** create, update, or delete activity logs.
+
+**Auth**: Owner and Manager only. Employees receive `403`.
+
+| Path                             | Method | Notes                                   |
+| -------------------------------- | ------ | --------------------------------------- |
+| `/activity-logs`                 | GET    | Paginated list with search/filter/sort  |
+| `/activity-logs/{activityLogId}` | GET    | Single entry; other-company ids → `404` |
+
+### List query parameters
+
+| Param                | Notes                                                                                                                                  |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `page`, `limit`      | Defaults `1` / `20` (max 100)                                                                                                          |
+| `sortBy`             | `createdAt` (default), `module`, `user`                                                                                                |
+| `sortOrder`          | `asc` / `desc` (default `desc`)                                                                                                        |
+| `q` + `searchBy`     | Search text; `searchBy` required when `q` is set: `employeeName`, `transactionNumber`, `tripNumber`, `expenseNumber`, `user`, `action` |
+| `module`             | e.g. `auth`, `employee`, `transaction`, `trip`, `expense`, …                                                                           |
+| `action`             | Exact action string (e.g. `transaction.settled`)                                                                                       |
+| `userId`             | Actor user UUID                                                                                                                        |
+| `eventType`          | `AUTHENTICATION`, `COMPANY`, `EMPLOYEE`, `ORGANIZATION`, `TRANSACTION`, `TRIP`, `EXPENSE`, `WORKFORCE`                                 |
+| `dateFrom`, `dateTo` | ISO date-time range on `createdAt`                                                                                                     |
+
+### Response shape (item)
+
+`id`, `companyId`, `eventType`, `module`, `action`, `description`, `userId`, optional
+`employeeId` / `resourceType` / `resourceId` / `resourceNumber` / `ipAddress` / `userAgent` /
+`metadata`, and `createdAt`. Password-related metadata never includes secrets.
+
+---
+
+## 20. Typical frontend flows
 
 ### App bootstrap (after login)
 

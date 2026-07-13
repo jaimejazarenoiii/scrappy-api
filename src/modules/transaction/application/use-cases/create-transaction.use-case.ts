@@ -145,6 +145,7 @@ export class CreateTransactionUseCase {
       resourceType: 'transaction',
       resourceId: detail.transaction.id,
       actorUserId: userId,
+      metadata: { transactionNumber: detail.transaction.transactionNumber },
     });
 
     return buildTransactionDetailResponse(detail);

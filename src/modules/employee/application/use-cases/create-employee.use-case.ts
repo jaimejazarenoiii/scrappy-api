@@ -9,6 +9,7 @@ import {
   EMPLOYEE_ACCOUNT_AUDIT_ACTIONS,
   logEmployeeAccountAudit,
 } from '../services/employee-account-audit.service.js';
+import { logEmployeeAudit } from '../services/employee-audit.service.js';
 import type { EmployeeAccountProvisioningService } from '../services/employee-account-provisioning.service.js';
 
 function toResponse(
@@ -61,13 +62,22 @@ export class CreateEmployeeUseCase {
         },
         input.account,
       );
+      const employeeName = result.employee.fullName;
+      logEmployeeAudit({
+        action: 'employee.created',
+        companyId,
+        resourceType: 'employee',
+        resourceId: result.employee.id,
+        actorUserId,
+        metadata: { employeeName, employeeId: result.employee.id },
+      });
       logEmployeeAccountAudit({
         action: EMPLOYEE_ACCOUNT_AUDIT_ACTIONS.PROVISIONED_ON_CREATE,
         companyId,
         resourceType: 'employee',
         resourceId: result.employee.id,
         actorUserId,
-        metadata: { userId: result.user.id, role: result.user.role },
+        metadata: { userId: result.user.id, role: result.user.role, employeeName },
       });
       return toResponse(result.employee, toLinkedUserSummary(result.user));
     }
@@ -84,6 +94,17 @@ export class CreateEmployeeUseCase {
       contactNumber: input.contactNumber ?? null,
       weeklySalary: input.weeklySalary,
       status: input.status ?? 'ACTIVE',
+    });
+    logEmployeeAudit({
+      action: 'employee.created',
+      companyId,
+      resourceType: 'employee',
+      resourceId: employee.id,
+      actorUserId,
+      metadata: {
+        employeeName: employee.fullName,
+        employeeId: employee.id,
+      },
     });
     return toResponse(employee, null);
   }

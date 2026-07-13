@@ -1,6 +1,6 @@
 import type { AuditEvent } from '../../../../shared/audit/audit-event.js';
-import { getLogger } from '../../../../config/logger.js';
+import { emitStructuredAudit } from '../../../../shared/audit/emit-structured-audit.js';
 
 export function logPayrollAudit(event: AuditEvent): void {
-  getLogger().info({ audit: event }, 'payroll audit event');
+  emitStructuredAudit('payroll audit event', event);
 }

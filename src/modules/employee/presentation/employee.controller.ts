@@ -84,6 +84,7 @@ export class EmployeeController {
             String(req.params.employeeId),
             req.auth!.companyId,
             req.body,
+            req.auth!.userId,
           ),
         ),
       );
@@ -99,6 +100,7 @@ export class EmployeeController {
           await this.archiveEmployeeUseCase.execute(
             String(req.params.employeeId),
             req.auth!.companyId,
+            req.auth!.userId,
           ),
         ),
       );

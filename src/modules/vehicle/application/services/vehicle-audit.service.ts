@@ -1,6 +1,6 @@
 import type { AuditEvent } from '../../../../shared/audit/audit-event.js';
-import { getLogger } from '../../../../config/logger.js';
+import { emitStructuredAudit } from '../../../../shared/audit/emit-structured-audit.js';
 
 export function logVehicleAudit(event: AuditEvent): void {
-  getLogger().info({ audit: event }, 'vehicle audit event');
+  emitStructuredAudit('vehicle audit event', event);
 }

@@ -42,7 +42,13 @@ export class CompanyController {
       if (req.auth && req.auth.companyId !== String(req.params.companyId))
         throw new CompanyScopeViolationError();
       res.json(
-        success(await this.updateCompanyUseCase.execute(String(req.params.companyId), req.body)),
+        success(
+          await this.updateCompanyUseCase.execute(
+            String(req.params.companyId),
+            req.body,
+            req.auth?.userId,
+          ),
+        ),
       );
     } catch (error) {
       next(error);

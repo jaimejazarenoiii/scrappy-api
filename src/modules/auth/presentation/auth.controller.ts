@@ -22,7 +22,15 @@ export class AuthController {
   };
   logout: RequestHandler = async (req, res, next) => {
     try {
-      res.json(success(await this.logoutUseCase.execute(req.auth?.sessionId)));
+      res.json(
+        success(
+          await this.logoutUseCase.execute({
+            sessionId: req.auth?.sessionId,
+            companyId: req.auth?.companyId,
+            userId: req.auth?.userId,
+          }),
+        ),
+      );
     } catch (error) {
       next(error);
     }

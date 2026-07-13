@@ -126,6 +126,14 @@ import { ExpenseAttachmentPrismaRepository } from '../modules/expense/infrastruc
 import { ExpenseNumberSequencePrismaRepository } from '../modules/expense/infrastructure/expense-number-sequence.prisma-repository.js';
 import { buildExpenseController } from '../modules/expense/index.js';
 import type { ExpenseController } from '../modules/expense/presentation/expense.controller.js';
+import {
+  ActivityLogPrismaRepository,
+  ActivityLogRecorder,
+  buildActivityLogController,
+} from '../modules/activity-log/index.js';
+import type { ActivityLogController } from '../modules/activity-log/presentation/activity-log.controller.js';
+import type { ActivityLogRepository } from '../modules/activity-log/domain/activity-log.repository.js';
+import { registerActivityLogRecorder } from '../shared/audit/activity-log-bridge.js';
 import type { ExpenseRepository } from '../modules/expense/domain/expense.repository.js';
 import type { ExpenseCategoryRepository } from '../modules/expense/domain/expense-category.repository.js';
 import type { ExpenseAttachmentRepository } from '../modules/expense/domain/expense-attachment.repository.js';
@@ -159,6 +167,7 @@ export interface Container {
   reportsController: ReportsController;
   tripController: TripController;
   expenseController: ExpenseController;
+  activityLogController: ActivityLogController;
   healthIndicator?: { check: () => Promise<boolean> };
 }
 
@@ -192,6 +201,7 @@ export interface ContainerOverrides {
   expenseAttachmentRepository?: ExpenseAttachmentRepository;
   expenseNumberSequenceRepository?: ExpenseNumberSequenceRepository;
   expenseFileStorage?: ExpenseFileStorage;
+  activityLogRepository?: ActivityLogRepository;
   healthIndicator?: { check: () => Promise<boolean> };
 }
 
@@ -242,6 +252,10 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
   const expenseNumberSequenceRepository =
     overrides.expenseNumberSequenceRepository ?? new ExpenseNumberSequencePrismaRepository();
   const expenseFileStorage = overrides.expenseFileStorage ?? resolvedStorages!.expenseFileStorage;
+  const activityLogRepository =
+    overrides.activityLogRepository ?? new ActivityLogPrismaRepository();
+  const activityLogRecorder = new ActivityLogRecorder(activityLogRepository);
+  registerActivityLogRecorder(activityLogRecorder);
 
   const employeeAccountProvisioningService = new EmployeeAccountProvisioningService(
     employeeRepository,
@@ -413,5 +427,6 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
       vehicleRepository,
       tripRepository,
     }),
+    activityLogController: buildActivityLogController({ activityLogRepository }),
   };
 }

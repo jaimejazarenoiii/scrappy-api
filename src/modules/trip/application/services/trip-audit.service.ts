@@ -1,5 +1,5 @@
 import type { AuditEvent } from '../../../../shared/audit/audit-event.js';
-import { getLogger } from '../../../../config/logger.js';
+import { emitStructuredAudit } from '../../../../shared/audit/emit-structured-audit.js';
 
 export const TRIP_AUDIT_ACTIONS = {
   CREATED: 'trip.created',
@@ -16,5 +16,5 @@ export const TRIP_AUDIT_ACTIONS = {
 export type TripAuditAction = (typeof TRIP_AUDIT_ACTIONS)[keyof typeof TRIP_AUDIT_ACTIONS];
 
 export function logTripAudit(event: AuditEvent): void {
-  getLogger().info({ audit: event }, 'trip audit event');
+  emitStructuredAudit('trip audit event', event);
 }

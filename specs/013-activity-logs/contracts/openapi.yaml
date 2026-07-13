@@ -1,0 +1,171 @@
+openapi: 3.0.3
+info:
+  title: Scrappy API — Activity Logs
+  version: 1.0.0
+  description: >
+    P010 contracts for read-only Company Activity Logs. Entries are system-generated and
+    immutable. Clients cannot create, update, or delete Activity Logs.
+servers:
+  - url: /api/v1
+tags:
+  - name: Activity Logs
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ApiSuccessEnvelope:
+      type: object
+      required: [success, data, meta, error]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: {}
+        meta: { type: object, additionalProperties: true }
+        error: { nullable: true, type: 'null' }
+    ActivityEventType:
+      type: string
+      enum:
+        - AUTHENTICATION
+        - COMPANY
+        - EMPLOYEE
+        - ORGANIZATION
+        - TRANSACTION
+        - TRIP
+        - EXPENSE
+        - WORKFORCE
+    ActivityModule:
+      type: string
+      enum:
+        - auth
+        - company
+        - employee
+        - branch
+        - warehouse
+        - vehicle
+        - transaction
+        - trip
+        - expense
+        - attendance
+        - leave
+        - cash-advance
+        - payroll
+        - user
+    ActivityLog:
+      type: object
+      required:
+        - id
+        - companyId
+        - eventType
+        - module
+        - action
+        - description
+        - userId
+        - createdAt
+      properties:
+        id: { type: string, format: uuid }
+        companyId: { type: string, format: uuid }
+        eventType: { $ref: '#/components/schemas/ActivityEventType' }
+        module: { $ref: '#/components/schemas/ActivityModule' }
+        action: { type: string, example: transaction.paid }
+        description: { type: string, example: Transaction TRX-001 marked paid }
+        userId: { type: string, format: uuid }
+        employeeId: { type: string, format: uuid, nullable: true }
+        resourceType: { type: string, nullable: true }
+        resourceId: { type: string, format: uuid, nullable: true }
+        resourceNumber: { type: string, nullable: true }
+        ipAddress: { type: string, nullable: true }
+        userAgent: { type: string, nullable: true }
+        metadata:
+          type: object
+          additionalProperties: true
+          nullable: true
+        createdAt: { type: string, format: date-time }
+        performedBy:
+          type: object
+          nullable: true
+          description: Optional display enrichment
+          properties:
+            id: { type: string, format: uuid }
+            email: { type: string, format: email }
+            role: { type: string, enum: [OWNER, MANAGER, EMPLOYEE] }
+paths:
+  /activity-logs:
+    get:
+      tags: [Activity Logs]
+      summary: List Activity Logs
+      description: >
+        Searchable, filterable, sortable, paginated Activity Logs for the authenticated Company.
+        Owner and Manager only.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string, minLength: 1, maxLength: 200 }
+        - in: query
+          name: searchBy
+          schema:
+            type: string
+            enum: [employeeName, transactionNumber, tripNumber, expenseNumber, user, action]
+        - in: query
+          name: module
+          schema: { $ref: '#/components/schemas/ActivityModule' }
+        - in: query
+          name: action
+          schema: { type: string }
+        - in: query
+          name: userId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: eventType
+          schema: { $ref: '#/components/schemas/ActivityEventType' }
+        - in: query
+          name: dateFrom
+          schema: { type: string, format: date-time }
+        - in: query
+          name: dateTo
+          schema: { type: string, format: date-time }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+            enum: [createdAt, module, user]
+            default: createdAt
+        - in: query
+          name: sortOrder
+          schema: { type: string, enum: [asc, desc], default: desc }
+      responses:
+        '200':
+          description: Paginated Activity Logs
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiSuccessEnvelope' }
+        '400': { description: Validation failed }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+  /activity-logs/{activityLogId}:
+    get:
+      tags: [Activity Logs]
+      summary: Get Activity Log by id
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: activityLogId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Activity Log detail
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiSuccessEnvelope' }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+        '404': { description: Not found }

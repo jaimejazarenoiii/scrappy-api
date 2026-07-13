@@ -1,5 +1,5 @@
 import type { AuditEvent } from '../../../../shared/audit/audit-event.js';
-import { getLogger } from '../../../../config/logger.js';
+import { emitStructuredAudit } from '../../../../shared/audit/emit-structured-audit.js';
 
 export const TRANSACTION_AUDIT_ACTIONS = {
   CREATED: 'transaction.created',
@@ -21,5 +21,5 @@ export type TransactionAuditAction =
   (typeof TRANSACTION_AUDIT_ACTIONS)[keyof typeof TRANSACTION_AUDIT_ACTIONS];
 
 export function logTransactionAudit(event: AuditEvent): void {
-  getLogger().info({ audit: event }, 'transaction audit event');
+  emitStructuredAudit('transaction audit event', event);
 }

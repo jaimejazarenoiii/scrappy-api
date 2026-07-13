@@ -19,6 +19,7 @@ import { createAnalyticsRoutes } from './analytics/index.js';
 import { createReportsRoutes } from './reports/index.js';
 import { createTripRoutes } from './trip/index.js';
 import { createExpenseRoutes } from './expense/index.js';
+import { createActivityLogRoutes } from './activity-log/index.js';
 
 export function registerModuleRoutes(app: Express, container: Container): void {
   const authn = createAuthenticationMiddleware(container.tokenProvider);
@@ -130,5 +131,12 @@ export function registerModuleRoutes(app: Express, container: Container): void {
     companyResolutionMiddleware,
     gate,
     createExpenseRoutes(container.expenseController),
+  );
+  app.use(
+    '/api/v1',
+    authn,
+    companyResolutionMiddleware,
+    gate,
+    createActivityLogRoutes(container.activityLogController),
   );
 }

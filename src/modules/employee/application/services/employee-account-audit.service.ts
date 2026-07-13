@@ -1,5 +1,5 @@
 import type { AuditEvent } from '../../../../shared/audit/audit-event.js';
-import { getLogger } from '../../../../config/logger.js';
+import { emitStructuredAudit } from '../../../../shared/audit/emit-structured-audit.js';
 
 export const EMPLOYEE_ACCOUNT_AUDIT_ACTIONS = {
   PROVISIONED_ON_CREATE: 'employee.account_provisioned_on_create',
@@ -12,5 +12,5 @@ export const EMPLOYEE_ACCOUNT_AUDIT_ACTIONS = {
  * Emits a structured audit log for employee account provisioning events.
  */
 export function logEmployeeAccountAudit(event: AuditEvent): void {
-  getLogger().info({ audit: event }, 'employee account audit event');
+  emitStructuredAudit('employee account audit event', event);
 }

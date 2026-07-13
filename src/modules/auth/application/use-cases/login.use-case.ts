@@ -7,6 +7,7 @@ import type { SessionRepository } from '../../../session/domain/session.reposito
 import type { UserRepository } from '../../../user/domain/user.repository.js';
 import type { AuthResponseDto } from '../dto/auth.response.js';
 import { assertValidLoginCompany, assertValidLoginUser } from '../services/login-policy.service.js';
+import { logAuthAudit } from '../services/auth-audit.service.js';
 
 export class LoginUseCase {
   constructor(
@@ -40,6 +41,14 @@ export class LoginUseCase {
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
     await this.userRepository.updateLastLogin(user.id);
+    logAuthAudit({
+      action: 'auth.login',
+      companyId: user.companyId,
+      resourceType: 'session',
+      resourceId: sessionId,
+      actorUserId: user.id,
+      metadata: { actorEmail: user.email, role: user.role },
+    });
     return {
       accessToken,
       refreshToken,

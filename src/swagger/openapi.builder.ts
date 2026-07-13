@@ -15,6 +15,7 @@ import { tripOpenApiPaths } from '../modules/trip/presentation/trip.openapi.js';
 import { expenseOpenApiPaths } from '../modules/expense/presentation/expense.openapi.js';
 import { analyticsOpenApiPaths } from '../modules/analytics/presentation/analytics.openapi.js';
 import { reportsOpenApiPaths } from '../modules/reports/presentation/reports.openapi.js';
+import { activityLogOpenApiPaths } from '../modules/activity-log/presentation/activity-log.openapi.js';
 import { commonSchemas } from './common-schemas.js';
 import { commonResponses } from './common-responses.js';
 
@@ -52,6 +53,7 @@ export function buildOpenApiDocument(): object {
       ...expenseOpenApiPaths,
       ...analyticsOpenApiPaths,
       ...reportsOpenApiPaths,
+      ...activityLogOpenApiPaths,
     },
   };
 }

@@ -1,5 +1,5 @@
 import type { AuditEvent } from '../../../../shared/audit/audit-event.js';
-import { getLogger } from '../../../../config/logger.js';
+import { emitStructuredAudit } from '../../../../shared/audit/emit-structured-audit.js';
 
 export const USER_PASSWORD_AUDIT_ACTIONS = {
   CHANGED: 'user.password_changed',
@@ -10,5 +10,5 @@ export const USER_PASSWORD_AUDIT_ACTIONS = {
  * Emits a structured audit log for password change/reset. Never include plaintext passwords.
  */
 export function logUserPasswordAudit(event: AuditEvent): void {
-  getLogger().info({ audit: event }, 'user password audit event');
+  emitStructuredAudit('user password audit event', event);
 }

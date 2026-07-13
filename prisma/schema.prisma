@@ -161,6 +161,7 @@ model Company {
   trips              Trip[]
   expenses           Expense[]
   expenseCategories  ExpenseCategory[]
+  activityLogs       ActivityLog[]
 }
 
 model User {
@@ -626,4 +627,32 @@ model ExpenseNumberSequence {
 
   @@id([companyId, sequenceDate])
   @@index([companyId, sequenceDate])
+}
+
+model ActivityLog {
+  id             String   @id @default(uuid())
+  companyId      String
+  eventType      String
+  module         String
+  action         String
+  description    String
+  userId         String
+  employeeId     String?
+  resourceType   String?
+  resourceId     String?
+  resourceNumber String?
+  ipAddress      String?
+  userAgent      String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, createdAt])
+  @@index([companyId, module, createdAt])
+  @@index([companyId, action, createdAt])
+  @@index([companyId, userId, createdAt])
+  @@index([companyId, eventType, createdAt])
+  @@index([companyId, resourceType, resourceId])
+  @@index([companyId, resourceNumber])
 }

@@ -1,5 +1,5 @@
 import type { AuditEvent } from '../../../../shared/audit/audit-event.js';
-import { getLogger } from '../../../../config/logger.js';
+import { emitStructuredAudit } from '../../../../shared/audit/emit-structured-audit.js';
 
 export const EXPENSE_AUDIT_ACTIONS = {
   CREATED: 'expense.created',
@@ -12,5 +12,5 @@ export const EXPENSE_AUDIT_ACTIONS = {
 } as const;
 
 export function logExpenseAudit(event: AuditEvent): void {
-  getLogger().info({ audit: event }, 'expense audit event');
+  emitStructuredAudit('expense audit event', event);
 }

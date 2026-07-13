@@ -37,7 +37,11 @@ describe('auth lifecycle use cases', () => {
     );
     expect(refreshed.accessToken).toBeTruthy();
     const payload = tokenProvider.verifyAccessToken(login.accessToken);
-    const logout = await new LogoutUseCase(sessionRepo).execute(payload.sessionId);
+    const logout = await new LogoutUseCase(sessionRepo).execute({
+      sessionId: payload.sessionId,
+      companyId: payload.companyId,
+      userId: payload.sub,
+    });
     expect(logout.loggedOut).toBe(true);
   });
 });
