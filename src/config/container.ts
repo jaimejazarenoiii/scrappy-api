@@ -41,6 +41,15 @@ import { ArchiveEmployeeUseCase } from '../modules/employee/application/use-case
 import { LinkEmployeeToUserUseCase } from '../modules/employee/application/use-cases/link-employee-to-user.use-case.js';
 import { ListEmployeesUseCase } from '../modules/employee/application/use-cases/list-employees.use-case.js';
 import { GetMyEmployeeUseCase } from '../modules/employee/application/use-cases/get-my-employee.use-case.js';
+import { GrantSystemAccessUseCase } from '../modules/employee/application/use-cases/grant-system-access.use-case.js';
+import { DisableSystemAccessUseCase } from '../modules/employee/application/use-cases/disable-system-access.use-case.js';
+import { ChangePasswordUseCase } from '../modules/user/application/use-cases/change-password.use-case.js';
+import { GetPasswordStatusUseCase } from '../modules/user/application/use-cases/get-password-status.use-case.js';
+import { EnableSystemAccessUseCase } from '../modules/employee/application/use-cases/enable-system-access.use-case.js';
+import { ResetEmployeePasswordUseCase } from '../modules/employee/application/use-cases/reset-employee-password.use-case.js';
+import { createPasswordChangeGateMiddleware } from '../middleware/password-change-gate.middleware.js';
+import type { RequestHandler } from 'express';
+import { EmployeeAccountProvisioningService } from '../modules/employee/application/services/employee-account-provisioning.service.js';
 import { BranchController } from '../modules/branch/presentation/branch.controller.js';
 import { CreateBranchUseCase } from '../modules/branch/application/use-cases/create-branch.use-case.js';
 import { GetBranchUseCase } from '../modules/branch/application/use-cases/get-branch.use-case.js';
@@ -133,6 +142,7 @@ import type { FileStorage } from '../modules/transaction/infrastructure/file-sto
 
 export interface Container {
   tokenProvider: TokenProvider;
+  passwordChangeGate: RequestHandler;
   companyController: CompanyController;
   authController: AuthController;
   userController: UserController;
@@ -232,6 +242,12 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
     overrides.expenseNumberSequenceRepository ?? new ExpenseNumberSequencePrismaRepository();
   const expenseFileStorage = overrides.expenseFileStorage ?? new LocalExpenseFileStorage();
 
+  const employeeAccountProvisioningService = new EmployeeAccountProvisioningService(
+    employeeRepository,
+    userRepository,
+    passwordHasher,
+  );
+
   return {
     tokenProvider,
     healthIndicator: overrides.healthIndicator,
@@ -253,16 +269,30 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
       new RefreshSessionUseCase(sessionRepository, tokenProvider),
       new ForgotPasswordPlaceholderUseCase(),
     ),
-    userController: new UserController(new GetCurrentUserUseCase(userRepository)),
+    userController: new UserController(
+      new GetCurrentUserUseCase(userRepository),
+      new ChangePasswordUseCase(userRepository, passwordHasher, sessionRepository),
+      new GetPasswordStatusUseCase(userRepository),
+    ),
     employeeController: new EmployeeController(
-      new CreateEmployeeUseCase(employeeRepository),
+      new CreateEmployeeUseCase(employeeRepository, employeeAccountProvisioningService),
       new GetEmployeeUseCase(employeeRepository),
       new UpdateEmployeeUseCase(employeeRepository),
       new ArchiveEmployeeUseCase(employeeRepository),
       new LinkEmployeeToUserUseCase(employeeRepository, userRepository),
       new ListEmployeesUseCase(employeeRepository),
       new GetMyEmployeeUseCase(userRepository, employeeRepository),
+      new GrantSystemAccessUseCase(employeeRepository, employeeAccountProvisioningService),
+      new DisableSystemAccessUseCase(employeeRepository, userRepository, sessionRepository),
+      new EnableSystemAccessUseCase(employeeRepository, userRepository),
+      new ResetEmployeePasswordUseCase(
+        employeeRepository,
+        userRepository,
+        passwordHasher,
+        sessionRepository,
+      ),
     ),
+    passwordChangeGate: createPasswordChangeGateMiddleware(userRepository),
     branchController: new BranchController(
       new CreateBranchUseCase(branchRepository),
       new GetBranchUseCase(branchRepository),

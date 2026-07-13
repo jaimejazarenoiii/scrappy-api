@@ -53,7 +53,12 @@ export class LoginUseCase {
         address: company.address,
         status: company.status,
       },
-      user: { id: user.id, email: user.email, role: user.role },
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        passwordChangeRequired: user.passwordChangeRequired,
+      },
     };
   }
 }

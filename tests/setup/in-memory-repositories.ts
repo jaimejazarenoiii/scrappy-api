@@ -10,6 +10,8 @@ import { EmployeeEntity as EmployeeModel } from '../../src/modules/employee/doma
 import type {
   CreateEmployeeInput,
   EmployeeRepository,
+  EmployeeWithLinkedUser,
+  LinkedAccountInput,
   UpdateEmployeeInput,
 } from '../../src/modules/employee/domain/employee.repository.js';
 import type { RefreshSessionEntity } from '../../src/modules/session/domain/refresh-session.entity.js';
@@ -133,9 +135,11 @@ export class InMemoryUserRepository implements UserRepository {
     const now = new Date();
     const user = UserModel.create({
       ...input,
-      employeeId: null,
+      employeeId: input.employeeId ?? null,
+      passwordChangeRequired: input.passwordChangeRequired ?? false,
+      passwordChangedAt: input.passwordChangedAt ?? null,
       lastLoginAt: null,
-      status: 'ACTIVE',
+      status: input.status ?? 'ACTIVE',
       createdAt: now,
       updatedAt: now,
       deletedAt: null,
@@ -171,10 +175,46 @@ export class InMemoryUserRepository implements UserRepository {
     this.users.set(userId, updated);
     return updated;
   }
+  async updateStatus(
+    userId: string,
+    companyId: string,
+    status: 'ACTIVE' | 'INACTIVE',
+  ): Promise<UserEntity> {
+    const user = await this.findById(userId, companyId);
+    if (!user) throw new Error('User not found');
+    const updated = UserModel.create({
+      ...user.toPrimitives(),
+      status,
+      updatedAt: new Date(),
+    });
+    this.users.set(userId, updated);
+    return updated;
+  }
+  async updatePassword(
+    userId: string,
+    companyId: string,
+    passwordHash: string,
+    options: { passwordChangeRequired: boolean; passwordChangedAt: Date },
+  ): Promise<UserEntity> {
+    const user = await this.findById(userId, companyId);
+    if (!user) throw new Error('User not found');
+    const updated = UserModel.create({
+      ...user.toPrimitives(),
+      passwordHash,
+      passwordChangeRequired: options.passwordChangeRequired,
+      passwordChangedAt: options.passwordChangedAt,
+      updatedAt: new Date(),
+    });
+    this.users.set(userId, updated);
+    return updated;
+  }
 }
 
 export class InMemoryEmployeeRepository implements EmployeeRepository {
   public employees = new Map<string, EmployeeEntity>();
+
+  constructor(private readonly userStore?: Map<string, UserEntity>) {}
+
   async create(input: CreateEmployeeInput): Promise<EmployeeEntity> {
     const now = new Date();
     const employee = EmployeeModel.create({
@@ -255,6 +295,60 @@ export class InMemoryEmployeeRepository implements EmployeeRepository {
       (employee) => idSet.has(employee.id) && employee.companyId === companyId,
     );
   }
+
+  async createWithLinkedAccount(
+    employeeInput: CreateEmployeeInput,
+    account: LinkedAccountInput,
+  ): Promise<EmployeeWithLinkedUser> {
+    const employee = await this.create({ ...employeeInput, userId: null });
+    const now = new Date();
+    const user = UserModel.create({
+      id: account.id,
+      companyId: employeeInput.companyId,
+      employeeId: employee.id,
+      email: account.email,
+      passwordHash: account.passwordHash,
+      role: account.role,
+      passwordChangeRequired: false,
+      passwordChangedAt: null,
+      lastLoginAt: null,
+      status: 'ACTIVE',
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    });
+    this.userStore?.set(user.id, user);
+    const linked = await this.linkUser(employee.id, employee.companyId, user.id);
+    return { employee: linked, user };
+  }
+
+  async grantLinkedAccount(
+    employeeId: string,
+    companyId: string,
+    account: LinkedAccountInput,
+  ): Promise<EmployeeWithLinkedUser> {
+    const employee = await this.findById(employeeId, companyId);
+    if (!employee) throw new Error('Employee not found');
+    const now = new Date();
+    const user = UserModel.create({
+      id: account.id,
+      companyId,
+      employeeId,
+      email: account.email,
+      passwordHash: account.passwordHash,
+      role: account.role,
+      passwordChangeRequired: false,
+      passwordChangedAt: null,
+      lastLoginAt: null,
+      status: 'ACTIVE',
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    });
+    this.userStore?.set(user.id, user);
+    const linked = await this.linkUser(employeeId, companyId, user.id);
+    return { employee: linked, user };
+  }
 }
 
 export class InMemorySessionRepository implements SessionRepository {
@@ -275,6 +369,16 @@ export class InMemorySessionRepository implements SessionRepository {
       sessionId,
       RefreshSessionModel.create({ ...session.toPrimitives(), revokedAt: new Date() }),
     );
+  }
+  async revokeAllForUser(userId: string): Promise<void> {
+    for (const [id, session] of this.sessions.entries()) {
+      if (session.userId === userId && session.revokedAt === null) {
+        this.sessions.set(
+          id,
+          RefreshSessionModel.create({ ...session.toPrimitives(), revokedAt: new Date() }),
+        );
+      }
+    }
   }
 }
 

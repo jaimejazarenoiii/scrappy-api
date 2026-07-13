@@ -1,7 +1,12 @@
 import type { User } from '@prisma/client';
 import { prisma } from '../../../database/prisma.client.js';
+import { ResourceNotFoundError } from '../../../shared/errors/http-exceptions.js';
 import { UserEntity as UserModel, type UserEntity } from '../domain/user.entity.js';
-import type { UserRepository, CreateUserInput } from '../domain/user.repository.js';
+import type {
+  UserRepository,
+  CreateUserInput,
+  UpdatePasswordOptions,
+} from '../domain/user.repository.js';
 
 function toDomain(record: User): UserEntity {
   return UserModel.create({
@@ -11,6 +16,8 @@ function toDomain(record: User): UserEntity {
     email: record.email,
     passwordHash: record.passwordHash,
     role: record.role,
+    passwordChangeRequired: record.passwordChangeRequired,
+    passwordChangedAt: record.passwordChangedAt,
     lastLoginAt: record.lastLoginAt,
     status: record.status,
     createdAt: record.createdAt,
@@ -21,7 +28,21 @@ function toDomain(record: User): UserEntity {
 
 export class UserPrismaRepository implements UserRepository {
   async create(input: CreateUserInput): Promise<UserEntity> {
-    return toDomain(await prisma.user.create({ data: input }));
+    return toDomain(
+      await prisma.user.create({
+        data: {
+          id: input.id,
+          companyId: input.companyId,
+          email: input.email,
+          passwordHash: input.passwordHash,
+          role: input.role,
+          employeeId: input.employeeId ?? null,
+          status: input.status ?? 'ACTIVE',
+          passwordChangeRequired: input.passwordChangeRequired ?? false,
+          passwordChangedAt: input.passwordChangedAt ?? null,
+        },
+      }),
+    );
   }
 
   async findByEmail(email: string): Promise<UserEntity | null> {
@@ -42,5 +63,35 @@ export class UserPrismaRepository implements UserRepository {
 
   async linkEmployee(userId: string, employeeId: string): Promise<UserEntity> {
     return toDomain(await prisma.user.update({ where: { id: userId }, data: { employeeId } }));
+  }
+
+  async updateStatus(
+    userId: string,
+    companyId: string,
+    status: 'ACTIVE' | 'INACTIVE',
+  ): Promise<UserEntity> {
+    const existing = await this.findById(userId, companyId);
+    if (!existing) throw new ResourceNotFoundError('User not found');
+    return toDomain(await prisma.user.update({ where: { id: userId }, data: { status } }));
+  }
+
+  async updatePassword(
+    userId: string,
+    companyId: string,
+    passwordHash: string,
+    options: UpdatePasswordOptions,
+  ): Promise<UserEntity> {
+    const existing = await this.findById(userId, companyId);
+    if (!existing) throw new ResourceNotFoundError('User not found');
+    return toDomain(
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          passwordHash,
+          passwordChangeRequired: options.passwordChangeRequired,
+          passwordChangedAt: options.passwordChangedAt,
+        },
+      }),
+    );
   }
 }

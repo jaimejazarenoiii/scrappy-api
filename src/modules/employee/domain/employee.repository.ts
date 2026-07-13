@@ -1,3 +1,5 @@
+import type { UserRole } from '../../../shared/policy/roles.js';
+import type { UserEntity } from '../../user/domain/user.entity.js';
 import type { EmployeeEntity } from './employee.entity.js';
 
 export interface CreateEmployeeInput {
@@ -26,6 +28,18 @@ export interface UpdateEmployeeInput {
   status?: 'ACTIVE' | 'INACTIVE';
 }
 
+export interface LinkedAccountInput {
+  id: string;
+  email: string;
+  passwordHash: string;
+  role: UserRole;
+}
+
+export interface EmployeeWithLinkedUser {
+  employee: EmployeeEntity;
+  user: UserEntity;
+}
+
 export interface EmployeeRepository {
   create(input: CreateEmployeeInput): Promise<EmployeeEntity>;
   findById(employeeId: string, companyId: string): Promise<EmployeeEntity | null>;
@@ -38,4 +52,15 @@ export interface EmployeeRepository {
   linkUser(employeeId: string, companyId: string, userId: string): Promise<EmployeeEntity>;
   listActiveByCompany(companyId: string): Promise<EmployeeEntity[]>;
   findByIds(employeeIds: string[], companyId: string): Promise<EmployeeEntity[]>;
+  /** Atomically creates an Employee and linked User account. */
+  createWithLinkedAccount(
+    employee: CreateEmployeeInput,
+    account: LinkedAccountInput,
+  ): Promise<EmployeeWithLinkedUser>;
+  /** Atomically creates a User and links it to an existing Employee. */
+  grantLinkedAccount(
+    employeeId: string,
+    companyId: string,
+    account: LinkedAccountInput,
+  ): Promise<EmployeeWithLinkedUser>;
 }

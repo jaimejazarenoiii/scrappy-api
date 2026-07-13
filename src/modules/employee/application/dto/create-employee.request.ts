@@ -1,3 +1,5 @@
+import type { AccountCredentialsRequestDto } from './account-credentials.request.js';
+
 export interface CreateEmployeeRequestDto {
   userId?: string;
   employeeNumber?: string;
@@ -8,4 +10,6 @@ export interface CreateEmployeeRequestDto {
   contactNumber?: string;
   weeklySalary: number;
   status?: 'ACTIVE' | 'INACTIVE';
+  createAccount?: boolean;
+  account?: AccountCredentialsRequestDto;
 }

@@ -105,6 +105,7 @@ export const commonSchemas = {
       id: uuid,
       email: { type: 'string', format: 'email' },
       role: { type: 'string', enum: ['OWNER', 'MANAGER', 'EMPLOYEE'] },
+      passwordChangeRequired: { type: 'boolean' },
     },
   },
 
@@ -129,6 +130,55 @@ export const commonSchemas = {
       role: { type: 'string', enum: ['OWNER', 'MANAGER', 'EMPLOYEE'] },
       status: locationStatus,
       lastLoginAt: { ...dateTime, nullable: true },
+      passwordChangeRequired: { type: 'boolean' },
+    },
+  },
+
+  ChangePasswordRequest: {
+    type: 'object',
+    required: ['currentPassword', 'newPassword', 'confirmPassword'],
+    properties: {
+      currentPassword: { type: 'string', minLength: 1 },
+      newPassword: { type: 'string', minLength: 8 },
+      confirmPassword: { type: 'string', minLength: 8 },
+    },
+  },
+
+  ChangePasswordResult: {
+    type: 'object',
+    required: ['passwordChangeRequired', 'passwordChangedAt'],
+    properties: {
+      passwordChangeRequired: { type: 'boolean', enum: [false] },
+      passwordChangedAt: dateTime,
+    },
+  },
+
+  PasswordStatus: {
+    type: 'object',
+    required: ['passwordChangeRequired'],
+    properties: {
+      passwordChangeRequired: { type: 'boolean' },
+      passwordChangedAt: { ...dateTime, nullable: true },
+    },
+  },
+
+  EmptyObject: {
+    type: 'object',
+    additionalProperties: false,
+  },
+
+  ResetEmployeePasswordResult: {
+    type: 'object',
+    required: ['employeeId', 'userId', 'passwordChangeRequired', 'temporaryPassword'],
+    properties: {
+      employeeId: uuid,
+      userId: uuid,
+      passwordChangeRequired: { type: 'boolean', enum: [true] },
+      temporaryPassword: {
+        type: 'string',
+        description:
+          'System-generated temporary password returned only once. Not recoverable afterward.',
+      },
     },
   },
 
@@ -150,6 +200,32 @@ export const commonSchemas = {
       createdAt: dateTime,
       updatedAt: dateTime,
       deletedAt: { ...dateTime, nullable: true },
+      linkedUser: {
+        nullable: true,
+        allOf: [{ $ref: '#/components/schemas/LinkedUserSummary' }],
+      },
+    },
+  },
+
+  LinkedUserSummary: {
+    type: 'object',
+    required: ['id', 'email', 'role', 'status'],
+    properties: {
+      id: uuid,
+      email: { type: 'string', format: 'email' },
+      role: { type: 'string', enum: ['OWNER', 'MANAGER', 'EMPLOYEE'] },
+      status: locationStatus,
+    },
+  },
+
+  EmployeeAccountCredentials: {
+    type: 'object',
+    required: ['email', 'password', 'confirmPassword', 'role'],
+    properties: {
+      email: { type: 'string', format: 'email' },
+      password: { type: 'string', minLength: 8 },
+      confirmPassword: { type: 'string', minLength: 8 },
+      role: { type: 'string', enum: ['OWNER', 'MANAGER', 'EMPLOYEE'] },
     },
   },
 
@@ -166,7 +242,13 @@ export const commonSchemas = {
       contactNumber: { type: 'string' },
       weeklySalary: { type: 'number', minimum: 0 },
       status: locationStatus,
+      createAccount: { type: 'boolean', default: false },
+      account: { $ref: '#/components/schemas/EmployeeAccountCredentials' },
     },
+  },
+
+  GrantSystemAccessRequest: {
+    $ref: '#/components/schemas/EmployeeAccountCredentials',
   },
 
   UpdateEmployeeRequest: {

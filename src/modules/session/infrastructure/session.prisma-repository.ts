@@ -33,4 +33,11 @@ export class SessionPrismaRepository implements SessionRepository {
       data: { revokedAt: new Date() },
     });
   }
+
+  async revokeAllForUser(userId: string): Promise<void> {
+    await prisma.refreshSession.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  }
 }

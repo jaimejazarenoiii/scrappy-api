@@ -5,4 +5,5 @@ export interface CurrentUserResponseDto {
   role: 'OWNER' | 'MANAGER' | 'EMPLOYEE';
   status: 'ACTIVE' | 'INACTIVE';
   employeeId: string | null;
+  passwordChangeRequired: boolean;
 }

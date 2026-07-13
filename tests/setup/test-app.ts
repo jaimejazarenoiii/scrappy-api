@@ -61,7 +61,7 @@ export function createTestContext() {
   setupTestEnv();
   const companyRepository = new InMemoryCompanyRepository();
   const userRepository = new InMemoryUserRepository();
-  const employeeRepository = new InMemoryEmployeeRepository();
+  const employeeRepository = new InMemoryEmployeeRepository(userRepository.users);
   const branchRepository = new InMemoryBranchRepository();
   const warehouseRepository = new InMemoryWarehouseRepository();
   const vehicleRepository = new InMemoryVehicleRepository();

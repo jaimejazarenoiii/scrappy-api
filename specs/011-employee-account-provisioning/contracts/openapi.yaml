@@ -1,0 +1,220 @@
+openapi: 3.0.3
+info:
+  title: Scrappy API — Employee Account Provisioning
+  version: 1.0.0
+  description: >
+    P003 addendum contracts for optional login creation during Employee create,
+    grant system access, and disable/enable login without deleting Employees.
+servers:
+  - url: /api/v1
+tags:
+  - name: Employees
+    description: Employee management and account provisioning
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ApiSuccessEnvelope:
+      type: object
+      required: [success, data, meta, error]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { type: object }
+        meta: { type: object, additionalProperties: true }
+        error: { nullable: true, type: 'null' }
+    ApiErrorEnvelope:
+      type: object
+      required: [success, data, meta, error]
+      properties:
+        success: { type: boolean, enum: [false] }
+        data: { nullable: true, type: 'null' }
+        meta: { type: object, additionalProperties: true }
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details:
+              type: array
+              items: { type: object, additionalProperties: true }
+    EmployeeAccountCredentials:
+      type: object
+      required: [email, password, confirmPassword, role]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+        confirmPassword: { type: string, minLength: 8 }
+        role: { type: string, enum: [OWNER, MANAGER, EMPLOYEE] }
+      description: password and confirmPassword must match
+    LinkedUserSummary:
+      type: object
+      required: [id, email, role, status]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        role: { type: string, enum: [OWNER, MANAGER, EMPLOYEE] }
+        status: { type: string, enum: [ACTIVE, INACTIVE] }
+    EmployeeWithAccess:
+      type: object
+      required:
+        - id
+        - companyId
+        - firstName
+        - lastName
+        - weeklySalary
+        - status
+      properties:
+        id: { type: string, format: uuid }
+        companyId: { type: string, format: uuid }
+        userId: { type: string, format: uuid, nullable: true }
+        employeeNumber: { type: string, nullable: true }
+        firstName: { type: string }
+        middleName: { type: string, nullable: true }
+        lastName: { type: string }
+        suffix: { type: string, nullable: true }
+        contactNumber: { type: string, nullable: true }
+        weeklySalary: { type: number }
+        status: { type: string, enum: [ACTIVE, INACTIVE] }
+        linkedUser:
+          allOf:
+            - $ref: '#/components/schemas/LinkedUserSummary'
+          nullable: true
+    CreateEmployeeRequest:
+      type: object
+      required: [firstName, lastName, weeklySalary]
+      properties:
+        employeeNumber: { type: string }
+        firstName: { type: string, minLength: 1 }
+        middleName: { type: string }
+        lastName: { type: string, minLength: 1 }
+        suffix: { type: string }
+        contactNumber: { type: string }
+        weeklySalary: { type: number, minimum: 0 }
+        status: { type: string, enum: [ACTIVE, INACTIVE] }
+        userId:
+          type: string
+          format: uuid
+          description: Legacy link to existing User; mutually exclusive with createAccount
+        createAccount:
+          type: boolean
+          default: false
+        account:
+          $ref: '#/components/schemas/EmployeeAccountCredentials'
+      description: >
+        When createAccount is true, account is required and userId must be omitted.
+    GrantSystemAccessRequest:
+      $ref: '#/components/schemas/EmployeeAccountCredentials'
+paths:
+  /employees:
+    post:
+      tags: [Employees]
+      summary: Create Employee (optional login account)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateEmployeeRequest' }
+            examples:
+              withoutAccount:
+                value:
+                  firstName: Ana
+                  lastName: Santos
+                  weeklySalary: 3500
+                  createAccount: false
+              withAccount:
+                value:
+                  firstName: Ben
+                  lastName: Reyes
+                  weeklySalary: 3800
+                  createAccount: true
+                  account:
+                    email: ben@example.com
+                    password: password123
+                    confirmPassword: password123
+                    role: EMPLOYEE
+      responses:
+        '201':
+          description: Employee created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiSuccessEnvelope' }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden (role or role-assignment) }
+        '409': { description: Duplicate email or employee number }
+        '422': { description: Validation error }
+  /employees/{employeeId}/system-access:
+    post:
+      tags: [Employees]
+      summary: Grant system access (create User and link)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GrantSystemAccessRequest' }
+            example:
+              email: carlo@example.com
+              password: password123
+              confirmPassword: password123
+              role: EMPLOYEE
+      responses:
+        '201':
+          description: Access granted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiSuccessEnvelope' }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+        '404': { description: Employee not found }
+        '409': { description: Already has user, archived, or duplicate email }
+        '422': { description: Validation error }
+  /employees/{employeeId}/system-access/disable:
+    post:
+      tags: [Employees]
+      summary: Disable login for linked User
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Access disabled
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiSuccessEnvelope' }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+        '404': { description: Employee not found }
+        '409': { description: No linked user or already inactive }
+  /employees/{employeeId}/system-access/enable:
+    post:
+      tags: [Employees]
+      summary: Enable login for linked User
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Access enabled
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiSuccessEnvelope' }
+        '401': { description: Unauthenticated }
+        '403': { description: Forbidden }
+        '404': { description: Employee not found }
+        '409': { description: No linked user or already active }

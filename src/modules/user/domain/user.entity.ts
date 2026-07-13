@@ -9,6 +9,8 @@ export interface UserProps {
   email: string;
   passwordHash: string;
   role: UserRole;
+  passwordChangeRequired: boolean;
+  passwordChangedAt: Date | null;
   lastLoginAt: Date | null;
   status: UserStatus;
   createdAt: Date;
@@ -40,6 +42,12 @@ export class UserEntity {
   }
   get role(): UserRole {
     return this.props.role;
+  }
+  get passwordChangeRequired(): boolean {
+    return this.props.passwordChangeRequired;
+  }
+  get passwordChangedAt(): Date | null {
+    return this.props.passwordChangedAt;
   }
   get lastLoginAt(): Date | null {
     return this.props.lastLoginAt;

@@ -14,6 +14,7 @@ export class GetCurrentUserUseCase {
       role: user.role,
       status: user.status,
       employeeId: user.employeeId,
+      passwordChangeRequired: user.passwordChangeRequired,
     };
   }
 }

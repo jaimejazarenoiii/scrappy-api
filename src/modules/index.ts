@@ -22,96 +22,113 @@ import { createExpenseRoutes } from './expense/index.js';
 
 export function registerModuleRoutes(app: Express, container: Container): void {
   const authn = createAuthenticationMiddleware(container.tokenProvider);
+  const gate = container.passwordChangeGate;
+
   app.use('/api/v1', createCompanyRoutes(container.companyController, authn));
   app.use('/api/v1', createAuthRoutes(container.authController, authn));
   app.use(
     '/api/v1',
     authn,
     companyResolutionMiddleware,
+    gate,
     createUserRoutes(container.userController),
   );
   app.use(
     '/api/v1',
     authn,
     companyResolutionMiddleware,
+    gate,
     createEmployeeRoutes(container.employeeController),
   );
   app.use(
     '/api/v1',
     authn,
     companyResolutionMiddleware,
+    gate,
     createBranchRoutes(container.branchController),
   );
   app.use(
     '/api/v1',
     authn,
     companyResolutionMiddleware,
+    gate,
     createWarehouseRoutes(container.warehouseController),
   );
   app.use(
     '/api/v1',
     authn,
     companyResolutionMiddleware,
+    gate,
     createVehicleRoutes(container.vehicleController),
   );
   app.use(
     '/api/v1',
     authn,
     companyResolutionMiddleware,
+    gate,
     createCashAdvanceRoutes(container.cashAdvanceController),
   );
   app.use(
     '/api/v1',
     authn,
     companyResolutionMiddleware,
+    gate,
     createPayrollRoutes(container.payrollController),
   );
   app.use(
     '/api/v1',
     authn,
     companyResolutionMiddleware,
+    gate,
     createLeaveRoutes(container.leaveController),
   );
   app.use(
     '/api/v1',
     authn,
     companyResolutionMiddleware,
+    gate,
     createAttendanceRoutes(container.attendanceController),
   );
   app.use(
     '/api/v1',
     authn,
     companyResolutionMiddleware,
+    gate,
     createWorkforceDashboardRoutes(container.workforceDashboardController),
   );
   app.use(
     '/api/v1',
     authn,
     companyResolutionMiddleware,
+    gate,
     createTransactionRoutes(container.transactionController),
   );
   app.use(
     '/api/v1',
     authn,
     companyResolutionMiddleware,
+    gate,
     createAnalyticsRoutes(container.analyticsController),
   );
   app.use(
     '/api/v1',
     authn,
     companyResolutionMiddleware,
+    gate,
     createReportsRoutes(container.reportsController),
   );
   app.use(
     '/api/v1',
     authn,
     companyResolutionMiddleware,
+    gate,
     createTripRoutes(container.tripController),
   );
   app.use(
     '/api/v1',
     authn,
     companyResolutionMiddleware,
+    gate,
     createExpenseRoutes(container.expenseController),
   );
 }

@@ -1,3 +1,5 @@
+import type { LinkedUserSummaryDto } from './linked-user.response.js';
+
 export interface EmployeeResponseDto {
   id: string;
   companyId: string;
@@ -13,4 +15,5 @@ export interface EmployeeResponseDto {
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
+  linkedUser?: LinkedUserSummaryDto | null;
 }

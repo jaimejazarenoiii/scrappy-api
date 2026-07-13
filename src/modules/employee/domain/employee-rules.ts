@@ -15,3 +15,15 @@ export function assertSameCompany(companyIdA: string, companyIdB: string): void 
     throw new CompanyScopeViolationError('Employee and user must belong to the same company');
   }
 }
+
+export function assertEmployeeHasNoUser(employee: EmployeeEntity): void {
+  if (employee.isLinkedToUser()) {
+    throw new LifecycleConflictError('Employee already has a linked user account');
+  }
+}
+
+export function assertEmployeeHasUser(employee: EmployeeEntity): void {
+  if (!employee.isLinkedToUser()) {
+    throw new LifecycleConflictError('Employee does not have a linked user account');
+  }
+}

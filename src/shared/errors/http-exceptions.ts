@@ -25,6 +25,12 @@ export class ForbiddenError extends AppError {
   }
 }
 
+export class PasswordChangeRequiredError extends AppError {
+  constructor(message = 'Password change is required before accessing this resource.') {
+    super(message, 403, ERROR_CODES.PASSWORD_CHANGE_REQUIRED);
+  }
+}
+
 export class CompanyScopeViolationError extends AppError {
   constructor(message = 'Cross-company access is not allowed.') {
     super(message, 403, ERROR_CODES.COMPANY_SCOPE_VIOLATION);

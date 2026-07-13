@@ -164,20 +164,22 @@ model Company {
 }
 
 model User {
-  id           String           @id @default(uuid())
-  companyId    String
-  employeeId   String?          @unique
-  email        String           @unique
-  passwordHash String
-  role         UserRole
-  lastLoginAt  DateTime?
-  status       UserStatus       @default(ACTIVE)
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  deletedAt    DateTime?
-  company      Company          @relation(fields: [companyId], references: [id])
-  employee     Employee?        @relation("UserEmployeeLink", fields: [employeeId], references: [id])
-  sessions     RefreshSession[]
+  id                     String           @id @default(uuid())
+  companyId              String
+  employeeId             String?          @unique
+  email                  String           @unique
+  passwordHash           String
+  role                   UserRole
+  passwordChangeRequired Boolean          @default(false)
+  passwordChangedAt       DateTime?
+  lastLoginAt            DateTime?
+  status                 UserStatus       @default(ACTIVE)
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  deletedAt              DateTime?
+  company                Company          @relation(fields: [companyId], references: [id])
+  employee               Employee?        @relation("UserEmployeeLink", fields: [employeeId], references: [id])
+  sessions               RefreshSession[]
 
   @@index([companyId, role])
 }

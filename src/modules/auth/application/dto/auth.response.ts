@@ -9,5 +9,6 @@ export interface AuthResponseDto {
     id: string;
     email: string;
     role: 'OWNER' | 'MANAGER' | 'EMPLOYEE';
+    passwordChangeRequired: boolean;
   };
 }

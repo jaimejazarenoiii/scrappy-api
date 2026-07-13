@@ -4,7 +4,9 @@ import { validate } from '../../../middleware/validation.middleware.js';
 import {
   createEmployeeSchema,
   employeeIdParamsSchema,
+  grantSystemAccessSchema,
   linkEmployeeUserSchema,
+  resetEmployeePasswordSchema,
   updateEmployeeSchema,
 } from './employee.schemas.js';
 import type { EmployeeController } from './employee.controller.js';
@@ -44,6 +46,32 @@ export function createEmployeeRoutes(controller: EmployeeController): Router {
     validate(employeeIdParamsSchema, 'params'),
     validate(linkEmployeeUserSchema),
     controller.linkUser,
+  );
+  router.post(
+    '/employees/:employeeId/system-access',
+    authorize(['OWNER', 'MANAGER']),
+    validate(employeeIdParamsSchema, 'params'),
+    validate(grantSystemAccessSchema),
+    controller.grantSystemAccess,
+  );
+  router.post(
+    '/employees/:employeeId/system-access/disable',
+    authorize(['OWNER', 'MANAGER']),
+    validate(employeeIdParamsSchema, 'params'),
+    controller.disableSystemAccess,
+  );
+  router.post(
+    '/employees/:employeeId/system-access/enable',
+    authorize(['OWNER', 'MANAGER']),
+    validate(employeeIdParamsSchema, 'params'),
+    controller.enableSystemAccess,
+  );
+  router.post(
+    '/employees/:employeeId/password-reset',
+    authorize(['OWNER', 'MANAGER']),
+    validate(employeeIdParamsSchema, 'params'),
+    validate(resetEmployeePasswordSchema),
+    controller.resetPassword,
   );
   return router;
 }

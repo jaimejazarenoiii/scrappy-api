@@ -106,7 +106,12 @@ Response `data`:
   "refreshToken": "eyJhbGc...",
   "expiresIn": 900,
   "company": { "id": "uuid", "name": "...", "status": "ACTIVE" },
-  "user": { "id": "uuid", "email": "owner@example.com", "role": "OWNER" }
+  "user": {
+    "id": "uuid",
+    "email": "owner@example.com",
+    "role": "OWNER",
+    "passwordChangeRequired": false
+  }
 }
 ```
 
@@ -139,12 +144,12 @@ for list endpoints — they automatically return only the current company's reco
 
 Convenience endpoints that resolve everything from the token:
 
-| Endpoint                   | Roles | Returns                                                                   |
-| -------------------------- | ----- | ------------------------------------------------------------------------- |
-| `GET /api/v1/users/me`     | all   | Current user (`id`, `companyId`, `email`, `role`, `status`, `employeeId`) |
-| `GET /api/v1/companies/me` | all   | Current user's company                                                    |
-| `GET /api/v1/employees`    | all   | Active employees of the current company                                   |
-| `GET /api/v1/employees/me` | all   | Employee profile linked to the current user (`404` if none)               |
+| Endpoint                   | Roles | Returns                                                                                             |
+| -------------------------- | ----- | --------------------------------------------------------------------------------------------------- |
+| `GET /api/v1/users/me`     | all   | Current user (`id`, `companyId`, `email`, `role`, `status`, `employeeId`, `passwordChangeRequired`) |
+| `GET /api/v1/companies/me` | all   | Current user's company                                                                              |
+| `GET /api/v1/employees`    | all   | Active employees of the current company                                                             |
+| `GET /api/v1/employees/me` | all   | Employee profile linked to the current user (`404` if none)                                         |
 
 ---
 
@@ -179,25 +184,37 @@ Convenience endpoints that resolve everything from the token:
 
 ## 4. Users
 
-| Method & path   | Roles | Description                |
-| --------------- | ----- | -------------------------- |
-| `GET /users/me` | all   | Current authenticated user |
+| Method & path                   | Roles | Description                                     |
+| ------------------------------- | ----- | ----------------------------------------------- |
+| `GET /users/me`                 | all   | Current authenticated user                      |
+| `GET /users/me/password-status` | all   | Whether password change is required             |
+| `POST /users/me/password`       | all   | Change own password (verifies current password) |
 
-**CurrentUser shape**: `{ id, companyId, employeeId, email, role, status, lastLoginAt }`.
+**CurrentUser shape**: `{ id, companyId, employeeId, email, role, status, lastLoginAt, passwordChangeRequired }`.
+
+**Change password body**: `{ "currentPassword", "newPassword", "confirmPassword" }` (`newPassword` min 8, must match confirm, must differ from current).
+
+**Password status shape**: `{ passwordChangeRequired, passwordChangedAt }`.
+
+After an admin reset, login succeeds with the temporary password but non-allowlisted protected routes return `403` with code `PASSWORD_CHANGE_REQUIRED` until `POST /users/me/password` succeeds. Allowlisted while forced-change is active: `GET /users/me`, `GET /users/me/password-status`, `POST /users/me/password` (plus auth logout/refresh).
 
 ---
 
 ## 5. Employees
 
-| Method & path                            | Roles          | Description                            |
-| ---------------------------------------- | -------------- | -------------------------------------- |
-| `GET /employees/me`                      | all            | Current user's linked employee profile |
-| `GET /employees`                         | all            | Active employees (for pickers)         |
-| `POST /employees`                        | OWNER, MANAGER | Create employee                        |
-| `GET /employees/{employeeId}`            | OWNER, MANAGER | Get employee by id                     |
-| `PATCH /employees/{employeeId}`          | OWNER, MANAGER | Update employee                        |
-| `POST /employees/{employeeId}/archive`   | OWNER, MANAGER | Soft-delete employee                   |
-| `POST /employees/{employeeId}/user-link` | OWNER, MANAGER | Link employee to a user account        |
+| Method & path                                        | Roles          | Description                                    |
+| ---------------------------------------------------- | -------------- | ---------------------------------------------- |
+| `GET /employees/me`                                  | all            | Current user's linked employee profile         |
+| `GET /employees`                                     | all            | Active employees (for pickers)                 |
+| `POST /employees`                                    | OWNER, MANAGER | Create employee (optional `createAccount`)     |
+| `GET /employees/{employeeId}`                        | OWNER, MANAGER | Get employee by id                             |
+| `PATCH /employees/{employeeId}`                      | OWNER, MANAGER | Update employee                                |
+| `POST /employees/{employeeId}/archive`               | OWNER, MANAGER | Soft-delete employee                           |
+| `POST /employees/{employeeId}/user-link`             | OWNER, MANAGER | Link employee to an **existing** user account  |
+| `POST /employees/{employeeId}/system-access`         | OWNER, MANAGER | Create User + link (grant system access)       |
+| `POST /employees/{employeeId}/system-access/disable` | OWNER, MANAGER | Disable login (`User.status=INACTIVE`)         |
+| `POST /employees/{employeeId}/system-access/enable`  | OWNER, MANAGER | Re-enable login                                |
+| `POST /employees/{employeeId}/password-reset`        | OWNER, MANAGER | Reset password; system generates one-time temp |
 
 **Create body**:
 
@@ -208,14 +225,35 @@ Convenience endpoints that resolve everything from the token:
   "weeklySalary": 3500,
   "employeeNumber": "EMP-001",
   "contactNumber": "0917...",
-  "status": "ACTIVE"
+  "status": "ACTIVE",
+  "createAccount": true,
+  "account": {
+    "email": "jane@example.com",
+    "password": "password123",
+    "confirmPassword": "password123",
+    "role": "EMPLOYEE"
+  }
 }
 ```
 
-**Employee shape**: `{ id, companyId, userId, employeeNumber, firstName, middleName, lastName,
-suffix, contactNumber, weeklySalary, status, createdAt, updatedAt, deletedAt }`.
+Omit `createAccount` / set `false` to create Employee only. `createAccount` cannot be combined with
+`userId`. Managers may only assign `EMPLOYEE` role; Owners may assign `OWNER`, `MANAGER`, or
+`EMPLOYEE`.
 
-**Link user body**: `{ "userId": "uuid" }`.
+**Employee shape**: `{ id, companyId, userId, employeeNumber, firstName, middleName, lastName,
+suffix, contactNumber, weeklySalary, status, createdAt, updatedAt, deletedAt, linkedUser? }` where
+`linkedUser` is `{ id, email, role, status }` when an account was provisioned or access toggled.
+
+**Grant system access body**: `{ "email", "password", "confirmPassword", "role" }`.
+
+**Link user body**: `{ "userId": "uuid" }` (existing User only).
+
+**Password reset**: empty body `{}`. Managers may reset Employee-role accounts only; Owners may reset
+Employee, Manager, or Owner (when linked via Employee). Response includes one-time
+`temporaryPassword` (plaintext returned only once; only the hash is stored). Sets
+`passwordChangeRequired=true`, invalidates previous credentials, and revokes all refresh sessions.
+Administrators must communicate the temporary password securely out of band. After the Employee
+changes their password, the temporary password becomes invalid.
 
 ---
 
