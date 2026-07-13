@@ -21,10 +21,23 @@ export interface UpdateCompanyInput {
   subscriptionStatus?: CompanySubscriptionStatus;
 }
 
+export interface ListCompaniesQuery {
+  page: number;
+  limit: number;
+  sortOrder?: 'asc' | 'desc';
+  search?: string;
+}
+
+export interface ListCompaniesResult {
+  items: CompanyEntity[];
+  total: number;
+}
+
 export interface CompanyRepository {
   create(input: CreateCompanyInput): Promise<CompanyEntity>;
   findById(companyId: string): Promise<CompanyEntity | null>;
   findByName(name: string): Promise<CompanyEntity | null>;
+  list(query: ListCompaniesQuery): Promise<ListCompaniesResult>;
   update(companyId: string, input: UpdateCompanyInput): Promise<CompanyEntity>;
   softDelete(companyId: string): Promise<CompanyEntity>;
 }

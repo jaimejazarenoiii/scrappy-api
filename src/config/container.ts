@@ -28,10 +28,15 @@ import { WorkforceDashboardController } from '../modules/workforce-dashboard/pre
 import { GetWorkforceDashboardUseCase } from '../modules/workforce-dashboard/application/use-cases/get-workforce-dashboard.use-case.js';
 import { DashboardVisibilityService } from '../modules/workforce-dashboard/application/services/dashboard-visibility.service.js';
 import { CompanyController } from '../modules/company/presentation/company.controller.js';
+import { AdminCompanyController } from '../modules/company/presentation/admin-company.controller.js';
 import { CreateCompanyWithOwnerUseCase } from '../modules/company/application/use-cases/create-company-with-owner.use-case.js';
 import { GetCompanyUseCase } from '../modules/company/application/use-cases/get-company.use-case.js';
 import { UpdateCompanyUseCase } from '../modules/company/application/use-cases/update-company.use-case.js';
 import { ArchiveCompanyUseCase } from '../modules/company/application/use-cases/archive-company.use-case.js';
+import { AdminCreateCompanyUseCase } from '../modules/company/application/use-cases/admin-create-company.use-case.js';
+import { AdminListCompaniesUseCase } from '../modules/company/application/use-cases/admin-list-companies.use-case.js';
+import { AdminGetCompanyUseCase } from '../modules/company/application/use-cases/admin-get-company.use-case.js';
+import { AdminCreateCompanyAccountUseCase } from '../modules/company/application/use-cases/admin-create-company-account.use-case.js';
 import { UserController } from '../modules/user/presentation/user.controller.js';
 import { GetCurrentUserUseCase } from '../modules/user/application/use-cases/get-current-user.use-case.js';
 import { EmployeeController } from '../modules/employee/presentation/employee.controller.js';
@@ -107,8 +112,12 @@ import { TransactionNumberSequencePrismaRepository } from '../modules/transactio
 import { buildTransactionController } from '../modules/transaction/index.js';
 import type { TransactionController } from '../modules/transaction/presentation/transaction.controller.js';
 import { AnalyticsPrismaQueryRepository } from '../modules/analytics/infrastructure/analytics.prisma-query-repository.js';
-import { buildAnalyticsController } from '../modules/analytics/index.js';
+import {
+  buildAnalyticsController,
+  buildAdminAnalyticsController,
+} from '../modules/analytics/index.js';
 import type { AnalyticsController } from '../modules/analytics/presentation/analytics.controller.js';
+import type { AdminAnalyticsController } from '../modules/analytics/presentation/admin-analytics.controller.js';
 import type { AnalyticsQueryRepository } from '../modules/analytics/domain/analytics-query.repository.js';
 import { ReportsPrismaQueryRepository } from '../modules/reports/infrastructure/reports.prisma-query-repository.js';
 import { buildReportsController } from '../modules/reports/index.js';
@@ -156,6 +165,7 @@ export interface Container {
   tokenProvider: TokenProvider;
   passwordChangeGate: RequestHandler;
   companyController: CompanyController;
+  adminCompanyController: AdminCompanyController;
   authController: AuthController;
   userController: UserController;
   employeeController: EmployeeController;
@@ -169,6 +179,7 @@ export interface Container {
   workforceDashboardController: WorkforceDashboardController;
   transactionController: TransactionController;
   analyticsController: AnalyticsController;
+  adminAnalyticsController: AdminAnalyticsController;
   reportsController: ReportsController;
   tripController: TripController;
   expenseController: ExpenseController;
@@ -280,6 +291,12 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
       new GetCompanyUseCase(companyRepository),
       new UpdateCompanyUseCase(companyRepository),
       new ArchiveCompanyUseCase(companyRepository),
+    ),
+    adminCompanyController: new AdminCompanyController(
+      new AdminCreateCompanyUseCase(companyRepository),
+      new AdminListCompaniesUseCase(companyRepository),
+      new AdminGetCompanyUseCase(companyRepository),
+      new AdminCreateCompanyAccountUseCase(companyRepository, employeeAccountProvisioningService),
     ),
     authController: new AuthController(
       new LoginUseCase(
@@ -412,6 +429,14 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
       warehouseRepository,
       vehicleRepository,
       employeeRepository,
+    }),
+    adminAnalyticsController: buildAdminAnalyticsController({
+      analyticsQueryRepository,
+      branchRepository,
+      warehouseRepository,
+      vehicleRepository,
+      employeeRepository,
+      companyRepository,
     }),
     reportsController: buildReportsController({
       reportsQueryRepository,

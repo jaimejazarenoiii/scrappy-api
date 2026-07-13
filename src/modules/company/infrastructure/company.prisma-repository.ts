@@ -4,6 +4,8 @@ import { CompanyEntity as CompanyModel, type CompanyEntity } from '../domain/com
 import type {
   CompanyRepository,
   CreateCompanyInput,
+  ListCompaniesQuery,
+  ListCompaniesResult,
   UpdateCompanyInput,
 } from '../domain/company.repository.js';
 
@@ -36,6 +38,24 @@ export class CompanyPrismaRepository implements CompanyRepository {
   async findByName(name: string): Promise<CompanyEntity | null> {
     const record = await prisma.company.findFirst({ where: { name } });
     return record ? toDomain(record) : null;
+  }
+
+  async list(query: ListCompaniesQuery): Promise<ListCompaniesResult> {
+    const where = {
+      deletedAt: null,
+      ...(query.search ? { name: { contains: query.search, mode: 'insensitive' as const } } : {}),
+    };
+    const order = query.sortOrder === 'asc' ? 'asc' : 'desc';
+    const [records, total] = await Promise.all([
+      prisma.company.findMany({
+        where,
+        orderBy: { createdAt: order },
+        skip: (query.page - 1) * query.limit,
+        take: query.limit,
+      }),
+      prisma.company.count({ where }),
+    ]);
+    return { items: records.map(toDomain), total };
   }
 
   async update(companyId: string, input: UpdateCompanyInput): Promise<CompanyEntity> {

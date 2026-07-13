@@ -166,6 +166,16 @@ const ACTION_TAXONOMY: Record<string, Taxonomy> = {
     module: 'subscription',
     description: 'Subscription suspended',
   },
+  'admin.company_created': {
+    eventType: 'COMPANY',
+    module: 'company',
+    description: 'Company created by platform admin',
+  },
+  'admin.account_created': {
+    eventType: 'EMPLOYEE',
+    module: 'employee',
+    description: 'Account provisioned by platform admin',
+  },
 };
 function resolveTaxonomy(action: string): Taxonomy {
   if (ACTION_TAXONOMY[action]) return ACTION_TAXONOMY[action]!;

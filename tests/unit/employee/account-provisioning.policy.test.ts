@@ -18,4 +18,11 @@ describe('account-provisioning.policy', () => {
   it('forbids employee actors from assigning roles', () => {
     expect(() => assertCanAssignRole('EMPLOYEE', 'EMPLOYEE')).toThrow(ForbiddenError);
   });
+
+  it('allows SUPER_ADMIN to assign tenant roles only', () => {
+    expect(() => assertCanAssignRole('SUPER_ADMIN', 'OWNER')).not.toThrow();
+    expect(() => assertCanAssignRole('SUPER_ADMIN', 'MANAGER')).not.toThrow();
+    expect(() => assertCanAssignRole('SUPER_ADMIN', 'EMPLOYEE')).not.toThrow();
+    expect(() => assertCanAssignRole('SUPER_ADMIN', 'SUPER_ADMIN')).toThrow(ForbiddenError);
+  });
 });

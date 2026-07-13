@@ -30,8 +30,10 @@ the access token carries the user's `companyId`, and every request only ever see
 16. [Analytics](#16-analytics)
 17. [Reports](#17-reports)
 18. [Expense Management](#18-expense-management)
-19. [Activity Logs](#19-activity-logs)
-20. [Typical frontend flows](#20-typical-frontend-flows)
+19. [Company Subscriptions](#19-company-subscriptions)
+20. [Admin supervision](#20-admin-supervision)
+21. [Activity Logs](#21-activity-logs)
+22. [Typical frontend flows](#22-typical-frontend-flows)
 
 ---
 
@@ -1057,7 +1059,60 @@ target any `{companyId}` in the path.
 
 ---
 
-## 20. Activity Logs
+## 20. Admin supervision
+
+Platform `SUPER_ADMIN` APIs under `/api/v1/admin/...` (JWT required; no tenant company-resolution middleware). Login via `POST /admin/auth/login`.
+
+### Companies and accounts
+
+Company must exist before accounts can be created. Prefer: create company → add one or more Employee+User accounts.
+
+| Path                                    | Method | Purpose                                                     |
+| --------------------------------------- | ------ | ----------------------------------------------------------- |
+| `/admin/companies`                      | POST   | Create company only (default `subscriptionStatus=TRIAL`)    |
+| `/admin/companies`                      | GET    | Paginated company list                                      |
+| `/admin/companies/{companyId}`          | GET    | Company detail (includes `subscriptionStatus`)              |
+| `/admin/companies/{companyId}/accounts` | POST   | Create Employee + User (`OWNER` \| `MANAGER` \| `EMPLOYEE`) |
+
+Account body:
+
+```json
+{
+  "firstName": "Ada",
+  "lastName": "Owner",
+  "weeklySalary": 0,
+  "account": {
+    "email": "owner@tenant.test",
+    "password": "password123",
+    "confirmPassword": "password123",
+    "role": "OWNER"
+  }
+}
+```
+
+### Analytics
+
+Dedicated admin analytics (does **not** reuse tenant `/analytics/*`).
+
+| Path                                                  | Method | Purpose                             |
+| ----------------------------------------------------- | ------ | ----------------------------------- |
+| `/admin/analytics/overview`                           | GET    | Portfolio metrics for all companies |
+| `/admin/analytics/companies/{companyId}/company`      | GET    | Company dashboard for a tenant      |
+| `/admin/analytics/companies/{companyId}/transactions` | GET    | Transactions analytics              |
+| `/admin/analytics/companies/{companyId}/trips`        | GET    | Trips analytics                     |
+| `/admin/analytics/companies/{companyId}/expenses`     | GET    | Expenses analytics                  |
+| `/admin/analytics/companies/{companyId}/workforce`    | GET    | Workforce analytics                 |
+| `/admin/analytics/companies/{companyId}/organization` | GET    | Organization analytics              |
+
+Query params match tenant analytics (`period`, `from`/`to`, dimensions, `includeArchived`, `limit`).
+
+### Activity Log actions
+
+`admin.company_created`, `admin.account_created`
+
+---
+
+## 21. Activity Logs
 
 Append-only company audit trail. Entries are created automatically by the API when business
 operations succeed. Clients **cannot** create, update, or delete activity logs.
@@ -1093,7 +1148,7 @@ metadata never includes secrets.
 
 ---
 
-## 21. Typical frontend flows
+## 22. Typical frontend flows
 
 ### App bootstrap (after login)
 

@@ -1,5 +1,6 @@
 import { authOpenApiPaths } from '../modules/auth/presentation/auth.openapi.js';
 import { companyOpenApiPaths } from '../modules/company/presentation/company.openapi.js';
+import { adminCompanyOpenApiPaths } from '../modules/company/presentation/admin-company.openapi.js';
 import { employeeOpenApiPaths } from '../modules/employee/presentation/employee.openapi.js';
 import { branchOpenApiPaths } from '../modules/branch/presentation/branch.openapi.js';
 import { warehouseOpenApiPaths } from '../modules/warehouse/presentation/warehouse.openapi.js';
@@ -14,6 +15,7 @@ import { payrollOpenApiPaths } from '../modules/payroll/presentation/payroll.ope
 import { tripOpenApiPaths } from '../modules/trip/presentation/trip.openapi.js';
 import { expenseOpenApiPaths } from '../modules/expense/presentation/expense.openapi.js';
 import { analyticsOpenApiPaths } from '../modules/analytics/presentation/analytics.openapi.js';
+import { adminAnalyticsOpenApiPaths } from '../modules/analytics/presentation/admin-analytics.openapi.js';
 import { reportsOpenApiPaths } from '../modules/reports/presentation/reports.openapi.js';
 import { activityLogOpenApiPaths } from '../modules/activity-log/presentation/activity-log.openapi.js';
 import { subscriptionOpenApiPaths } from '../modules/subscription/presentation/subscription.openapi.js';
@@ -38,6 +40,7 @@ export function buildOpenApiDocument(): object {
     },
     paths: {
       ...companyOpenApiPaths,
+      ...adminCompanyOpenApiPaths,
       ...authOpenApiPaths,
       ...userOpenApiPaths,
       ...employeeOpenApiPaths,
@@ -53,6 +56,7 @@ export function buildOpenApiDocument(): object {
       ...tripOpenApiPaths,
       ...expenseOpenApiPaths,
       ...analyticsOpenApiPaths,
+      ...adminAnalyticsOpenApiPaths,
       ...reportsOpenApiPaths,
       ...activityLogOpenApiPaths,
       ...subscriptionOpenApiPaths,

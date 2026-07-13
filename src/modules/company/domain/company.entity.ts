@@ -46,6 +46,12 @@ export class CompanyEntity {
   get subscriptionStatus(): CompanySubscriptionStatus {
     return this.props.subscriptionStatus;
   }
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+  get updatedAt(): Date {
+    return this.props.updatedAt;
+  }
   get deletedAt(): Date | null {
     return this.props.deletedAt;
   }

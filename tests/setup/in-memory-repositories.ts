@@ -3,6 +3,8 @@ import { CompanyEntity as CompanyModel } from '../../src/modules/company/domain/
 import type {
   CompanyRepository,
   CreateCompanyInput,
+  ListCompaniesQuery,
+  ListCompaniesResult,
   UpdateCompanyInput,
 } from '../../src/modules/company/domain/company.repository.js';
 import type { EmployeeEntity } from '../../src/modules/employee/domain/employee.entity.js';
@@ -104,6 +106,18 @@ export class InMemoryCompanyRepository implements CompanyRepository {
   }
   async findByName(name: string): Promise<CompanyEntity | null> {
     return [...this.companies.values()].find((company) => company.name === name) ?? null;
+  }
+  async list(query: ListCompaniesQuery): Promise<ListCompaniesResult> {
+    let items = [...this.companies.values()].filter((company) => company.deletedAt === null);
+    if (query.search) {
+      const needle = query.search.toLowerCase();
+      items = items.filter((company) => company.name.toLowerCase().includes(needle));
+    }
+    const order = query.sortOrder === 'asc' ? 1 : -1;
+    items.sort((left, right) => order * (left.createdAt.getTime() - right.createdAt.getTime()));
+    const total = items.length;
+    const start = (query.page - 1) * query.limit;
+    return { items: items.slice(start, start + query.limit), total };
   }
   async update(companyId: string, input: UpdateCompanyInput): Promise<CompanyEntity> {
     const current = this.companies.get(companyId);

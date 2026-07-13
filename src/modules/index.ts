@@ -15,7 +15,7 @@ import { createPayrollRoutes } from './payroll/presentation/payroll.routes.js';
 import { createAttendanceRoutes } from './attendance/presentation/attendance.routes.js';
 import { createWorkforceDashboardRoutes } from './workforce-dashboard/presentation/workforce-dashboard.routes.js';
 import { createTransactionRoutes } from './transaction/index.js';
-import { createAnalyticsRoutes } from './analytics/index.js';
+import { createAnalyticsRoutes, createAdminAnalyticsRoutes } from './analytics/index.js';
 import { createReportsRoutes } from './reports/index.js';
 import { createTripRoutes } from './trip/index.js';
 import { createExpenseRoutes } from './expense/index.js';
@@ -24,6 +24,7 @@ import {
   createAdminSubscriptionRoutes,
   createTenantSubscriptionRoutes,
 } from './subscription/index.js';
+import { createAdminCompanyRoutes } from './company/presentation/admin-company.routes.js';
 
 export function registerModuleRoutes(app: Express, container: Container): void {
   const authn = createAuthenticationMiddleware(container.tokenProvider);
@@ -31,6 +32,9 @@ export function registerModuleRoutes(app: Express, container: Container): void {
 
   app.use('/api/v1', createCompanyRoutes(container.companyController, authn));
   app.use('/api/v1', createAuthRoutes(container.authController, authn));
+  app.use('/api/v1', authn, createAdminCompanyRoutes(container.adminCompanyController));
+  app.use('/api/v1', authn, createAdminAnalyticsRoutes(container.adminAnalyticsController));
+  app.use('/api/v1', authn, createAdminSubscriptionRoutes(container.subscriptionController));
   app.use(
     '/api/v1',
     authn,
@@ -143,7 +147,6 @@ export function registerModuleRoutes(app: Express, container: Container): void {
     gate,
     createActivityLogRoutes(container.activityLogController),
   );
-  app.use('/api/v1', authn, createAdminSubscriptionRoutes(container.subscriptionController));
   app.use(
     '/api/v1',
     authn,
