@@ -6,7 +6,8 @@ the access token carries the user's `companyId`, and every request only ever see
 - **Base URL**: `http://localhost:3000` (dev) — all paths prefixed with `/api/v1`
 - **Auth**: JWT Bearer token in the `Authorization` header
 - **Content-Type**: `application/json` (except photo upload → `multipart/form-data`)
-- **Interactive docs**: Swagger UI at `GET /docs` when the server is running
+- **Interactive docs**: Swagger UI at `GET /docs` in **development/test only** (disabled when `NODE_ENV=production`, including Railway).
+- **Root `/`**: Returns API identity outside production; **404 in production**.
 - **Attachment storage**: local disk in development/test; S3 (or S3-compatible) in production.
   Upload/download APIs are unchanged — clients still use the authenticated attachment endpoints.
 

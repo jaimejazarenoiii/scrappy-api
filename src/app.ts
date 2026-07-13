@@ -1,5 +1,6 @@
 import express, { type Express } from 'express';
 import type { Container } from './config/container.js';
+import { loadConfig } from './config/index.js';
 import {
   API_NAME,
   API_STATUS_RUNNING,
@@ -22,6 +23,7 @@ import { registerModuleRoutes } from './modules/index.js';
 
 export function createApp(container: Container): Express {
   const app = express();
+  const isProduction = loadConfig().NODE_ENV === 'production';
   app.disable('x-powered-by');
   app.use(requestIdMiddleware);
   app.use(createRequestLoggerMiddleware());
@@ -29,9 +31,12 @@ export function createApp(container: Container): Express {
   app.use(createSecurityHeadersMiddleware());
   app.use(createRateLimitMiddleware());
   app.use(express.json());
-  app.get('/', (_req, res) => {
-    res.json(success({ name: API_NAME, version: API_VERSION, status: API_STATUS_RUNNING }));
-  });
+  // Do not expose API identity at `/` in production (Railway public URL).
+  if (!isProduction) {
+    app.get('/', (_req, res) => {
+      res.json(success({ name: API_NAME, version: API_VERSION, status: API_STATUS_RUNNING }));
+    });
+  }
   app.get('/health', async (_req, res) => {
     const healthy = await (container.healthIndicator?.check?.() ?? Promise.resolve(true));
     res.status(healthy ? 200 : 503).json(
