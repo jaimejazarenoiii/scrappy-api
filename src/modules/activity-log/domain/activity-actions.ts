@@ -64,6 +64,7 @@ export const ACTIVITY_ACTIONS = {
   PAYROLL_PAID: 'payroll.paid',
   SUBSCRIPTION_CREATED: 'subscription.created',
   SUBSCRIPTION_RENEWED: 'subscription.renewed',
+  SUBSCRIPTION_UPDATED: 'subscription.updated',
   SUBSCRIPTION_EXPIRED: 'subscription.expired',
   SUBSCRIPTION_SUSPENDED: 'subscription.suspended',
   ADMIN_COMPANY_CREATED: 'admin.company_created',

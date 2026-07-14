@@ -3,6 +3,7 @@ import { success } from '../../../shared/http/api-response.js';
 import type { AuthorizationContext } from '../../../shared/policy/authorization-context.js';
 import type { CreateSubscriptionUseCase } from '../application/use-cases/create-subscription.use-case.js';
 import type { RenewSubscriptionUseCase } from '../application/use-cases/renew-subscription.use-case.js';
+import type { UpdateSubscriptionUseCase } from '../application/use-cases/update-subscription.use-case.js';
 import type { ExpireSubscriptionUseCase } from '../application/use-cases/expire-subscription.use-case.js';
 import type { SuspendCompanySubscriptionUseCase } from '../application/use-cases/suspend-company-subscription.use-case.js';
 import type { ListSubscriptionHistoryUseCase } from '../application/use-cases/list-subscription-history.use-case.js';
@@ -14,6 +15,7 @@ import type {
   ExpireSubscriptionRequestDto,
   RenewSubscriptionRequestDto,
   SuspendCompanyRequestDto,
+  UpdateSubscriptionRequestDto,
 } from '../application/dto/subscription.dto.js';
 import type { SubscriptionHistoryQuery } from './subscription.schemas.js';
 
@@ -31,6 +33,7 @@ export class SubscriptionController {
   constructor(
     private readonly createSubscriptionUseCase: CreateSubscriptionUseCase,
     private readonly renewSubscriptionUseCase: RenewSubscriptionUseCase,
+    private readonly updateSubscriptionUseCase: UpdateSubscriptionUseCase,
     private readonly expireSubscriptionUseCase: ExpireSubscriptionUseCase,
     private readonly suspendCompanySubscriptionUseCase: SuspendCompanySubscriptionUseCase,
     private readonly listSubscriptionHistoryUseCase: ListSubscriptionHistoryUseCase,
@@ -72,6 +75,27 @@ export class SubscriptionController {
             ),
           ),
         );
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  update: RequestHandler = async (req, res, next) => {
+    try {
+      const { companyId, subscriptionId } = req.params as {
+        companyId: string;
+        subscriptionId: string;
+      };
+      res.json(
+        success(
+          await this.updateSubscriptionUseCase.execute(
+            authContext(req),
+            companyId,
+            subscriptionId,
+            req.body as UpdateSubscriptionRequestDto,
+          ),
+        ),
+      );
     } catch (error) {
       next(error);
     }

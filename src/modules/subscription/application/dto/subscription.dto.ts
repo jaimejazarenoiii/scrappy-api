@@ -28,6 +28,15 @@ export interface SuspendCompanyRequestDto {
   notes?: string;
 }
 
+export interface UpdateSubscriptionRequestDto {
+  planName?: string;
+  startsAt?: Date;
+  endsAt?: Date;
+  status?: SubscriptionPeriodStatus;
+  companyStatus?: CompanySubscriptionStatus;
+  notes?: string | null;
+}
+
 export interface CompanySubscriptionResponseDto {
   id: string;
   companyId: string;
@@ -47,6 +56,11 @@ export interface SubscriptionStatusResponseDto {
 }
 
 export interface CreateSubscriptionResponseDto {
+  subscription: CompanySubscriptionResponseDto;
+  subscriptionStatus: CompanySubscriptionStatus;
+}
+
+export interface UpdateSubscriptionResponseDto {
   subscription: CompanySubscriptionResponseDto;
   subscriptionStatus: CompanySubscriptionStatus;
 }

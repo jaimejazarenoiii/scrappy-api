@@ -4,6 +4,7 @@ import type { SessionRepository } from '../session/domain/session.repository.js'
 import type { UserRepository } from '../user/domain/user.repository.js';
 import { CreateSubscriptionUseCase } from './application/use-cases/create-subscription.use-case.js';
 import { RenewSubscriptionUseCase } from './application/use-cases/renew-subscription.use-case.js';
+import { UpdateSubscriptionUseCase } from './application/use-cases/update-subscription.use-case.js';
 import { ExpireSubscriptionUseCase } from './application/use-cases/expire-subscription.use-case.js';
 import { SuspendCompanySubscriptionUseCase } from './application/use-cases/suspend-company-subscription.use-case.js';
 import { ListSubscriptionHistoryUseCase } from './application/use-cases/list-subscription-history.use-case.js';
@@ -41,6 +42,11 @@ export function buildSubscriptionController(
       cascadeService,
     ),
     new RenewSubscriptionUseCase(
+      deps.companyRepository,
+      deps.companySubscriptionRepository,
+      cascadeService,
+    ),
+    new UpdateSubscriptionUseCase(
       deps.companyRepository,
       deps.companySubscriptionRepository,
       cascadeService,

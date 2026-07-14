@@ -12,6 +12,14 @@ export interface CreateCompanySubscriptionInput {
   createdBy: string;
 }
 
+export interface UpdateCompanySubscriptionInput {
+  planName?: string;
+  startsAt?: Date;
+  endsAt?: Date;
+  status?: SubscriptionPeriodStatus;
+  notes?: string | null;
+}
+
 export interface ListCompanySubscriptionsQuery {
   page: number;
   limit: number;
@@ -36,5 +44,10 @@ export interface CompanySubscriptionRepository {
     subscriptionId: string,
     companyId: string,
     status: SubscriptionPeriodStatus,
+  ): Promise<CompanySubscriptionEntity>;
+  update(
+    subscriptionId: string,
+    companyId: string,
+    input: UpdateCompanySubscriptionInput,
   ): Promise<CompanySubscriptionEntity>;
 }

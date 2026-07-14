@@ -4,6 +4,7 @@ import { emitStructuredAudit } from '../../../../shared/audit/emit-structured-au
 export const SUBSCRIPTION_AUDIT_ACTIONS = {
   CREATED: 'subscription.created',
   RENEWED: 'subscription.renewed',
+  UPDATED: 'subscription.updated',
   EXPIRED: 'subscription.expired',
   SUSPENDED: 'subscription.suspended',
 } as const;

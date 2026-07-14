@@ -156,6 +156,11 @@ const ACTION_TAXONOMY: Record<string, Taxonomy> = {
     module: 'subscription',
     description: 'Subscription renewed',
   },
+  'subscription.updated': {
+    eventType: 'COMPANY',
+    module: 'subscription',
+    description: 'Subscription period updated',
+  },
   'subscription.expired': {
     eventType: 'COMPANY',
     module: 'subscription',

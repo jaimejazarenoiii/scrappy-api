@@ -47,12 +47,45 @@ export const renewSubscriptionSchema = z
   })
   .superRefine(dateRangeRefine);
 
-export const expireSubscriptionSchema = z.object({
-  notes: z.string().trim().max(2000).optional(),
-});
+export const expireSubscriptionSchema = z
+  .object({
+    notes: z.string().trim().max(2000).optional(),
+  })
+  .default({});
 
-export const suspendCompanySchema = z.object({
-  notes: z.string().trim().max(2000).optional(),
-});
+export const suspendCompanySchema = z
+  .object({
+    notes: z.string().trim().max(2000).optional(),
+  })
+  .default({});
+
+export const updateSubscriptionSchema = z
+  .object({
+    planName: z.string().trim().min(1).max(120).optional(),
+    startsAt: z.coerce.date().optional(),
+    endsAt: z.coerce.date().optional(),
+    status: z.enum(['PENDING', 'ACTIVE', 'EXPIRED', 'CANCELLED']).optional(),
+    companyStatus: z.enum(COMPANY_SUBSCRIPTION_STATUSES).optional(),
+    notes: z.string().trim().max(2000).nullable().optional(),
+  })
+  .refine(
+    (value) =>
+      value.planName !== undefined ||
+      value.startsAt !== undefined ||
+      value.endsAt !== undefined ||
+      value.status !== undefined ||
+      value.companyStatus !== undefined ||
+      value.notes !== undefined,
+    { message: 'At least one field is required' },
+  )
+  .superRefine((data, ctx) => {
+    if (data.startsAt && data.endsAt && data.startsAt > data.endsAt) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'startsAt must be before or equal to endsAt',
+        path: ['startsAt'],
+      });
+    }
+  });
 
 export type SubscriptionHistoryQuery = z.infer<typeof subscriptionHistoryQuerySchema>;

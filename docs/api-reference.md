@@ -1035,18 +1035,23 @@ Users to `INACTIVE` and revoke refresh sessions.
 
 ### Admin endpoints (SUPER_ADMIN only)
 
-| Path                                                          | Method | Purpose                        |
-| ------------------------------------------------------------- | ------ | ------------------------------ |
-| `/admin/companies/{companyId}/subscriptions`                  | POST   | Create subscription period     |
-| `/admin/companies/{companyId}/subscriptions/renew`            | POST   | Renew (prior ACTIVE → EXPIRED) |
-| `/admin/companies/{companyId}/subscriptions/expire`           | POST   | Expire entitlement             |
-| `/admin/companies/{companyId}/subscriptions/suspend`          | POST   | Suspend access                 |
-| `/admin/companies/{companyId}/subscriptions`                  | GET    | Paginated history              |
-| `/admin/companies/{companyId}/subscriptions/{subscriptionId}` | GET    | Period detail                  |
-| `/admin/companies/{companyId}/subscription-status`            | GET    | Current operational status     |
+| Path                                                          | Method | Purpose                         |
+| ------------------------------------------------------------- | ------ | ------------------------------- |
+| `/admin/companies/{companyId}/subscriptions`                  | POST   | Create subscription period      |
+| `/admin/companies/{companyId}/subscriptions/renew`            | POST   | Renew (prior ACTIVE → EXPIRED)  |
+| `/admin/companies/{companyId}/subscriptions/expire`           | POST   | Expire entitlement              |
+| `/admin/companies/{companyId}/subscriptions/suspend`          | POST   | Suspend access                  |
+| `/admin/companies/{companyId}/subscriptions`                  | GET    | Paginated history               |
+| `/admin/companies/{companyId}/subscriptions/{subscriptionId}` | GET    | Period detail                   |
+| `/admin/companies/{companyId}/subscriptions/{subscriptionId}` | PATCH  | Edit period (dates, plan, etc.) |
+| `/admin/companies/{companyId}/subscription-status`            | GET    | Current operational status      |
 
 Admin routes require JWT authentication only (no company-resolution middleware). Super Admin may
 target any `{companyId}` in the path.
+
+**Edit period** (`PATCH .../subscriptions/{subscriptionId}`): partial update of `planName`,
+`startsAt`, `endsAt`, `status`, `notes`, and optional `companyStatus`. Date changes must not
+overlap other periods for that company.
 
 ### Tenant read-only
 
@@ -1056,7 +1061,7 @@ target any `{companyId}` in the path.
 
 ### Activity Log actions
 
-`subscription.created`, `subscription.renewed`, `subscription.expired`, `subscription.suspended`
+`subscription.created`, `subscription.renewed`, `subscription.updated`, `subscription.expired`, `subscription.suspended`
 
 ---
 

@@ -11,6 +11,7 @@ import type {
   CreateCompanySubscriptionInput,
   ListCompanySubscriptionsQuery,
   ListCompanySubscriptionsResult,
+  UpdateCompanySubscriptionInput,
 } from '../../src/modules/subscription/domain/company-subscription.repository.js';
 import type { SubscriptionPeriodStatus } from '../../src/modules/subscription/domain/subscription-period-status.js';
 
@@ -86,11 +87,23 @@ export class InMemoryCompanySubscriptionRepository implements CompanySubscriptio
     companyId: string,
     status: SubscriptionPeriodStatus,
   ): Promise<CompanySubscriptionEntity> {
+    return this.update(subscriptionId, companyId, { status });
+  }
+
+  async update(
+    subscriptionId: string,
+    companyId: string,
+    input: UpdateCompanySubscriptionInput,
+  ): Promise<CompanySubscriptionEntity> {
     const existing = await this.findById(subscriptionId, companyId);
     if (!existing) throw new ResourceNotFoundError('Subscription not found');
     const updated = CompanySubscriptionModel.create({
       ...existing.toPrimitives(),
-      status,
+      ...(input.planName !== undefined ? { planName: input.planName } : {}),
+      ...(input.startsAt !== undefined ? { startsAt: input.startsAt } : {}),
+      ...(input.endsAt !== undefined ? { endsAt: input.endsAt } : {}),
+      ...(input.status !== undefined ? { status: input.status } : {}),
+      ...(input.notes !== undefined ? { notes: input.notes } : {}),
       updatedAt: new Date(),
     });
     this.subscriptions.set(subscriptionId, updated);

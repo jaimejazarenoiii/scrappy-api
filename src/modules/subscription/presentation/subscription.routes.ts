@@ -10,6 +10,7 @@ import {
   renewSubscriptionSchema,
   subscriptionHistoryQuerySchema,
   suspendCompanySchema,
+  updateSubscriptionSchema,
 } from './subscription.schemas.js';
 
 const ALL_TENANT_ROLES = ['OWNER', 'MANAGER', 'EMPLOYEE', 'SUPER_ADMIN'] as const;
@@ -62,6 +63,14 @@ export function createAdminSubscriptionRoutes(controller: SubscriptionController
     authorize(['SUPER_ADMIN']),
     validate(adminSubscriptionParamsSchema, 'params'),
     controller.getById,
+  );
+
+  router.patch(
+    '/admin/companies/:companyId/subscriptions/:subscriptionId',
+    authorize(['SUPER_ADMIN']),
+    validate(adminSubscriptionParamsSchema, 'params'),
+    validate(updateSubscriptionSchema),
+    controller.update,
   );
 
   router.get(

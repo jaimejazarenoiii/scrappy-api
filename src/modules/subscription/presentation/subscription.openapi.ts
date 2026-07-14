@@ -144,6 +144,59 @@ export const subscriptionOpenApiPaths = {
         '404': { $ref: '#/components/responses/NotFound' },
       },
     },
+    patch: {
+      tags: ['Admin Subscriptions'],
+      summary: 'Update subscription period',
+      description:
+        'Edit an existing subscription period (dates, plan, notes, period status). Overlap and single-ACTIVE rules still apply.',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          in: 'path',
+          name: 'companyId',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+        },
+        {
+          in: 'path',
+          name: 'subscriptionId',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              minProperties: 1,
+              properties: {
+                planName: { type: 'string' },
+                startsAt: { type: 'string', format: 'date-time' },
+                endsAt: { type: 'string', format: 'date-time' },
+                status: {
+                  type: 'string',
+                  enum: ['PENDING', 'ACTIVE', 'EXPIRED', 'CANCELLED'],
+                },
+                companyStatus: {
+                  type: 'string',
+                  enum: ['TRIAL', 'ACTIVE', 'GRACE_PERIOD', 'EXPIRED', 'SUSPENDED'],
+                },
+                notes: { type: 'string', nullable: true },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        '200': { description: 'Subscription updated' },
+        '400': { $ref: '#/components/responses/ValidationError' },
+        '403': { $ref: '#/components/responses/Forbidden' },
+        '404': { $ref: '#/components/responses/NotFound' },
+        '409': { $ref: '#/components/responses/Conflict' },
+      },
+    },
   },
   '/admin/companies/{companyId}/subscription-status': {
     get: {

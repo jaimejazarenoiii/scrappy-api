@@ -5,6 +5,7 @@ import type {
   CreateCompanySubscriptionInput,
   ListCompanySubscriptionsQuery,
   ListCompanySubscriptionsResult,
+  UpdateCompanySubscriptionInput,
 } from '../domain/company-subscription.repository.js';
 import type { SubscriptionPeriodStatus } from '../domain/subscription-period-status.js';
 import { toCompanySubscriptionDomain } from './mappers/company-subscription.mapper.js';
@@ -73,6 +74,23 @@ export class CompanySubscriptionPrismaRepository implements CompanySubscriptionR
       await prisma.companySubscription.update({
         where: { id: subscriptionId },
         data: { status },
+      }),
+    );
+  }
+
+  async update(subscriptionId: string, companyId: string, input: UpdateCompanySubscriptionInput) {
+    const existing = await this.findById(subscriptionId, companyId);
+    if (!existing) throw new ResourceNotFoundError('Subscription not found');
+    return toCompanySubscriptionDomain(
+      await prisma.companySubscription.update({
+        where: { id: subscriptionId },
+        data: {
+          ...(input.planName !== undefined ? { planName: input.planName } : {}),
+          ...(input.startsAt !== undefined ? { startsAt: input.startsAt } : {}),
+          ...(input.endsAt !== undefined ? { endsAt: input.endsAt } : {}),
+          ...(input.status !== undefined ? { status: input.status } : {}),
+          ...(input.notes !== undefined ? { notes: input.notes } : {}),
+        },
       }),
     );
   }
