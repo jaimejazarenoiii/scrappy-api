@@ -28,6 +28,7 @@ describe('trip start api', () => {
     expect(response.body.data.status).toBe('STARTED');
     expect(response.body.data.actualStart).toBeTruthy();
     expect(response.body.data.startingOdometer).toBe(222);
+    expect(response.body.data.distance ?? null).toBeNull();
   });
 
   it('rejects start when trip has no members', async () => {

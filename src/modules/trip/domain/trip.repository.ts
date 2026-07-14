@@ -110,6 +110,8 @@ export interface TripSummaryProjection {
   notes: string | null;
   startingOdometer: number | null;
   endingOdometer: number | null;
+  /** Computed as ending − starting when both readings are present. */
+  distance: number | null;
   loadEnabled: boolean;
   strictLoadValidation: boolean;
   vehicle: TripVehicleSummary;

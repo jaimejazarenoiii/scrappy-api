@@ -22,6 +22,7 @@ import type {
 } from '../../src/modules/trip/domain/trip.repository.js';
 import type { TripMemberEntity } from '../../src/modules/trip/domain/trip-member.entity.js';
 import { TripMemberEntity as TripMemberEntityClass } from '../../src/modules/trip/domain/trip-member.entity.js';
+import { computeTripDistance } from '../../src/modules/trip/infrastructure/mappers/trip-decimal.mapper.js';
 import type { InMemoryVehicleRepository } from './in-memory-repositories.js';
 import type { InMemoryEmployeeRepository } from './in-memory-repositories.js';
 
@@ -127,6 +128,7 @@ export class InMemoryTripRepository implements TripRepository {
       notes: props.notes,
       startingOdometer: props.startingOdometer,
       endingOdometer: props.endingOdometer,
+      distance: computeTripDistance(props.startingOdometer, props.endingOdometer),
       loadEnabled: props.loadEnabled,
       strictLoadValidation: props.strictLoadValidation,
       vehicle: {

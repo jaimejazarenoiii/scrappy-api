@@ -24,7 +24,7 @@ import type {
   UpdateTripMemberInput,
 } from '../domain/trip.repository.js';
 import { toTripDomain } from './mappers/trip.mapper.js';
-import { decimalToNumber } from './mappers/trip-decimal.mapper.js';
+import { computeTripDistance, decimalToNumber } from './mappers/trip-decimal.mapper.js';
 import { mapTripMemberDetail, toTripMemberDomain } from './mappers/trip-member.mapper.js';
 import type { TripMemberEntity } from '../domain/trip-member.entity.js';
 import type { TripEntity } from '../domain/trip.entity.js';
@@ -65,6 +65,8 @@ function resolveOrderBy(query: ListTripQuery): Prisma.TripOrderByWithRelationInp
 function mapTripSummary(
   record: Prisma.TripGetPayload<{ include: { vehicle: true } }>,
 ): TripSummaryProjection {
+  const startingOdometer = decimalToNumber(record.startingOdometer);
+  const endingOdometer = decimalToNumber(record.endingOdometer);
   return {
     id: record.id,
     companyId: record.companyId,
@@ -76,8 +78,9 @@ function mapTripSummary(
     origin: record.origin,
     destination: record.destination,
     notes: record.notes,
-    startingOdometer: decimalToNumber(record.startingOdometer),
-    endingOdometer: decimalToNumber(record.endingOdometer),
+    startingOdometer,
+    endingOdometer,
+    distance: computeTripDistance(startingOdometer, endingOdometer),
     loadEnabled: record.loadEnabled,
     strictLoadValidation: record.strictLoadValidation,
     vehicle: {
