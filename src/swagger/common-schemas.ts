@@ -1092,6 +1092,8 @@ export const commonSchemas = {
       origin: { type: 'string' },
       destination: { type: 'string' },
       notes: { type: 'string', nullable: true },
+      startingOdometer: { type: 'number', nullable: true },
+      endingOdometer: { type: 'number', nullable: true },
       loadEnabled: { type: 'boolean' },
       strictLoadValidation: { type: 'boolean' },
     },

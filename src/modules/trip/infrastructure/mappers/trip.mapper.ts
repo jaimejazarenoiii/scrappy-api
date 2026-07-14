@@ -1,6 +1,7 @@
 import type { Trip as PrismaTrip } from '@prisma/client';
 import { TripEntity } from '../../domain/trip.entity.js';
 import type { TripStatus } from '../../domain/trip-status.js';
+import { decimalToNumber } from './trip-decimal.mapper.js';
 
 export function toTripDomain(record: PrismaTrip): TripEntity {
   return TripEntity.create({
@@ -15,6 +16,8 @@ export function toTripDomain(record: PrismaTrip): TripEntity {
     origin: record.origin,
     destination: record.destination,
     notes: record.notes,
+    startingOdometer: decimalToNumber(record.startingOdometer),
+    endingOdometer: decimalToNumber(record.endingOdometer),
     loadEnabled: record.loadEnabled,
     strictLoadValidation: record.strictLoadValidation,
     createdByUserId: record.createdByUserId,

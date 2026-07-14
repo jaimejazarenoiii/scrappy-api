@@ -30,6 +30,7 @@ export class CompleteTripUseCase {
     await this.tripRepository.complete(tripId, auth.companyId, {
       actualEnd,
       completedByUserId: auth.userId,
+      endingOdometer: input.endingOdometer ?? null,
     });
 
     await this.vehicleRepository.update(trip.toPrimitives().vehicleId, auth.companyId, {

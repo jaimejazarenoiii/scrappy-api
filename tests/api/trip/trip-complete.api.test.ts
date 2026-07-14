@@ -32,6 +32,8 @@ describe('trip complete api', () => {
     expect(response.body.success).toBe(true);
     expect(response.body.data.status).toBe('COMPLETED');
     expect(response.body.data.actualEnd).toBeTruthy();
+    expect(response.body.data.startingOdometer).toBe(200);
+    expect(response.body.data.endingOdometer).toBe(25);
   });
 
   it('returns 404 for unknown trip id', async () => {

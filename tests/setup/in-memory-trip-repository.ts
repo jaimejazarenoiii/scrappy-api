@@ -60,6 +60,8 @@ export class InMemoryTripRepository implements TripRepository {
       origin: input.origin,
       destination: input.destination,
       notes: input.notes,
+      startingOdometer: null,
+      endingOdometer: null,
       loadEnabled: true,
       strictLoadValidation: false,
       createdByUserId: input.createdByUserId,
@@ -123,6 +125,8 @@ export class InMemoryTripRepository implements TripRepository {
       origin: props.origin,
       destination: props.destination,
       notes: props.notes,
+      startingOdometer: props.startingOdometer,
+      endingOdometer: props.endingOdometer,
       loadEnabled: props.loadEnabled,
       strictLoadValidation: props.strictLoadValidation,
       vehicle: {
@@ -235,6 +239,10 @@ export class InMemoryTripRepository implements TripRepository {
       status: 'STARTED',
       actualStart: input.actualStart,
       startedByUserId: input.startedByUserId,
+      startingOdometer:
+        input.startingOdometer !== undefined && input.startingOdometer !== null
+          ? input.startingOdometer
+          : props.startingOdometer,
       updatedAt: new Date(),
     });
     this.trips.set(tripId, updated);
@@ -249,6 +257,10 @@ export class InMemoryTripRepository implements TripRepository {
       status: 'COMPLETED',
       actualEnd: input.actualEnd,
       completedByUserId: input.completedByUserId,
+      endingOdometer:
+        input.endingOdometer !== undefined && input.endingOdometer !== null
+          ? input.endingOdometer
+          : props.endingOdometer,
       updatedByUserId: input.completedByUserId,
       updatedAt: new Date(),
     });

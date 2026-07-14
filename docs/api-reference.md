@@ -673,7 +673,7 @@ GET /api/v1/trips?page=1&limit=10&sortBy=scheduledStart&sortOrder=desc
 
 #### Response row (`TripSummary`)
 
-Each item in `data` includes: `id`, `companyId`, `tripNumber`, `status`, `scheduledStart`, `actualStart`, `actualEnd`, `origin`, `destination`, `notes`, `loadEnabled`, `strictLoadValidation`, and nested `vehicle` (`id`, `plateNumber`, `description`, `status`).
+Each item in `data` includes: `id`, `companyId`, `tripNumber`, `status`, `scheduledStart`, `actualStart`, `actualEnd`, `origin`, `destination`, `notes`, `startingOdometer`, `endingOdometer`, `loadEnabled`, `strictLoadValidation`, and nested `vehicle` (`id`, `plateNumber`, `description`, `status`).
 
 ---
 
@@ -743,7 +743,7 @@ Returns full trip detail including members and `linkedTransactionCount`.
 
 #### Response (`TripDetail`)
 
-Includes trip header fields, nested `vehicle`, `members` array, `linkedTransactionCount`, `loadEnabled`, `strictLoadValidation`, `createdAt`, and `updatedAt`.
+Includes trip header fields, nested `vehicle`, `members` array, `linkedTransactionCount`, `startingOdometer`, `endingOdometer`, `loadEnabled`, `strictLoadValidation`, `createdAt`, and `updatedAt`.
 
 #### Errors
 

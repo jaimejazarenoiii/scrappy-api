@@ -512,6 +512,8 @@ model Trip {
   origin             String
   destination        String
   notes              String?
+  startingOdometer   Decimal?    @db.Decimal(12, 3)
+  endingOdometer     Decimal?    @db.Decimal(12, 3)
   loadEnabled            Boolean @default(true)
   strictLoadValidation   Boolean @default(false)
 

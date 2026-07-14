@@ -15,6 +15,8 @@ export interface TripProps {
   origin: string;
   destination: string;
   notes: string | null;
+  startingOdometer: number | null;
+  endingOdometer: number | null;
   loadEnabled: boolean;
   strictLoadValidation: boolean;
 

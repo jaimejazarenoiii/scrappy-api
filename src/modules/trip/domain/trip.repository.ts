@@ -45,11 +45,13 @@ export interface UpdateTripLoadFlagsInput {
 export interface StartTripInput {
   actualStart: Date;
   startedByUserId: string;
+  startingOdometer?: number | null;
 }
 
 export interface CompleteTripInput {
   actualEnd: Date;
   completedByUserId: string;
+  endingOdometer?: number | null;
 }
 
 export interface CancelTripInput {
@@ -106,6 +108,8 @@ export interface TripSummaryProjection {
   origin: string;
   destination: string;
   notes: string | null;
+  startingOdometer: number | null;
+  endingOdometer: number | null;
   loadEnabled: boolean;
   strictLoadValidation: boolean;
   vehicle: TripVehicleSummary;

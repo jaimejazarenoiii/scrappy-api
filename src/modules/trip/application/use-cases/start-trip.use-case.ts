@@ -53,6 +53,7 @@ export class StartTripUseCase {
     await this.tripRepository.start(tripId, auth.companyId, {
       actualStart,
       startedByUserId: auth.userId,
+      startingOdometer: input.startingOdometer ?? null,
     });
 
     await this.vehicleRepository.update(trip.toPrimitives().vehicleId, auth.companyId, {
