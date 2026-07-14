@@ -1073,12 +1073,14 @@ Platform `SUPER_ADMIN` APIs under `/api/v1/admin/...` (JWT required; no tenant c
 
 Company must exist before accounts can be created. Prefer: create company → add one or more Employee+User accounts.
 
-| Path                                    | Method | Purpose                                                     |
-| --------------------------------------- | ------ | ----------------------------------------------------------- |
-| `/admin/companies`                      | POST   | Create company only (default `subscriptionStatus=TRIAL`)    |
-| `/admin/companies`                      | GET    | Paginated company list                                      |
-| `/admin/companies/{companyId}`          | GET    | Company detail (includes `subscriptionStatus`)              |
-| `/admin/companies/{companyId}/accounts` | POST   | Create Employee + User (`OWNER` \| `MANAGER` \| `EMPLOYEE`) |
+| Path                                                            | Method | Purpose                                                     |
+| --------------------------------------------------------------- | ------ | ----------------------------------------------------------- |
+| `/admin/companies`                                              | POST   | Create company only (default `subscriptionStatus=TRIAL`)    |
+| `/admin/companies`                                              | GET    | Paginated company list                                      |
+| `/admin/companies/{companyId}`                                  | GET    | Company detail (includes `subscriptionStatus`)              |
+| `/admin/companies/{companyId}/accounts`                         | GET    | List tenant accounts (excludes `SUPER_ADMIN`)               |
+| `/admin/companies/{companyId}/accounts`                         | POST   | Create Employee + User (`OWNER` \| `MANAGER` \| `EMPLOYEE`) |
+| `/admin/companies/{companyId}/accounts/{userId}/password-reset` | POST   | Set temporary password; forces change on next login         |
 
 Account body:
 
@@ -1095,6 +1097,16 @@ Account body:
   }
 }
 ```
+
+Password reset body:
+
+```json
+{
+  "temporaryPassword": "TempPass123!"
+}
+```
+
+Sets `passwordChangeRequired=true`, stores only the hash, revokes refresh sessions. Temporary password is not returned (admin already provided it).
 
 ### Analytics
 

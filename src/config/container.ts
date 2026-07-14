@@ -37,6 +37,8 @@ import { AdminCreateCompanyUseCase } from '../modules/company/application/use-ca
 import { AdminListCompaniesUseCase } from '../modules/company/application/use-cases/admin-list-companies.use-case.js';
 import { AdminGetCompanyUseCase } from '../modules/company/application/use-cases/admin-get-company.use-case.js';
 import { AdminCreateCompanyAccountUseCase } from '../modules/company/application/use-cases/admin-create-company-account.use-case.js';
+import { AdminListCompanyAccountsUseCase } from '../modules/company/application/use-cases/admin-list-company-accounts.use-case.js';
+import { AdminResetCompanyAccountPasswordUseCase } from '../modules/company/application/use-cases/admin-reset-company-account-password.use-case.js';
 import { UserController } from '../modules/user/presentation/user.controller.js';
 import { GetCurrentUserUseCase } from '../modules/user/application/use-cases/get-current-user.use-case.js';
 import { EmployeeController } from '../modules/employee/presentation/employee.controller.js';
@@ -297,6 +299,13 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
       new AdminListCompaniesUseCase(companyRepository),
       new AdminGetCompanyUseCase(companyRepository),
       new AdminCreateCompanyAccountUseCase(companyRepository, employeeAccountProvisioningService),
+      new AdminListCompanyAccountsUseCase(companyRepository, userRepository, employeeRepository),
+      new AdminResetCompanyAccountPasswordUseCase(
+        companyRepository,
+        userRepository,
+        passwordHasher,
+        sessionRepository,
+      ),
     ),
     authController: new AuthController(
       new LoginUseCase(

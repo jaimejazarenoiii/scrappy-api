@@ -22,6 +22,11 @@ export const adminCompanyIdParamsSchema = z.object({
   companyId: z.string().uuid(),
 });
 
+export const adminCompanyAccountParamsSchema = z.object({
+  companyId: z.string().uuid(),
+  userId: z.string().uuid(),
+});
+
 export const adminCreateCompanyAccountSchema = z.object({
   firstName: z.string().min(1),
   middleName: z.string().optional(),
@@ -32,4 +37,8 @@ export const adminCreateCompanyAccountSchema = z.object({
   weeklySalary: z.coerce.number().nonnegative(),
   status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
   account: employeeAccountCredentialsSchema,
+});
+
+export const adminResetCompanyAccountPasswordSchema = z.object({
+  temporaryPassword: z.string().min(8),
 });

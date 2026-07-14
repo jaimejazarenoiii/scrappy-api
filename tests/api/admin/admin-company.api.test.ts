@@ -70,6 +70,34 @@ describe('admin company provisioning API', () => {
     expect(employee.status).toBe(201);
     expect(employee.body.data.linkedUser.role).toBe('EMPLOYEE');
 
+    const accounts = await request(app)
+      .get(`/api/v1/admin/companies/${companyId}/accounts`)
+      .set(adminAuth);
+    expect(accounts.status).toBe(200);
+    expect(accounts.body.data).toHaveLength(3);
+    expect(accounts.body.data.map((a: { email: string }) => a.email).sort()).toEqual([
+      'employee@admintenant.test',
+      'manager@admintenant.test',
+      'owner@admintenant.test',
+    ]);
+
+    const ownerUserId = accounts.body.data.find(
+      (a: { email: string }) => a.email === 'owner@admintenant.test',
+    ).userId as string;
+    const reset = await request(app)
+      .post(`/api/v1/admin/companies/${companyId}/accounts/${ownerUserId}/password-reset`)
+      .set(adminAuth)
+      .send({ temporaryPassword: 'TempPass99!' });
+    expect(reset.status).toBe(200);
+    expect(reset.body.data.passwordChangeRequired).toBe(true);
+
+    const loginTemp = await request(app).post('/api/v1/auth/login').send({
+      identifier: 'owner@admintenant.test',
+      password: 'TempPass99!',
+    });
+    expect(loginTemp.status).toBe(200);
+    expect(loginTemp.body.data.user.passwordChangeRequired).toBe(true);
+
     const list = await request(app).get('/api/v1/admin/companies').set(adminAuth);
     expect(list.status).toBe(200);
     expect(list.body.data.some((c: { id: string }) => c.id === companyId)).toBe(true);

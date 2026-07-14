@@ -75,6 +75,26 @@ export const adminCompanyOpenApiPaths = {
     },
   },
   '/api/v1/admin/companies/{companyId}/accounts': {
+    get: {
+      tags: ['Admin'],
+      summary: 'List company accounts (SUPER_ADMIN)',
+      description: 'Lists tenant User accounts for the company (excludes SUPER_ADMIN).',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          in: 'path',
+          name: 'companyId',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+        },
+      ],
+      responses: {
+        '200': { description: 'Account list' },
+        '401': { $ref: '#/components/responses/Unauthenticated' },
+        '403': { $ref: '#/components/responses/Forbidden' },
+        '404': { $ref: '#/components/responses/NotFound' },
+      },
+    },
     post: {
       tags: ['Admin'],
       summary: 'Create company account (SUPER_ADMIN)',
@@ -121,6 +141,51 @@ export const adminCompanyOpenApiPaths = {
       },
       responses: {
         '201': { description: 'Employee + User created' },
+        '400': { $ref: '#/components/responses/ValidationError' },
+        '401': { $ref: '#/components/responses/Unauthenticated' },
+        '403': { $ref: '#/components/responses/Forbidden' },
+        '404': { $ref: '#/components/responses/NotFound' },
+        '409': { $ref: '#/components/responses/Conflict' },
+      },
+    },
+  },
+  '/api/v1/admin/companies/{companyId}/accounts/{userId}/password-reset': {
+    post: {
+      tags: ['Admin'],
+      summary: 'Reset company account password (SUPER_ADMIN)',
+      description:
+        'Sets an admin-provided temporary password, forces passwordChangeRequired on next login, and revokes sessions. Temporary password is not returned (admin already knows it).',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          in: 'path',
+          name: 'companyId',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+        },
+        {
+          in: 'path',
+          name: 'userId',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              required: ['temporaryPassword'],
+              properties: {
+                temporaryPassword: { type: 'string', minLength: 8 },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        '200': { description: 'Password reset; passwordChangeRequired=true' },
         '400': { $ref: '#/components/responses/ValidationError' },
         '401': { $ref: '#/components/responses/Unauthenticated' },
         '403': { $ref: '#/components/responses/Forbidden' },

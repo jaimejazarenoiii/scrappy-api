@@ -3,10 +3,12 @@ import { authorize } from '../../../middleware/authorization.middleware.js';
 import { validate } from '../../../middleware/validation.middleware.js';
 import type { AdminCompanyController } from './admin-company.controller.js';
 import {
+  adminCompanyAccountParamsSchema,
   adminCompanyIdParamsSchema,
   adminCompanyListQuerySchema,
   adminCreateCompanyAccountSchema,
   adminCreateCompanySchema,
+  adminResetCompanyAccountPasswordSchema,
 } from './admin-company.schemas.js';
 
 export function createAdminCompanyRoutes(controller: AdminCompanyController): Router {
@@ -33,12 +35,27 @@ export function createAdminCompanyRoutes(controller: AdminCompanyController): Ro
     controller.getById,
   );
 
+  router.get(
+    '/admin/companies/:companyId/accounts',
+    authorize(['SUPER_ADMIN']),
+    validate(adminCompanyIdParamsSchema, 'params'),
+    controller.listAccounts,
+  );
+
   router.post(
     '/admin/companies/:companyId/accounts',
     authorize(['SUPER_ADMIN']),
     validate(adminCompanyIdParamsSchema, 'params'),
     validate(adminCreateCompanyAccountSchema),
     controller.createAccount,
+  );
+
+  router.post(
+    '/admin/companies/:companyId/accounts/:userId/password-reset',
+    authorize(['SUPER_ADMIN']),
+    validate(adminCompanyAccountParamsSchema, 'params'),
+    validate(adminResetCompanyAccountPasswordSchema),
+    controller.resetAccountPassword,
   );
 
   return router;

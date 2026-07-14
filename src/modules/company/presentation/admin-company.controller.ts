@@ -5,6 +5,8 @@ import type { AdminCreateCompanyUseCase } from '../application/use-cases/admin-c
 import type { AdminListCompaniesUseCase } from '../application/use-cases/admin-list-companies.use-case.js';
 import type { AdminGetCompanyUseCase } from '../application/use-cases/admin-get-company.use-case.js';
 import type { AdminCreateCompanyAccountUseCase } from '../application/use-cases/admin-create-company-account.use-case.js';
+import type { AdminListCompanyAccountsUseCase } from '../application/use-cases/admin-list-company-accounts.use-case.js';
+import type { AdminResetCompanyAccountPasswordUseCase } from '../application/use-cases/admin-reset-company-account-password.use-case.js';
 import type { AdminCompanyListQuery } from './admin-company.schemas.js';
 
 function authContext(req: {
@@ -23,6 +25,8 @@ export class AdminCompanyController {
     private readonly adminListCompaniesUseCase: AdminListCompaniesUseCase,
     private readonly adminGetCompanyUseCase: AdminGetCompanyUseCase,
     private readonly adminCreateCompanyAccountUseCase: AdminCreateCompanyAccountUseCase,
+    private readonly adminListCompanyAccountsUseCase: AdminListCompanyAccountsUseCase,
+    private readonly adminResetCompanyAccountPasswordUseCase: AdminResetCompanyAccountPasswordUseCase,
   ) {}
 
   create: RequestHandler = async (req, res, next) => {
@@ -80,6 +84,36 @@ export class AdminCompanyController {
             ),
           ),
         );
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  listAccounts: RequestHandler = async (req, res, next) => {
+    try {
+      const { companyId } = req.params as { companyId: string };
+      res.json(
+        success(await this.adminListCompanyAccountsUseCase.execute(authContext(req), companyId)),
+      );
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  resetAccountPassword: RequestHandler = async (req, res, next) => {
+    try {
+      const { companyId, userId } = req.params as { companyId: string; userId: string };
+      const { temporaryPassword } = req.body as { temporaryPassword: string };
+      res.json(
+        success(
+          await this.adminResetCompanyAccountPasswordUseCase.execute(
+            authContext(req),
+            companyId,
+            userId,
+            temporaryPassword,
+          ),
+        ),
+      );
     } catch (error) {
       next(error);
     }
