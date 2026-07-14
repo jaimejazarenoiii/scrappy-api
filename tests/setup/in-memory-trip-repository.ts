@@ -240,8 +240,20 @@ export class InMemoryTripRepository implements TripRepository {
     this.trips.set(tripId, updated);
     return updated;
   }
-  async complete(_tripId: string, _companyId: string, _input: CompleteTripInput): Promise<never> {
-    throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
+  async complete(tripId: string, companyId: string, input: CompleteTripInput): Promise<TripEntity> {
+    const trip = await this.findById(tripId, companyId);
+    if (!trip) throw new BusinessRuleViolationError('Trip not found');
+    const props = trip.toPrimitives();
+    const updated = TripEntity.create({
+      ...props,
+      status: 'COMPLETED',
+      actualEnd: input.actualEnd,
+      completedByUserId: input.completedByUserId,
+      updatedByUserId: input.completedByUserId,
+      updatedAt: new Date(),
+    });
+    this.trips.set(tripId, updated);
+    return updated;
   }
   async cancel(_tripId: string, _companyId: string, _input: CancelTripInput): Promise<never> {
     throw new BusinessRuleViolationError(NOT_IMPLEMENTED);

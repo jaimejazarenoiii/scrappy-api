@@ -20,6 +20,7 @@ import type {
   UpdateTripLoadFlagsInput,
   ArchiveTripInput,
   StartTripInput,
+  CompleteTripInput,
   UpdateTripMemberInput,
 } from '../domain/trip.repository.js';
 import { toTripDomain } from './mappers/trip.mapper.js';
@@ -266,8 +267,21 @@ export class TripPrismaRepository implements TripRepository {
 
     return toTripDomain(record);
   }
-  async complete(): Promise<never> {
-    throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
+  async complete(tripId: string, companyId: string, input: CompleteTripInput): Promise<TripEntity> {
+    const existing = await this.findById(tripId, companyId);
+    if (!existing) throw new ResourceNotFoundError('Trip not found');
+
+    const record = await prisma.trip.update({
+      where: { id: tripId },
+      data: {
+        status: 'COMPLETED',
+        actualEnd: input.actualEnd,
+        completedByUserId: input.completedByUserId,
+        updatedByUserId: input.completedByUserId,
+      },
+    });
+
+    return toTripDomain(record);
   }
   async cancel(): Promise<never> {
     throw new BusinessRuleViolationError(NOT_IMPLEMENTED);

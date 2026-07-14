@@ -812,7 +812,7 @@ Returns a chronological list of lifecycle events derived from the trip record (`
 | `GET /trips/mine`                           | EMPLOYEE                 | Planned — assigned trips                                            |
 | `GET /trips/by-number/{tripNumber}`         | OWNER, MANAGER, EMPLOYEE | Planned — lookup by trip number                                     |
 | `POST /trips/{tripId}/start`                | OWNER, MANAGER           | Draft → Started (`startingOdometer` optional)                       |
-| `POST /trips/{tripId}/complete`             | OWNER, MANAGER           | Planned — Started → Completed                                       |
+| `POST /trips/{tripId}/complete`             | OWNER, MANAGER           | Started → Completed (`endingOdometer` optional)                     |
 | `POST /trips/{tripId}/cancel`               | OWNER, MANAGER           | Planned — Draft → Cancelled                                         |
 | `POST /trips/{tripId}/archive`              | OWNER, MANAGER           | Planned — archive Completed/Cancelled                               |
 | `POST /trips/{tripId}/members`              | OWNER, MANAGER           | Add member(s) — `{ employeeIds: [...] }` or `{ employeeId, role? }` |

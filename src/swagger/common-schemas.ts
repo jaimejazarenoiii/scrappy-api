@@ -1176,6 +1176,7 @@ export const commonSchemas = {
     type: 'object',
     properties: {
       note: { type: 'string', maxLength: 500 },
+      endingOdometer: { type: 'number', minimum: 0 },
     },
   },
   CancelTripRequest: {

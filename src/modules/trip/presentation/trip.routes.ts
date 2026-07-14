@@ -9,6 +9,7 @@ import {
   listTripTransactionsQuerySchema,
 } from './trip.schemas.js';
 import { startTripSchema } from '../application/dto/start-trip.request.js';
+import { completeTripSchema } from '../application/dto/complete-trip.request.js';
 import {
   addTripMembersSchema,
   updateTripMemberSchema,
@@ -64,6 +65,14 @@ export function createTripRoutes(controller: TripController): Router {
     validate(tripIdParamsSchema, 'params'),
     validate(startTripSchema),
     controller.start,
+  );
+
+  router.post(
+    '/trips/:tripId/complete',
+    authorize([...MANAGER_ROLES]),
+    validate(tripIdParamsSchema, 'params'),
+    validate(completeTripSchema),
+    controller.complete,
   );
 
   router.post(

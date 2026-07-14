@@ -29,6 +29,7 @@ import { StartTripUseCase } from './application/use-cases/start-trip.use-case.js
 import { AddTripMembersUseCase } from './application/use-cases/add-trip-members.use-case.js';
 import { UpdateTripMemberUseCase } from './application/use-cases/update-trip-member.use-case.js';
 import { RemoveTripMemberUseCase } from './application/use-cases/remove-trip-member.use-case.js';
+import { CompleteTripUseCase } from './application/use-cases/complete-trip.use-case.js';
 import { TripController } from './presentation/trip.controller.js';
 import { TripLoadController } from './presentation/trip-load.controller.js';
 
@@ -75,6 +76,7 @@ export function buildTripController(deps: TripModuleDependencies): TripControlle
     new AddTripMembersUseCase(deps.tripRepository, deps.employeeRepository),
     new UpdateTripMemberUseCase(deps.tripRepository),
     new RemoveTripMemberUseCase(deps.tripRepository),
+    new CompleteTripUseCase(deps.tripRepository, deps.vehicleRepository),
   );
 }
 

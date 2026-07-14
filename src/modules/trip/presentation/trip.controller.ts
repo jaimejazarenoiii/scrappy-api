@@ -13,6 +13,8 @@ import type { UpdateTripMemberUseCase } from '../application/use-cases/update-tr
 import type { RemoveTripMemberUseCase } from '../application/use-cases/remove-trip-member.use-case.js';
 import type { CreateTripRequestDto } from '../application/dto/create-trip.request.js';
 import type { StartTripRequestDto } from '../application/dto/start-trip.request.js';
+import type { CompleteTripUseCase } from '../application/use-cases/complete-trip.use-case.js';
+import type { CompleteTripRequestDto } from '../application/dto/complete-trip.request.js';
 import type {
   AddTripMembersRequestDto,
   TripMemberParams,
@@ -42,6 +44,7 @@ export class TripController {
     private readonly addTripMembersUseCase: AddTripMembersUseCase,
     private readonly updateTripMemberUseCase: UpdateTripMemberUseCase,
     private readonly removeTripMemberUseCase: RemoveTripMemberUseCase,
+    private readonly completeTripUseCase: CompleteTripUseCase,
   ) {}
 
   create: RequestHandler = async (req, res, next) => {
@@ -124,6 +127,22 @@ export class TripController {
             req.params.tripId as string,
             authContext(req),
             req.body as StartTripRequestDto,
+          ),
+        ),
+      );
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  complete: RequestHandler = async (req, res, next) => {
+    try {
+      res.json(
+        success(
+          await this.completeTripUseCase.execute(
+            req.params.tripId as string,
+            authContext(req),
+            req.body as CompleteTripRequestDto,
           ),
         ),
       );
