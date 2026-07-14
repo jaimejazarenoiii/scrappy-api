@@ -161,14 +161,15 @@ model Company {
   email              String?
   address            String?
   status             CompanyStatus             @default(ACTIVE)
-  subscriptionStatus CompanySubscriptionStatus @default(TRIAL)
-  createdAt          DateTime                  @default(now())
-  updatedAt          DateTime                  @updatedAt
-  deletedAt          DateTime?
-  subscriptions      CompanySubscription[]
-  users              User[]
-  employees          Employee[]
-  branches           Branch[]
+  subscriptionStatus            CompanySubscriptionStatus @default(TRIAL)
+  defaultStrictLoadValidation   Boolean                   @default(false)
+  createdAt                     DateTime                  @default(now())
+  updatedAt                     DateTime                  @updatedAt
+  deletedAt                     DateTime?
+  subscriptions                 CompanySubscription[]
+  users                         User[]
+  employees                     Employee[]
+  branches                      Branch[]
   warehouses         Warehouse[]
   vehicles           Vehicle[]
   attendanceSessions AttendanceSession[]
@@ -502,15 +503,17 @@ model TransactionEmployeeAssignment {
 model Trip {
   id                 String      @id @default(uuid())
   companyId          String
-  tripNumber        String
+  tripNumber         String
   vehicleId          String
   status             TripStatus  @default(DRAFT)
-  scheduledStart    DateTime
-  actualStart       DateTime?
-  actualEnd         DateTime?
+  scheduledStart     DateTime
+  actualStart        DateTime?
+  actualEnd          DateTime?
   origin             String
   destination        String
   notes              String?
+  loadEnabled            Boolean @default(true)
+  strictLoadValidation   Boolean @default(false)
 
   createdByUserId      String?
   updatedByUserId      String?
@@ -529,11 +532,44 @@ model Trip {
   members TripMember[]
   transactions Transaction[]
   expenses Expense[]
+  tripLoad TripLoad?
 
   @@index([companyId, status, deletedAt])
   @@index([companyId, scheduledStart])
   @@index([companyId, tripNumber])
   @@unique([companyId, tripNumber])
+}
+
+model TripLoad {
+  id              String   @id @default(uuid())
+  tripId          String   @unique
+  notes           String?
+  createdByUserId String
+  updatedByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  trip  Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  items TripLoadItem[]
+
+  @@index([tripId])
+}
+
+model TripLoadItem {
+  id               String              @id @default(uuid())
+  tripLoadId       String
+  materialName     String
+  materialNameNorm String
+  quantity         Decimal             @db.Decimal(12, 3)
+  unit             TransactionItemUnit
+  notes            String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  tripLoad TripLoad @relation(fields: [tripLoadId], references: [id], onDelete: Cascade)
+
+  @@unique([tripLoadId, materialNameNorm])
+  @@index([tripLoadId])
 }
 
 model TripMember {

@@ -673,7 +673,7 @@ GET /api/v1/trips?page=1&limit=10&sortBy=scheduledStart&sortOrder=desc
 
 #### Response row (`TripSummary`)
 
-Each item in `data` includes: `id`, `companyId`, `tripNumber`, `status`, `scheduledStart`, `actualStart`, `actualEnd`, `origin`, `destination`, `notes`, and nested `vehicle` (`id`, `plateNumber`, `description`, `status`).
+Each item in `data` includes: `id`, `companyId`, `tripNumber`, `status`, `scheduledStart`, `actualStart`, `actualEnd`, `origin`, `destination`, `notes`, `loadEnabled`, `strictLoadValidation`, and nested `vehicle` (`id`, `plateNumber`, `description`, `status`).
 
 ---
 
@@ -743,7 +743,7 @@ Returns full trip detail including members and `linkedTransactionCount`.
 
 #### Response (`TripDetail`)
 
-Includes trip header fields, nested `vehicle`, `members` array, `linkedTransactionCount`, `createdAt`, and `updatedAt`.
+Includes trip header fields, nested `vehicle`, `members` array, `linkedTransactionCount`, `loadEnabled`, `strictLoadValidation`, `createdAt`, and `updatedAt`.
 
 #### Errors
 
@@ -818,6 +818,77 @@ Returns a chronological list of lifecycle events derived from the trip record (`
 | `POST /trips/{tripId}/members`              | OWNER, MANAGER           | Planned — add member                        |
 | `PATCH /trips/{tripId}/members/{memberId}`  | OWNER, MANAGER           | Planned — update member role                |
 | `DELETE /trips/{tripId}/members/{memberId}` | OWNER, MANAGER           | Planned — remove member                     |
+
+---
+
+### Trip Load Management
+
+Trip Load Management lets a company record the planned cargo (materials + quantities) for a trip and
+optionally validate outbound transactions against it. The feature is **always on**; there is no
+per-company kill switch, only a `defaultStrictLoadValidation` company preference used when a load is
+enabled without an explicit flag.
+
+**Trip flags** (also returned on `TripSummary` / `TripDetail`):
+
+- `loadEnabled` (boolean) — always `true`. Trip load is always available; whether cargo is recorded is
+  determined by the presence of a `TripLoad` row (0 or 1 per trip).
+- `strictLoadValidation` (boolean) — when `true`, outbound overselling is blocked; when `false`, it is
+  allowed but surfaced as warnings.
+
+**Lifecycle**: All load mutations (create/update/delete load, add/update/remove items, enable/disable)
+are **Draft-only**. Once a trip leaves `DRAFT`, mutations return **409** (`LIFECYCLE_CONFLICT`); reads
+and the summary remain available.
+
+**Materials**: `materialName` is normalized (trim + lowercase) and must be unique within a load.
+`quantity` maps to transaction item `weight`; `unit` matches `TransactionItemUnit`.
+
+**Remaining quantity** is never stored — it is computed as
+`loaded − Σ(outbound TransactionItem.weight matching materialNameNorm + unit)`, excluding cancelled
+transactions.
+
+**Authorization**: Owner/Manager may mutate and read; Employees may read the load and summary only when
+they are members of the trip.
+
+#### Endpoints
+
+| Method & path                                | Roles                    | Purpose                                                                |
+| -------------------------------------------- | ------------------------ | ---------------------------------------------------------------------- |
+| `POST /trips/{tripId}/load`                  | OWNER, MANAGER           | Create the trip load (**201**)                                         |
+| `GET /trips/{tripId}/load`                   | OWNER, MANAGER, EMPLOYEE | Get the load with items                                                |
+| `PATCH /trips/{tripId}/load`                 | OWNER, MANAGER           | Update load notes                                                      |
+| `DELETE /trips/{tripId}/load`                | OWNER, MANAGER           | Delete the load (`loadEnabled` remains true)                           |
+| `POST /trips/{tripId}/load/items`            | OWNER, MANAGER           | Add a load item (**201**)                                              |
+| `PATCH /trips/{tripId}/load/items/{itemId}`  | OWNER, MANAGER           | Update a load item                                                     |
+| `DELETE /trips/{tripId}/load/items/{itemId}` | OWNER, MANAGER           | Remove a load item                                                     |
+| `POST /trips/{tripId}/load/enable`           | OWNER, MANAGER           | Enable load; optional `strictLoadValidation` override                  |
+| `POST /trips/{tripId}/load/disable`          | OWNER, MANAGER           | Clear load and reset `strictLoadValidation` to false                   |
+| `GET /trips/{tripId}/load/summary`           | OWNER, MANAGER, EMPLOYEE | Per-material `loadedQuantity`, `outboundQuantity`, `remainingQuantity` |
+| `GET /companies/me/trip-load-settings`       | OWNER, MANAGER           | Read `defaultStrictLoadValidation`                                     |
+| `PATCH /companies/me/trip-load-settings`     | OWNER, MANAGER           | Update `defaultStrictLoadValidation`                                   |
+
+#### Create load request
+
+```jsonc
+{
+  "notes": "Morning cargo",
+  "items": [
+    { "materialName": "Copper", "quantity": 100, "unit": "KG", "notes": null },
+    { "materialName": "Steel", "quantity": 50, "unit": "KG" },
+  ],
+}
+```
+
+#### Outbound validation
+
+When an outbound transaction is created against a trip whose load is enabled and whose materials match a
+load item:
+
+- **Strict** (`strictLoadValidation=true`): overselling is rejected with **409**
+  (`BUSINESS_RULE_VIOLATION`).
+- **Non-strict**: the transaction is created (**201**) and each oversell is reported in
+  `meta.warnings` (`{ materialName, unit, loadedQuantity, outboundQuantity, exceededBy }`).
+
+Inbound transactions and materials not present in the load are never validated.
 
 ---
 

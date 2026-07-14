@@ -91,6 +91,12 @@ export interface TransactionAssignmentView {
   assignedAt: Date;
 }
 
+export interface TripOutboundItemLine {
+  materialName: string;
+  unit: TransactionItemUnit;
+  weight: number;
+}
+
 export interface TransactionDetail {
   transaction: TransactionEntity;
   items: TransactionItemEntity[];
@@ -138,6 +144,7 @@ export interface TransactionRepository {
   ): Promise<TransactionEntity>;
   archive(transactionId: string, companyId: string): Promise<TransactionEntity>;
   isEmployeeAssigned(transactionId: string, employeeId: string): Promise<boolean>;
+  listOutboundItemLinesByTrip(tripId: string, companyId: string): Promise<TripOutboundItemLine[]>;
   listByCompany(companyId: string, query: ListTransactionsQuery): Promise<ListTransactionsResult>;
   listAssigned(
     companyId: string,

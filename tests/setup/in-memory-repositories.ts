@@ -94,6 +94,7 @@ export class InMemoryCompanyRepository implements CompanyRepository {
       address: input.address ?? null,
       status: 'ACTIVE',
       subscriptionStatus: 'TRIAL',
+      defaultStrictLoadValidation: false,
       createdAt: now,
       updatedAt: now,
       deletedAt: null,
@@ -719,6 +720,7 @@ import { randomUUID } from 'node:crypto';
 import { TransactionEntity } from '../../src/modules/transaction/domain/transaction.entity.js';
 import { TransactionItemEntity } from '../../src/modules/transaction/domain/transaction-item.entity.js';
 import { TransactionAttachmentEntity } from '../../src/modules/transaction/domain/transaction-attachment.entity.js';
+import type { TransactionItemUnit } from '../../src/modules/transaction/domain/transaction-item-unit.js';
 import type {
   CancelTransactionInput,
   CreateTransactionInput,
@@ -1034,6 +1036,33 @@ export class InMemoryTransactionRepository implements TransactionRepository {
       (assignment) =>
         assignment.transactionId === transactionId && assignment.employeeId === employeeId,
     );
+  }
+
+  async listOutboundItemLinesByTrip(tripId: string, companyId: string) {
+    const lines: { materialName: string; unit: TransactionItemUnit; weight: number }[] = [];
+    for (const transaction of this.store.transactions.values()) {
+      const props = transaction.toPrimitives();
+      if (
+        props.companyId !== companyId ||
+        props.tripId !== tripId ||
+        props.direction !== 'OUTBOUND' ||
+        props.status === 'CANCELLED' ||
+        props.deletedAt !== null
+      ) {
+        continue;
+      }
+      for (const item of this.store.items.values()) {
+        const itemProps = item.toPrimitives();
+        if (itemProps.transactionId === transaction.id) {
+          lines.push({
+            materialName: itemProps.materialName,
+            unit: itemProps.unit,
+            weight: itemProps.weight,
+          });
+        }
+      }
+    }
+    return lines;
   }
 
   async listByCompany(companyId: string, query: ListTransactionsQuery) {

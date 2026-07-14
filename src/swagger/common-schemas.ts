@@ -1092,6 +1092,8 @@ export const commonSchemas = {
       origin: { type: 'string' },
       destination: { type: 'string' },
       notes: { type: 'string', nullable: true },
+      loadEnabled: { type: 'boolean' },
+      strictLoadValidation: { type: 'boolean' },
     },
   },
   TripDetail: {
@@ -1195,6 +1197,123 @@ export const commonSchemas = {
     required: ['role'],
     properties: {
       role: { $ref: '#/components/schemas/TripMemberRole' },
+    },
+  },
+
+  TransactionItemUnit: {
+    type: 'string',
+    enum: ['KG', 'G', 'TON', 'LB', 'PIECE', 'BUNDLE', 'SACK'],
+  },
+  TripLoadItem: {
+    type: 'object',
+    required: ['id', 'tripLoadId', 'materialName', 'quantity', 'unit', 'createdAt', 'updatedAt'],
+    properties: {
+      id: uuid,
+      tripLoadId: uuid,
+      materialName: { type: 'string' },
+      quantity: { type: 'number' },
+      unit: { $ref: '#/components/schemas/TransactionItemUnit' },
+      notes: { type: 'string', nullable: true },
+      remainingQuantity: { type: 'number', nullable: true },
+      createdAt: { type: 'string', format: 'date-time' },
+      updatedAt: { type: 'string', format: 'date-time' },
+    },
+  },
+  TripLoad: {
+    type: 'object',
+    required: ['id', 'tripId', 'items', 'createdByUserId', 'createdAt', 'updatedAt'],
+    properties: {
+      id: uuid,
+      tripId: uuid,
+      notes: { type: 'string', nullable: true },
+      items: { type: 'array', items: { $ref: '#/components/schemas/TripLoadItem' } },
+      createdByUserId: uuid,
+      updatedByUserId: { ...uuid, nullable: true },
+      createdAt: { type: 'string', format: 'date-time' },
+      updatedAt: { type: 'string', format: 'date-time' },
+    },
+  },
+  TripLoadFlags: {
+    type: 'object',
+    required: ['tripId', 'loadEnabled', 'strictLoadValidation'],
+    properties: {
+      tripId: uuid,
+      loadEnabled: { type: 'boolean' },
+      strictLoadValidation: { type: 'boolean' },
+    },
+  },
+  TripLoadSummaryItem: {
+    type: 'object',
+    required: ['materialName', 'unit', 'loadedQuantity', 'outboundQuantity', 'remainingQuantity'],
+    properties: {
+      materialName: { type: 'string' },
+      unit: { $ref: '#/components/schemas/TransactionItemUnit' },
+      loadedQuantity: { type: 'number' },
+      outboundQuantity: { type: 'number' },
+      remainingQuantity: { type: 'number' },
+    },
+  },
+  TripLoadSummary: {
+    type: 'object',
+    required: ['tripId', 'tripStatus', 'loadEnabled', 'strictLoadValidation', 'items'],
+    properties: {
+      tripId: uuid,
+      tripStatus: { $ref: '#/components/schemas/TripStatus' },
+      loadEnabled: { type: 'boolean' },
+      strictLoadValidation: { type: 'boolean' },
+      notes: { type: 'string', nullable: true },
+      items: { type: 'array', items: { $ref: '#/components/schemas/TripLoadSummaryItem' } },
+    },
+  },
+  TripLoadSettings: {
+    type: 'object',
+    required: ['defaultStrictLoadValidation'],
+    properties: {
+      defaultStrictLoadValidation: { type: 'boolean' },
+    },
+  },
+  EnableTripLoadRequest: {
+    type: 'object',
+    properties: {
+      strictLoadValidation: { type: 'boolean' },
+    },
+  },
+  CreateTripLoadRequest: {
+    type: 'object',
+    required: ['items'],
+    properties: {
+      notes: { type: 'string', maxLength: 2000, nullable: true },
+      items: {
+        type: 'array',
+        minItems: 1,
+        items: { $ref: '#/components/schemas/CreateTripLoadItemRequest' },
+      },
+    },
+  },
+  UpdateTripLoadRequest: {
+    type: 'object',
+    properties: {
+      notes: { type: 'string', maxLength: 2000, nullable: true },
+    },
+  },
+  CreateTripLoadItemRequest: {
+    type: 'object',
+    required: ['materialName', 'quantity', 'unit'],
+    properties: {
+      materialName: { type: 'string', minLength: 1, maxLength: 200 },
+      quantity: { type: 'number', exclusiveMinimum: 0 },
+      unit: { $ref: '#/components/schemas/TransactionItemUnit' },
+      notes: { type: 'string', maxLength: 2000, nullable: true },
+    },
+  },
+  UpdateTripLoadItemRequest: {
+    type: 'object',
+    minProperties: 1,
+    properties: {
+      materialName: { type: 'string', minLength: 1, maxLength: 200 },
+      quantity: { type: 'number', exclusiveMinimum: 0 },
+      unit: { $ref: '#/components/schemas/TransactionItemUnit' },
+      notes: { type: 'string', maxLength: 2000, nullable: true },
     },
   },
 

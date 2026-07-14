@@ -8,6 +8,7 @@ import type {
   ListTransactionsResult,
   TransactionDetail,
   TransactionRepository,
+  TripOutboundItemLine,
   UpdateTransactionInput,
 } from '../domain/transaction.repository.js';
 import { toTransactionDomain } from './mappers/transaction.mapper.js';
@@ -241,6 +242,29 @@ export class TransactionPrismaRepository implements TransactionRepository {
       where: { transactionId, employeeId },
     });
     return count > 0;
+  }
+
+  async listOutboundItemLinesByTrip(
+    tripId: string,
+    companyId: string,
+  ): Promise<TripOutboundItemLine[]> {
+    const records = await prisma.transactionItem.findMany({
+      where: {
+        transaction: {
+          companyId,
+          tripId,
+          direction: 'OUTBOUND',
+          status: { not: 'CANCELLED' },
+          deletedAt: null,
+        },
+      },
+      select: { materialName: true, unit: true, weight: true },
+    });
+    return records.map((record) => ({
+      materialName: record.materialName,
+      unit: record.unit,
+      weight: Number(record.weight),
+    }));
   }
 
   async listByCompany(

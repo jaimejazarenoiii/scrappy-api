@@ -19,6 +19,7 @@ function toDomain(record: Company): CompanyEntity {
     address: record.address,
     status: record.status,
     subscriptionStatus: record.subscriptionStatus,
+    defaultStrictLoadValidation: record.defaultStrictLoadValidation,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
     deletedAt: record.deletedAt,

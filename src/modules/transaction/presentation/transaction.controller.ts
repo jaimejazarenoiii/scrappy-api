@@ -63,17 +63,13 @@ export class TransactionController {
 
   create: RequestHandler = async (req, res, next) => {
     try {
-      res
-        .status(201)
-        .json(
-          success(
-            await this.createTransactionUseCase.execute(
-              req.auth!.companyId,
-              req.auth!.userId,
-              req.body,
-            ),
-          ),
-        );
+      const { loadWarnings, ...data } = await this.createTransactionUseCase.execute(
+        req.auth!.companyId,
+        req.auth!.userId,
+        req.body,
+      );
+      const meta = loadWarnings && loadWarnings.length > 0 ? { warnings: loadWarnings } : {};
+      res.status(201).json(success(data, meta));
     } catch (error) {
       next(error);
     }

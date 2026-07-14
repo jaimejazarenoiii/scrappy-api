@@ -11,6 +11,14 @@ export const TRIP_AUDIT_ACTIONS = {
   MEMBER_ADDED: 'trip.member_added',
   MEMBER_UPDATED: 'trip.member_updated',
   MEMBER_REMOVED: 'trip.member_removed',
+  LOAD_ENABLED: 'trip.load_enabled',
+  LOAD_DISABLED: 'trip.load_disabled',
+  LOAD_CREATED: 'trip.load_created',
+  LOAD_UPDATED: 'trip.load_updated',
+  LOAD_DELETED: 'trip.load_deleted',
+  LOAD_ITEM_ADDED: 'trip.load_item_added',
+  LOAD_ITEM_UPDATED: 'trip.load_item_updated',
+  LOAD_ITEM_REMOVED: 'trip.load_item_removed',
 } as const;
 
 export type TripAuditAction = (typeof TRIP_AUDIT_ACTIONS)[keyof typeof TRIP_AUDIT_ACTIONS];

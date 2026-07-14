@@ -15,6 +15,8 @@ export interface TripProps {
   origin: string;
   destination: string;
   notes: string | null;
+  loadEnabled: boolean;
+  strictLoadValidation: boolean;
 
   createdByUserId: string | null;
   updatedByUserId: string | null;
@@ -46,6 +48,12 @@ export class TripEntity {
   }
   get status(): TripStatus {
     return this.props.status;
+  }
+  get loadEnabled(): boolean {
+    return this.props.loadEnabled;
+  }
+  get strictLoadValidation(): boolean {
+    return this.props.strictLoadValidation;
   }
   get deletedAt(): Date | null {
     return this.props.deletedAt;

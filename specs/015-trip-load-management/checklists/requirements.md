@@ -31,13 +31,9 @@
 
 ## Notes
 
-- Validation passed on first iteration (2026-07-14).
-- REST API contracts are included per explicit feature scope (backend API specification addendum,
-  consistent with P006 Trip Management). Endpoints describe business resources and behaviors only,
-  not implementation technology.
-- Reasonable defaults applied without clarification markers:
-  - Company-level Trip Load enablement and validation settings
-  - Default exceed behavior: warn when validation is first enabled
-  - Material matching: trimmed, case-insensitive name; unit must match for validation
-  - Started trips: load items immutable (no add/edit/remove after start)
-- Ready for `/speckit-plan`.
+- Refreshed 2026-07-14 via `/speckit-specify` (same feature directory `015-trip-load-management`).
+- **Always on**: Trip Load has no Company enable/disable. Optional **per Trip** only.
+- Prompt “Enable Trip Load” interpreted as using/attaching loads, not a feature flag (prior product decision).
+- REST resource contracts are business-level (method/URI/purpose/errors), consistent with P006.
+- No code implementation exists yet (`src/`, Prisma, docs) — ready for `/speckit-plan`.
+- `plan.md` is still an unfilled template; run `/speckit-plan` next.

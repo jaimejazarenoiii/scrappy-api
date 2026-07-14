@@ -1,0 +1,322 @@
+openapi: 3.0.3
+info:
+  title: Scrappy API — Trip Load Management
+  version: 1.0.0
+  description: >
+    P006 addendum. Trip Load is always available, optional per Trip via loadEnabled.
+    Remaining quantity is calculated. Not inventory. Outbound validation uses Trip flags.
+servers:
+  - url: /api/v1
+tags:
+  - name: Trip Load
+  - name: Company Trip Load Settings
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    TransactionItemUnit:
+      type: string
+      description: Aligns with existing transaction item units
+    TripLoadItem:
+      type: object
+      required: [id, tripLoadId, materialName, quantity, unit, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        tripLoadId: { type: string, format: uuid }
+        materialName: { type: string }
+        quantity: { type: number }
+        unit: { $ref: '#/components/schemas/TransactionItemUnit' }
+        notes: { type: string, nullable: true }
+        remainingQuantity:
+          type: number
+          nullable: true
+          description: Calculated when trip is Started/Completed; not stored
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    TripLoad:
+      type: object
+      required: [id, tripId, items, createdByUserId, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        tripId: { type: string, format: uuid }
+        notes: { type: string, nullable: true }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/TripLoadItem' }
+        createdByUserId: { type: string, format: uuid }
+        updatedByUserId: { type: string, format: uuid, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    TripLoadFlags:
+      type: object
+      required: [tripId, loadEnabled, strictLoadValidation]
+      properties:
+        tripId: { type: string, format: uuid }
+        loadEnabled: { type: boolean }
+        strictLoadValidation: { type: boolean }
+    TripLoadSummaryItem:
+      type: object
+      required: [materialName, unit, loadedQuantity, outboundQuantity, remainingQuantity]
+      properties:
+        materialName: { type: string }
+        unit: { $ref: '#/components/schemas/TransactionItemUnit' }
+        loadedQuantity: { type: number }
+        outboundQuantity: { type: number }
+        remainingQuantity: { type: number }
+    TripLoadSummary:
+      type: object
+      required: [tripId, tripStatus, loadEnabled, strictLoadValidation, items]
+      properties:
+        tripId: { type: string, format: uuid }
+        tripStatus: { type: string, enum: [DRAFT, STARTED, COMPLETED, CANCELLED] }
+        loadEnabled: { type: boolean }
+        strictLoadValidation: { type: boolean }
+        notes: { type: string, nullable: true }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/TripLoadSummaryItem' }
+    EnableTripLoadRequest:
+      type: object
+      properties:
+        strictLoadValidation: { type: boolean }
+    CreateTripLoadRequest:
+      type: object
+      required: [items]
+      properties:
+        notes: { type: string, maxLength: 2000 }
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [materialName, quantity, unit]
+            properties:
+              materialName: { type: string, minLength: 1, maxLength: 200 }
+              quantity: { type: number, exclusiveMinimum: 0 }
+              unit: { $ref: '#/components/schemas/TransactionItemUnit' }
+              notes: { type: string, maxLength: 2000 }
+    UpdateTripLoadRequest:
+      type: object
+      properties:
+        notes: { type: string, maxLength: 2000, nullable: true }
+    CreateTripLoadItemRequest:
+      type: object
+      required: [materialName, quantity, unit]
+      properties:
+        materialName: { type: string, minLength: 1, maxLength: 200 }
+        quantity: { type: number, exclusiveMinimum: 0 }
+        unit: { $ref: '#/components/schemas/TransactionItemUnit' }
+        notes: { type: string, maxLength: 2000 }
+    UpdateTripLoadItemRequest:
+      type: object
+      minProperties: 1
+      properties:
+        materialName: { type: string, minLength: 1, maxLength: 200 }
+        quantity: { type: number, exclusiveMinimum: 0 }
+        unit: { $ref: '#/components/schemas/TransactionItemUnit' }
+        notes: { type: string, maxLength: 2000, nullable: true }
+    TripLoadSettings:
+      type: object
+      required: [defaultStrictLoadValidation]
+      properties:
+        defaultStrictLoadValidation:
+          type: boolean
+          description: Default copied onto Trip when enabling load
+paths:
+  /companies/me/trip-load-settings:
+    get:
+      tags: [Company Trip Load Settings]
+      summary: Get company Trip Load defaults (no feature enable flag)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Defaults }
+        '403': { description: Forbidden }
+    patch:
+      tags: [Company Trip Load Settings]
+      summary: Update company Trip Load defaults
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                defaultStrictLoadValidation: { type: boolean }
+      responses:
+        '200': { description: Updated defaults }
+        '403': { description: Forbidden }
+  /trips/{tripId}/load/enable:
+    post:
+      tags: [Trip Load]
+      summary: Enable Trip Load on Draft trip
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: tripId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EnableTripLoadRequest' }
+      responses:
+        '200': { description: loadEnabled true }
+        '403': { description: Forbidden }
+        '404': { description: Trip not found }
+        '409': { description: Not Draft }
+  /trips/{tripId}/load/disable:
+    post:
+      tags: [Trip Load]
+      summary: Disable Trip Load on Draft trip (clears load if present)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: tripId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: loadEnabled false }
+        '403': { description: Forbidden }
+        '409': { description: Not Draft }
+  /trips/{tripId}/load:
+    post:
+      tags: [Trip Load]
+      summary: Create Trip Load with items
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: tripId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTripLoadRequest' }
+      responses:
+        '201': { description: Created }
+        '400': { description: Validation / duplicate material }
+        '403': { description: Forbidden }
+        '409': { description: Load exists or not Draft }
+    get:
+      tags: [Trip Load]
+      summary: Get Trip Load
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: tripId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Trip Load detail
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TripLoad' }
+        '403': { description: Forbidden }
+        '404': { description: Not found }
+    patch:
+      tags: [Trip Load]
+      summary: Update Trip Load notes (Draft)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: tripId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTripLoadRequest' }
+      responses:
+        '200': { description: Updated }
+        '409': { description: Not Draft }
+    delete:
+      tags: [Trip Load]
+      summary: Delete Trip Load (Draft)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: tripId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Deleted }
+        '409': { description: Not Draft }
+  /trips/{tripId}/load/summary:
+    get:
+      tags: [Trip Load]
+      summary: Trip Load summary with remaining quantities
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: tripId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Summary
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TripLoadSummary' }
+        '403': { description: Forbidden }
+        '404': { description: No load }
+  /trips/{tripId}/load/items:
+    post:
+      tags: [Trip Load]
+      summary: Add Trip Load item (Draft)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: tripId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTripLoadItemRequest' }
+      responses:
+        '201': { description: Created item }
+        '400': { description: Validation }
+        '409': { description: Not Draft }
+  /trips/{tripId}/load/items/{itemId}:
+    patch:
+      tags: [Trip Load]
+      summary: Update Trip Load item (Draft)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: tripId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: itemId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTripLoadItemRequest' }
+      responses:
+        '200': { description: Updated }
+        '409': { description: Not Draft }
+    delete:
+      tags: [Trip Load]
+      summary: Remove Trip Load item (Draft)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: tripId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: itemId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Deleted }
+        '409': { description: Not Draft }

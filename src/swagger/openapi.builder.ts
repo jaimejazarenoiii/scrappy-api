@@ -13,6 +13,7 @@ import { workforceDashboardOpenApiPaths } from '../modules/workforce-dashboard/p
 import { transactionOpenApiPaths } from '../modules/transaction/presentation/transaction.openapi.js';
 import { payrollOpenApiPaths } from '../modules/payroll/presentation/payroll.openapi.js';
 import { tripOpenApiPaths } from '../modules/trip/presentation/trip.openapi.js';
+import { tripLoadOpenApiPaths } from '../modules/trip/presentation/trip-load.openapi.js';
 import { expenseOpenApiPaths } from '../modules/expense/presentation/expense.openapi.js';
 import { analyticsOpenApiPaths } from '../modules/analytics/presentation/analytics.openapi.js';
 import { adminAnalyticsOpenApiPaths } from '../modules/analytics/presentation/admin-analytics.openapi.js';
@@ -54,6 +55,7 @@ export function buildOpenApiDocument(): object {
       ...workforceDashboardOpenApiPaths,
       ...transactionOpenApiPaths,
       ...tripOpenApiPaths,
+      ...tripLoadOpenApiPaths,
       ...expenseOpenApiPaths,
       ...analyticsOpenApiPaths,
       ...adminAnalyticsOpenApiPaths,

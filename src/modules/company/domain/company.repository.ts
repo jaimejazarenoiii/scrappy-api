@@ -19,6 +19,7 @@ export interface UpdateCompanyInput {
   address?: string | null;
   status?: 'ACTIVE' | 'INACTIVE';
   subscriptionStatus?: CompanySubscriptionStatus;
+  defaultStrictLoadValidation?: boolean;
 }
 
 export interface ListCompaniesQuery {

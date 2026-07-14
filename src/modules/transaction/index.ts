@@ -11,6 +11,7 @@ import type { TransactionAttachmentRepository } from './domain/transaction-attac
 import type { TransactionSuggestionRepository } from './domain/transaction-suggestion.repository.js';
 import type { TransactionNumberSequenceRepository } from './domain/transaction-number-sequence.repository.js';
 import type { FileStorage } from './infrastructure/file-storage/file-storage.interface.js';
+import type { TripLoadValidationService } from '../trip/application/services/trip-load-validation.service.js';
 import { CreateTransactionUseCase } from './application/use-cases/create-transaction.use-case.js';
 import { GetTransactionUseCase } from './application/use-cases/get-transaction.use-case.js';
 import { UpdateTransactionUseCase } from './application/use-cases/update-transaction.use-case.js';
@@ -54,6 +55,7 @@ export interface TransactionModuleDependencies {
   branchRepository: BranchRepository;
   warehouseRepository: WarehouseRepository;
   tripRepository: TripRepository;
+  tripLoadValidationService?: TripLoadValidationService;
 }
 
 export function buildTransactionController(
@@ -77,6 +79,7 @@ export function buildTransactionController(
       deps.warehouseRepository,
       deps.tripRepository,
       transactionNumberService,
+      deps.tripLoadValidationService,
     ),
     new GetTransactionUseCase(deps.transactionRepository, deps.userRepository),
     new GetTransactionByNumberUseCase(deps.transactionRepository, deps.userRepository),

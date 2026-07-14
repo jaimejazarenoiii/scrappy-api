@@ -30,6 +30,14 @@ import { resolveActingEmployeeId } from '../../../../shared/workforce/employee-c
 import { validateTripLocationReference } from '../services/transaction-trip-location.service.js';
 import { logTransactionAudit } from '../services/transaction-audit.service.js';
 import type { TransactionNumberService } from '../services/transaction-number.service.js';
+import type {
+  TripLoadValidationService,
+  TripLoadWarning,
+} from '../../../trip/application/services/trip-load-validation.service.js';
+
+export type CreateTransactionResult = TransactionDetailResponseDto & {
+  loadWarnings?: TripLoadWarning[];
+};
 
 export class CreateTransactionUseCase {
   constructor(
@@ -41,13 +49,14 @@ export class CreateTransactionUseCase {
     private readonly warehouseRepository: WarehouseRepository,
     private readonly tripRepository: TripRepository,
     private readonly transactionNumberService: TransactionNumberService,
+    private readonly tripLoadValidationService?: TripLoadValidationService,
   ) {}
 
   async execute(
     companyId: string,
     userId: string,
     input: CreateTransactionRequestDto,
-  ): Promise<TransactionDetailResponseDto> {
+  ): Promise<CreateTransactionResult> {
     const actingUser = await this.userRepository.findById(userId, companyId);
     if (!actingUser) throw new ResourceNotFoundError('User not found');
 
@@ -96,6 +105,28 @@ export class CreateTransactionUseCase {
         input.tripId,
         assignedEmployeeIds,
       );
+    }
+
+    let loadWarnings: TripLoadWarning[] = [];
+    if (
+      this.tripLoadValidationService &&
+      direction === 'OUTBOUND' &&
+      input.locationType === 'TRIP' &&
+      input.tripId
+    ) {
+      const trip = await this.tripRepository.findById(input.tripId, companyId);
+      if (trip) {
+        loadWarnings = await this.tripLoadValidationService.validateOutbound({
+          companyId,
+          tripId: input.tripId,
+          strictLoadValidation: trip.strictLoadValidation,
+          items: input.items.map((item) => ({
+            materialName: item.materialName,
+            unit: item.unit,
+            weight: item.weight,
+          })),
+        });
+      }
     }
 
     const items: CreateTransactionInput['items'] = input.items.map((item) => {
@@ -148,7 +179,8 @@ export class CreateTransactionUseCase {
       metadata: { transactionNumber: detail.transaction.transactionNumber },
     });
 
-    return buildTransactionDetailResponse(detail);
+    const response = buildTransactionDetailResponse(detail);
+    return loadWarnings.length > 0 ? { ...response, loadWarnings } : response;
   }
 
   private async validateLocationReferences(

@@ -36,6 +36,12 @@ export interface UpdateTripInput {
   updatedByUserId?: string | null;
 }
 
+export interface UpdateTripLoadFlagsInput {
+  loadEnabled?: boolean;
+  strictLoadValidation?: boolean;
+  updatedByUserId?: string | null;
+}
+
 export interface StartTripInput {
   actualStart: Date;
   startedByUserId: string;
@@ -100,6 +106,8 @@ export interface TripSummaryProjection {
   origin: string;
   destination: string;
   notes: string | null;
+  loadEnabled: boolean;
+  strictLoadValidation: boolean;
   vehicle: TripVehicleSummary;
 }
 
@@ -130,6 +138,11 @@ export interface ListTripSummariesResult {
 export interface TripRepository {
   create(input: CreateTripInput): Promise<TripEntity>;
   update(tripId: string, companyId: string, input: UpdateTripInput): Promise<TripEntity>;
+  updateLoadFlags(
+    tripId: string,
+    companyId: string,
+    input: UpdateTripLoadFlagsInput,
+  ): Promise<TripEntity>;
   start(tripId: string, companyId: string, input: StartTripInput): Promise<TripEntity>;
   complete(tripId: string, companyId: string, input: CompleteTripInput): Promise<TripEntity>;
   cancel(tripId: string, companyId: string, input: CancelTripInput): Promise<TripEntity>;

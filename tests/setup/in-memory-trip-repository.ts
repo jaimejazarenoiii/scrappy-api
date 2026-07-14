@@ -10,6 +10,7 @@ import type {
   TripDetailProjection,
   TripMemberInput,
   UpdateTripInput,
+  UpdateTripLoadFlagsInput,
   StartTripInput,
   CompleteTripInput,
   CancelTripInput,
@@ -55,6 +56,8 @@ export class InMemoryTripRepository implements TripRepository {
       origin: input.origin,
       destination: input.destination,
       notes: input.notes,
+      loadEnabled: true,
+      strictLoadValidation: false,
       createdByUserId: input.createdByUserId,
       updatedByUserId: input.updatedByUserId,
       startedByUserId: null,
@@ -116,6 +119,8 @@ export class InMemoryTripRepository implements TripRepository {
       origin: props.origin,
       destination: props.destination,
       notes: props.notes,
+      loadEnabled: props.loadEnabled,
+      strictLoadValidation: props.strictLoadValidation,
       vehicle: {
         id: props.vehicleId,
         plateNumber: vehicleProps?.plateNumber ?? 'UNKNOWN',
@@ -186,6 +191,25 @@ export class InMemoryTripRepository implements TripRepository {
 
   async update(_tripId: string, _companyId: string, _input: UpdateTripInput): Promise<never> {
     throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
+  }
+  async updateLoadFlags(
+    tripId: string,
+    companyId: string,
+    input: UpdateTripLoadFlagsInput,
+  ): Promise<TripEntity> {
+    const trip = await this.findById(tripId, companyId);
+    if (!trip) throw new BusinessRuleViolationError('Trip not found');
+    const props = trip.toPrimitives();
+    const updated = TripEntity.create({
+      ...props,
+      loadEnabled: true,
+      strictLoadValidation: input.strictLoadValidation ?? props.strictLoadValidation,
+      updatedByUserId:
+        input.updatedByUserId !== undefined ? input.updatedByUserId : props.updatedByUserId,
+      updatedAt: new Date(),
+    });
+    this.trips.set(tripId, updated);
+    return updated;
   }
   async start(tripId: string, companyId: string, input: StartTripInput): Promise<TripEntity> {
     const trip = await this.findById(tripId, companyId);

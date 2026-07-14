@@ -30,6 +30,7 @@ import {
   InMemoryTripRepository,
   InMemoryTripNumberSequenceRepository,
 } from './in-memory-trip-repository.js';
+import { InMemoryTripLoadRepository } from './in-memory-trip-load-repository.js';
 import { InMemoryTripReferenceChecker } from './in-memory-trip-reference-checker.js';
 import {
   InMemoryExpenseStore,
@@ -119,6 +120,7 @@ export function createTestContext() {
   );
   const tripReferenceChecker = new InMemoryTripReferenceChecker();
   const tripRepository = new InMemoryTripRepository(vehicleRepository, employeeRepository);
+  const tripLoadRepository = new InMemoryTripLoadRepository();
   const tripNumberSequenceRepository = new InMemoryTripNumberSequenceRepository();
   const expenseStore = new InMemoryExpenseStore();
   const expenseAttachmentRepository = new InMemoryExpenseAttachmentRepository(expenseStore);
@@ -155,6 +157,7 @@ export function createTestContext() {
     reportsQueryRepository,
     tripReferenceChecker,
     tripRepository,
+    tripLoadRepository,
     tripNumberSequenceRepository,
     expenseRepository,
     expenseCategoryRepository,
@@ -193,6 +196,7 @@ export function createTestContext() {
     expenseNumberSequenceRepository,
     expenseFileStorage,
     tripRepository,
+    tripLoadRepository,
     activityLogRepository,
     companySubscriptionRepository,
   };

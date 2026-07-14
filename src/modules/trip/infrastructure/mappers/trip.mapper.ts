@@ -15,6 +15,8 @@ export function toTripDomain(record: PrismaTrip): TripEntity {
     origin: record.origin,
     destination: record.destination,
     notes: record.notes,
+    loadEnabled: record.loadEnabled,
+    strictLoadValidation: record.strictLoadValidation,
     createdByUserId: record.createdByUserId,
     updatedByUserId: record.updatedByUserId,
     startedByUserId: record.startedByUserId,

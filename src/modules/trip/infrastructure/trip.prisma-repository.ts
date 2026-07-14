@@ -16,6 +16,7 @@ import type {
   TripDetailProjection,
   TripMemberInput,
   UpdateTripInput,
+  UpdateTripLoadFlagsInput,
   ArchiveTripInput,
 } from '../domain/trip.repository.js';
 import { toTripDomain } from './mappers/trip.mapper.js';
@@ -70,6 +71,8 @@ function mapTripSummary(
     origin: record.origin,
     destination: record.destination,
     notes: record.notes,
+    loadEnabled: record.loadEnabled,
+    strictLoadValidation: record.strictLoadValidation,
     vehicle: {
       id: record.vehicle.id,
       plateNumber: record.vehicle.plateNumber,
@@ -225,6 +228,22 @@ export class TripPrismaRepository implements TripRepository {
 
   async update(_tripId: string, _companyId: string, _input: UpdateTripInput): Promise<never> {
     throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
+  }
+  async updateLoadFlags(
+    tripId: string,
+    companyId: string,
+    input: UpdateTripLoadFlagsInput,
+  ): Promise<TripEntity> {
+    const existing = await this.findById(tripId, companyId);
+    if (!existing) throw new ResourceNotFoundError('Trip not found');
+    const data: Prisma.TripUpdateInput = {};
+    if (input.loadEnabled !== undefined) data.loadEnabled = true;
+    if (input.strictLoadValidation !== undefined) {
+      data.strictLoadValidation = input.strictLoadValidation;
+    }
+    if (input.updatedByUserId !== undefined) data.updatedByUserId = input.updatedByUserId;
+    const record = await prisma.trip.update({ where: { id: tripId }, data });
+    return toTripDomain(record);
   }
   async start(): Promise<never> {
     throw new BusinessRuleViolationError(NOT_IMPLEMENTED);

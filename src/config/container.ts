@@ -127,10 +127,14 @@ import type { ReportsController } from '../modules/reports/presentation/reports.
 import type { ReportsQueryRepository } from '../modules/reports/domain/report-query.repository.js';
 import type { TripReferenceChecker } from '../modules/reports/application/services/report-filter-validator.service.js';
 import { TripPrismaRepository } from '../modules/trip/infrastructure/trip.prisma-repository.js';
+import { TripLoadPrismaRepository } from '../modules/trip/infrastructure/trip-load.prisma-repository.js';
 import { TripNumberSequencePrismaRepository } from '../modules/trip/infrastructure/trip-number-sequence.prisma-repository.js';
-import { buildTripController } from '../modules/trip/index.js';
+import { buildTripController, buildTripLoadController } from '../modules/trip/index.js';
+import { TripLoadValidationService } from '../modules/trip/application/services/trip-load-validation.service.js';
 import type { TripController } from '../modules/trip/presentation/trip.controller.js';
+import type { TripLoadController } from '../modules/trip/presentation/trip-load.controller.js';
 import type { TripRepository } from '../modules/trip/domain/trip.repository.js';
+import type { TripLoadRepository } from '../modules/trip/domain/trip-load.repository.js';
 import type { TripNumberSequenceRepository } from '../modules/trip/domain/trip-number-sequence.repository.js';
 import { ExpensePrismaRepository } from '../modules/expense/infrastructure/expense.prisma-repository.js';
 import { ExpenseCategoryPrismaRepository } from '../modules/expense/infrastructure/expense-category.prisma-repository.js';
@@ -184,6 +188,7 @@ export interface Container {
   adminAnalyticsController: AdminAnalyticsController;
   reportsController: ReportsController;
   tripController: TripController;
+  tripLoadController: TripLoadController;
   expenseController: ExpenseController;
   activityLogController: ActivityLogController;
   subscriptionController: SubscriptionController;
@@ -214,6 +219,7 @@ export interface ContainerOverrides {
   reportsQueryRepository?: ReportsQueryRepository;
   tripReferenceChecker?: TripReferenceChecker;
   tripRepository?: TripRepository;
+  tripLoadRepository?: TripLoadRepository;
   tripNumberSequenceRepository?: TripNumberSequenceRepository;
   expenseRepository?: ExpenseRepository;
   expenseCategoryRepository?: ExpenseCategoryRepository;
@@ -262,8 +268,13 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
   const reportsQueryRepository =
     overrides.reportsQueryRepository ?? new ReportsPrismaQueryRepository();
   const tripRepository = overrides.tripRepository ?? new TripPrismaRepository();
+  const tripLoadRepository = overrides.tripLoadRepository ?? new TripLoadPrismaRepository();
   const tripNumberSequenceRepository =
     overrides.tripNumberSequenceRepository ?? new TripNumberSequencePrismaRepository();
+  const tripLoadValidationService = new TripLoadValidationService(
+    tripLoadRepository,
+    transactionRepository,
+  );
   const expenseRepository = overrides.expenseRepository ?? new ExpensePrismaRepository();
   const expenseCategoryRepository =
     overrides.expenseCategoryRepository ?? new ExpenseCategoryPrismaRepository();
@@ -431,6 +442,7 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
       branchRepository,
       warehouseRepository,
       tripRepository,
+      tripLoadValidationService,
     }),
     analyticsController: buildAnalyticsController({
       analyticsQueryRepository,
@@ -463,6 +475,13 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
       employeeRepository,
       userRepository,
       transactionRepository,
+    }),
+    tripLoadController: buildTripLoadController({
+      tripRepository,
+      tripLoadRepository,
+      transactionRepository,
+      userRepository,
+      companyRepository,
     }),
     expenseController: buildExpenseController({
       expenseRepository,

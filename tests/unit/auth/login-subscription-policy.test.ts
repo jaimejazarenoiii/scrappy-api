@@ -24,6 +24,7 @@ function company(
     address: null,
     status: 'ACTIVE',
     subscriptionStatus,
+    defaultStrictLoadValidation: false,
     createdAt: new Date(),
     updatedAt: new Date(),
     deletedAt: null,

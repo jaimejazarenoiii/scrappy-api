@@ -10,6 +10,7 @@ export interface CompanyProps {
   address: string | null;
   status: CompanyStatus;
   subscriptionStatus: CompanySubscriptionStatus;
+  defaultStrictLoadValidation: boolean;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -45,6 +46,9 @@ export class CompanyEntity {
   }
   get subscriptionStatus(): CompanySubscriptionStatus {
     return this.props.subscriptionStatus;
+  }
+  get defaultStrictLoadValidation(): boolean {
+    return this.props.defaultStrictLoadValidation;
   }
   get createdAt(): Date {
     return this.props.createdAt;

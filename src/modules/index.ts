@@ -17,7 +17,7 @@ import { createWorkforceDashboardRoutes } from './workforce-dashboard/presentati
 import { createTransactionRoutes } from './transaction/index.js';
 import { createAnalyticsRoutes, createAdminAnalyticsRoutes } from './analytics/index.js';
 import { createReportsRoutes } from './reports/index.js';
-import { createTripRoutes } from './trip/index.js';
+import { createTripRoutes, createTripLoadRoutes } from './trip/index.js';
 import { createExpenseRoutes } from './expense/index.js';
 import { createActivityLogRoutes } from './activity-log/index.js';
 import {
@@ -132,6 +132,13 @@ export function registerModuleRoutes(app: Express, container: Container): void {
     companyResolutionMiddleware,
     gate,
     createTripRoutes(container.tripController),
+  );
+  app.use(
+    '/api/v1',
+    authn,
+    companyResolutionMiddleware,
+    gate,
+    createTripLoadRoutes(container.tripLoadController),
   );
   app.use(
     '/api/v1',

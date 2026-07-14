@@ -118,6 +118,26 @@ const ACTION_TAXONOMY: Record<string, Taxonomy> = {
   'trip.started': { eventType: 'TRIP', module: 'trip', description: 'Trip started' },
   'trip.completed': { eventType: 'TRIP', module: 'trip', description: 'Trip completed' },
   'trip.cancelled': { eventType: 'TRIP', module: 'trip', description: 'Trip cancelled' },
+  'trip.load_enabled': { eventType: 'TRIP', module: 'trip', description: 'Trip load enabled' },
+  'trip.load_disabled': { eventType: 'TRIP', module: 'trip', description: 'Trip load disabled' },
+  'trip.load_created': { eventType: 'TRIP', module: 'trip', description: 'Trip load created' },
+  'trip.load_updated': { eventType: 'TRIP', module: 'trip', description: 'Trip load updated' },
+  'trip.load_deleted': { eventType: 'TRIP', module: 'trip', description: 'Trip load deleted' },
+  'trip.load_item_added': {
+    eventType: 'TRIP',
+    module: 'trip',
+    description: 'Trip load item added',
+  },
+  'trip.load_item_updated': {
+    eventType: 'TRIP',
+    module: 'trip',
+    description: 'Trip load item updated',
+  },
+  'trip.load_item_removed': {
+    eventType: 'TRIP',
+    module: 'trip',
+    description: 'Trip load item removed',
+  },
   'expense.created': { eventType: 'EXPENSE', module: 'expense', description: 'Expense created' },
   'expense.recorded': { eventType: 'EXPENSE', module: 'expense', description: 'Expense recorded' },
   'expense.cancelled': {
