@@ -9,6 +9,11 @@ import {
   listTripTransactionsQuerySchema,
 } from './trip.schemas.js';
 import { startTripSchema } from '../application/dto/start-trip.request.js';
+import {
+  addTripMembersSchema,
+  updateTripMemberSchema,
+  tripMemberParamsSchema,
+} from '../application/dto/trip-member.request.js';
 
 const MANAGER_ROLES = ['OWNER', 'MANAGER'] as const;
 
@@ -59,6 +64,29 @@ export function createTripRoutes(controller: TripController): Router {
     validate(tripIdParamsSchema, 'params'),
     validate(startTripSchema),
     controller.start,
+  );
+
+  router.post(
+    '/trips/:tripId/members',
+    authorize([...MANAGER_ROLES]),
+    validate(tripIdParamsSchema, 'params'),
+    validate(addTripMembersSchema),
+    controller.addMembers,
+  );
+
+  router.patch(
+    '/trips/:tripId/members/:memberId',
+    authorize([...MANAGER_ROLES]),
+    validate(tripMemberParamsSchema, 'params'),
+    validate(updateTripMemberSchema),
+    controller.updateMember,
+  );
+
+  router.delete(
+    '/trips/:tripId/members/:memberId',
+    authorize([...MANAGER_ROLES]),
+    validate(tripMemberParamsSchema, 'params'),
+    controller.removeMember,
   );
 
   return router;

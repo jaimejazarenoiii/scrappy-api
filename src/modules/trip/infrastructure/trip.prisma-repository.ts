@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { prisma } from '../../../database/prisma.client.js';
 import {
   BusinessRuleViolationError,
+  DuplicateResourceError,
   ResourceNotFoundError,
 } from '../../../shared/errors/http-exceptions.js';
 import type {
@@ -19,6 +20,7 @@ import type {
   UpdateTripLoadFlagsInput,
   ArchiveTripInput,
   StartTripInput,
+  UpdateTripMemberInput,
 } from '../domain/trip.repository.js';
 import { toTripDomain } from './mappers/trip.mapper.js';
 import { mapTripMemberDetail, toTripMemberDomain } from './mappers/trip-member.mapper.js';
@@ -273,17 +275,72 @@ export class TripPrismaRepository implements TripRepository {
   async archive(_tripId: string, _companyId: string, _input: ArchiveTripInput): Promise<never> {
     throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
   }
-  async findMemberByTripAndEmployee(): Promise<never> {
-    throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
+  async findMemberByTripAndEmployee(
+    tripId: string,
+    companyId: string,
+    employeeId: string,
+  ): Promise<TripMemberEntity | null> {
+    const trip = await this.findById(tripId, companyId);
+    if (!trip) return null;
+    const record = await prisma.tripMember.findUnique({
+      where: { tripId_employeeId: { tripId, employeeId } },
+    });
+    return record ? toTripMemberDomain(record) : null;
   }
-  async addMember(): Promise<never> {
-    throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
+
+  async addMember(
+    tripId: string,
+    companyId: string,
+    input: TripMemberInput,
+  ): Promise<TripMemberEntity> {
+    const trip = await this.findById(tripId, companyId);
+    if (!trip) throw new ResourceNotFoundError('Trip not found');
+
+    const existing = await prisma.tripMember.findUnique({
+      where: { tripId_employeeId: { tripId, employeeId: input.employeeId } },
+    });
+    if (existing) {
+      throw new DuplicateResourceError('Employee is already assigned to this trip.');
+    }
+
+    const record = await prisma.tripMember.create({
+      data: {
+        id: randomUUID(),
+        tripId,
+        employeeId: input.employeeId,
+        role: input.role,
+      },
+    });
+    return toTripMemberDomain(record);
   }
-  async updateMember(): Promise<never> {
-    throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
+
+  async updateMember(
+    tripId: string,
+    companyId: string,
+    memberId: string,
+    input: UpdateTripMemberInput,
+  ): Promise<TripMemberEntity> {
+    const trip = await this.findById(tripId, companyId);
+    if (!trip) throw new ResourceNotFoundError('Trip not found');
+
+    const existing = await prisma.tripMember.findFirst({ where: { id: memberId, tripId } });
+    if (!existing) throw new ResourceNotFoundError('Trip member not found');
+
+    const record = await prisma.tripMember.update({
+      where: { id: memberId },
+      data: { role: input.role },
+    });
+    return toTripMemberDomain(record);
   }
-  async removeMember(): Promise<never> {
-    throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
+
+  async removeMember(tripId: string, companyId: string, memberId: string): Promise<void> {
+    const trip = await this.findById(tripId, companyId);
+    if (!trip) throw new ResourceNotFoundError('Trip not found');
+
+    const existing = await prisma.tripMember.findFirst({ where: { id: memberId, tripId } });
+    if (!existing) throw new ResourceNotFoundError('Trip member not found');
+
+    await prisma.tripMember.delete({ where: { id: memberId } });
   }
   async findStartedTripByVehicle(vehicleId: string, companyId: string): Promise<TripEntity | null> {
     const record = await prisma.trip.findFirst({

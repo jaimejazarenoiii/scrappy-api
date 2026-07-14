@@ -1,6 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { TripEntity } from '../../src/modules/trip/domain/trip.entity.js';
-import { BusinessRuleViolationError } from '../../src/shared/errors/http-exceptions.js';
+import {
+  BusinessRuleViolationError,
+  DuplicateResourceError,
+} from '../../src/shared/errors/http-exceptions.js';
 import type {
   CreateTripInput,
   TripDashboardCounts,
@@ -246,23 +249,97 @@ export class InMemoryTripRepository implements TripRepository {
   async archive(_tripId: string, _companyId: string, _input: ArchiveTripInput): Promise<never> {
     throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
   }
-  async findMemberByTripAndEmployee(): Promise<never> {
-    throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
+  async findMemberByTripAndEmployee(
+    tripId: string,
+    companyId: string,
+    employeeId: string,
+  ): Promise<TripMemberEntity | null> {
+    const trip = await this.findById(tripId, companyId);
+    if (!trip) return null;
+    for (const member of this.members.values()) {
+      if (member.tripId === tripId && member.employeeId === employeeId) {
+        return TripMemberEntityClass.create({
+          id: member.id,
+          tripId: member.tripId,
+          employeeId: member.employeeId,
+          role: member.role as 'DRIVER' | 'HELPER' | 'BUYER' | 'SUPERVISOR',
+          createdAt: member.createdAt,
+          updatedAt: member.updatedAt,
+        });
+      }
+    }
+    return null;
   }
-  async addMember(_tripId: string, _companyId: string, _input: TripMemberInput): Promise<never> {
-    throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
+
+  async addMember(
+    tripId: string,
+    companyId: string,
+    input: TripMemberInput,
+  ): Promise<TripMemberEntity> {
+    const trip = await this.findById(tripId, companyId);
+    if (!trip) throw new BusinessRuleViolationError('Trip not found');
+
+    const existing = await this.findMemberByTripAndEmployee(tripId, companyId, input.employeeId);
+    if (existing) throw new DuplicateResourceError('Employee is already assigned to this trip.');
+
+    const now = new Date();
+    const id = randomUUID();
+    this.members.set(id, {
+      id,
+      tripId,
+      employeeId: input.employeeId,
+      role: input.role,
+      createdAt: now,
+      updatedAt: now,
+    });
+    return TripMemberEntityClass.create({
+      id,
+      tripId,
+      employeeId: input.employeeId,
+      role: input.role,
+      createdAt: now,
+      updatedAt: now,
+    });
   }
+
   async updateMember(
-    _tripId: string,
-    _companyId: string,
-    _memberId: string,
-    _input: UpdateTripMemberInput,
-  ): Promise<never> {
-    throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
+    tripId: string,
+    companyId: string,
+    memberId: string,
+    input: UpdateTripMemberInput,
+  ): Promise<TripMemberEntity> {
+    const trip = await this.findById(tripId, companyId);
+    if (!trip) throw new BusinessRuleViolationError('Trip not found');
+
+    const member = this.members.get(memberId);
+    if (!member || member.tripId !== tripId) {
+      throw new BusinessRuleViolationError('Trip member not found');
+    }
+
+    const updatedAt = new Date();
+    this.members.set(memberId, { ...member, role: input.role, updatedAt });
+    return TripMemberEntityClass.create({
+      id: memberId,
+      tripId,
+      employeeId: member.employeeId,
+      role: input.role,
+      createdAt: member.createdAt,
+      updatedAt,
+    });
   }
-  async removeMember(): Promise<never> {
-    throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
+
+  async removeMember(tripId: string, companyId: string, memberId: string): Promise<void> {
+    const trip = await this.findById(tripId, companyId);
+    if (!trip) throw new BusinessRuleViolationError('Trip not found');
+
+    const member = this.members.get(memberId);
+    if (!member || member.tripId !== tripId) {
+      throw new BusinessRuleViolationError('Trip member not found');
+    }
+
+    this.members.delete(memberId);
   }
+
   async findStartedTripByVehicle(vehicleId: string, companyId: string): Promise<TripEntity | null> {
     for (const trip of this.trips.values()) {
       if (

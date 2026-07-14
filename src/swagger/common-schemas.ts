@@ -1187,11 +1187,13 @@ export const commonSchemas = {
   },
   AddTripMemberRequest: {
     type: 'object',
-    required: ['employeeId', 'role'],
     properties: {
       employeeId: uuid,
-      role: { $ref: '#/components/schemas/TripMemberRole' },
+      employeeIds: { type: 'array', items: uuid, minItems: 1 },
+      role: { $ref: '#/components/schemas/TripMemberRole', default: 'DRIVER' },
     },
+    description:
+      'Provide either employeeId (single) or employeeIds (bulk). Role defaults to DRIVER when omitted.',
   },
   UpdateTripMemberRequest: {
     type: 'object',

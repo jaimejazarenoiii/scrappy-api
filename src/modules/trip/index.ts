@@ -26,6 +26,9 @@ import { GetTripLoadSummaryUseCase } from './application/use-cases/get-trip-load
 import { GetCompanyTripLoadSettingsUseCase } from './application/use-cases/get-company-trip-load-settings.use-case.js';
 import { UpdateCompanyTripLoadSettingsUseCase } from './application/use-cases/update-company-trip-load-settings.use-case.js';
 import { StartTripUseCase } from './application/use-cases/start-trip.use-case.js';
+import { AddTripMembersUseCase } from './application/use-cases/add-trip-members.use-case.js';
+import { UpdateTripMemberUseCase } from './application/use-cases/update-trip-member.use-case.js';
+import { RemoveTripMemberUseCase } from './application/use-cases/remove-trip-member.use-case.js';
 import { TripController } from './presentation/trip.controller.js';
 import { TripLoadController } from './presentation/trip-load.controller.js';
 
@@ -69,6 +72,9 @@ export function buildTripController(deps: TripModuleDependencies): TripControlle
       deps.userRepository,
     ),
     new StartTripUseCase(deps.tripRepository, deps.vehicleRepository),
+    new AddTripMembersUseCase(deps.tripRepository, deps.employeeRepository),
+    new UpdateTripMemberUseCase(deps.tripRepository),
+    new RemoveTripMemberUseCase(deps.tripRepository),
   );
 }
 
