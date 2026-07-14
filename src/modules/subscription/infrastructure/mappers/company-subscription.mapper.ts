@@ -13,9 +13,11 @@ export function toCompanySubscriptionDomain(
     planName: record.planName,
     startsAt: record.startsAt,
     endsAt: record.endsAt,
+    activatedAt: record.activatedAt,
     status: record.status,
     notes: record.notes,
     createdBy: record.createdBy,
+    updatedBy: record.updatedBy,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   });

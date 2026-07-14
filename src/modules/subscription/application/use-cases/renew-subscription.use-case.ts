@@ -7,6 +7,7 @@ import {
 import type { CompanyRepository } from '../../../company/domain/company.repository.js';
 import type { CompanySubscriptionStatus } from '../../../company/domain/company-subscription-status.js';
 import type { CompanySubscriptionRepository } from '../../domain/company-subscription.repository.js';
+import { activationTimestampForStatus } from '../../domain/subscription-period-activation.js';
 import { assertNoOverlap } from '../../domain/subscription-overlap.service.js';
 import type {
   CreateSubscriptionResponseDto,
@@ -46,7 +47,9 @@ export class RenewSubscriptionUseCase {
 
     const active = await this.subscriptionRepository.findActiveByCompany(companyId);
     if (active) {
-      await this.subscriptionRepository.updateStatus(active.id, companyId, 'EXPIRED');
+      await this.subscriptionRepository.updateStatus(active.id, companyId, 'EXPIRED', {
+        updatedBy: auth.userId,
+      });
     }
 
     const subscription = await this.subscriptionRepository.create({
@@ -58,6 +61,7 @@ export class RenewSubscriptionUseCase {
       status: periodStatus,
       notes: input.notes?.trim() ?? null,
       createdBy: auth.userId,
+      activatedAt: activationTimestampForStatus(periodStatus),
     });
 
     const subscriptionStatus: CompanySubscriptionStatus = input.companyStatus ?? 'ACTIVE';

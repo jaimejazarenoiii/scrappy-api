@@ -11,6 +11,7 @@ import type {
   CreateCompanySubscriptionInput,
   ListCompanySubscriptionsQuery,
   ListCompanySubscriptionsResult,
+  SubscriptionStatusMutationInput,
   UpdateCompanySubscriptionInput,
 } from '../../src/modules/subscription/domain/company-subscription.repository.js';
 import type { SubscriptionPeriodStatus } from '../../src/modules/subscription/domain/subscription-period-status.js';
@@ -41,9 +42,11 @@ export class InMemoryCompanySubscriptionRepository implements CompanySubscriptio
       planName: input.planName,
       startsAt: input.startsAt,
       endsAt: input.endsAt,
+      activatedAt: input.activatedAt ?? null,
       status: input.status,
       notes: input.notes ?? null,
       createdBy: input.createdBy,
+      updatedBy: null,
       createdAt: now,
       updatedAt: now,
     });
@@ -86,8 +89,13 @@ export class InMemoryCompanySubscriptionRepository implements CompanySubscriptio
     subscriptionId: string,
     companyId: string,
     status: SubscriptionPeriodStatus,
+    audit?: SubscriptionStatusMutationInput,
   ): Promise<CompanySubscriptionEntity> {
-    return this.update(subscriptionId, companyId, { status });
+    return this.update(subscriptionId, companyId, {
+      status,
+      ...(audit?.updatedBy !== undefined ? { updatedBy: audit.updatedBy } : {}),
+      ...(audit?.activatedAt !== undefined ? { activatedAt: audit.activatedAt } : {}),
+    });
   }
 
   async update(
@@ -104,6 +112,8 @@ export class InMemoryCompanySubscriptionRepository implements CompanySubscriptio
       ...(input.endsAt !== undefined ? { endsAt: input.endsAt } : {}),
       ...(input.status !== undefined ? { status: input.status } : {}),
       ...(input.notes !== undefined ? { notes: input.notes } : {}),
+      ...(input.activatedAt !== undefined ? { activatedAt: input.activatedAt } : {}),
+      ...(input.updatedBy !== undefined ? { updatedBy: input.updatedBy } : {}),
       updatedAt: new Date(),
     });
     this.subscriptions.set(subscriptionId, updated);

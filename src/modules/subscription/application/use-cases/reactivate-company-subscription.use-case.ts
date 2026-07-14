@@ -1,9 +1,12 @@
 import type { AuthorizationContext } from '../../../../shared/policy/authorization-context.js';
-import { ResourceNotFoundError } from '../../../../shared/errors/http-exceptions.js';
+import {
+  BusinessRuleViolationError,
+  ResourceNotFoundError,
+} from '../../../../shared/errors/http-exceptions.js';
 import type { CompanyRepository } from '../../../company/domain/company.repository.js';
-import type { CompanySubscriptionRepository } from '../../domain/company-subscription.repository.js';
+import type { CompanySubscriptionStatus } from '../../../company/domain/company-subscription-status.js';
 import type {
-  ExpireSubscriptionRequestDto,
+  ReactivateCompanyRequestDto,
   SubscriptionStatusResponseDto,
 } from '../dto/subscription.dto.js';
 import { assertSuperAdmin } from '../policies/subscription-authorization.policy.js';
@@ -13,40 +16,42 @@ import {
   logSubscriptionAudit,
 } from '../services/subscription-audit.service.js';
 
-export class ExpireSubscriptionUseCase {
+export class ReactivateCompanySubscriptionUseCase {
   constructor(
     private readonly companyRepository: CompanyRepository,
-    private readonly subscriptionRepository: CompanySubscriptionRepository,
     private readonly cascadeService: SubscriptionAccountCascadeService,
   ) {}
 
   async execute(
     auth: AuthorizationContext,
     companyId: string,
-    _input: ExpireSubscriptionRequestDto = {},
+    input: ReactivateCompanyRequestDto = {},
   ): Promise<SubscriptionStatusResponseDto> {
     assertSuperAdmin(auth);
     const company = await this.companyRepository.findById(companyId);
     if (!company) throw new ResourceNotFoundError('Company not found');
 
-    const active = await this.subscriptionRepository.findActiveByCompany(companyId);
-    if (active) {
-      await this.subscriptionRepository.updateStatus(active.id, companyId, 'EXPIRED', {
-        updatedBy: auth.userId,
-      });
+    if (company.subscriptionStatus !== 'SUSPENDED') {
+      throw new BusinessRuleViolationError(
+        'Only suspended companies can be reactivated; use renew after expiry',
+      );
     }
 
-    await this.cascadeService.applyForSubscriptionStatus(companyId, 'EXPIRED');
+    const subscriptionStatus: CompanySubscriptionStatus = input.companyStatus ?? 'ACTIVE';
+    await this.cascadeService.applyForSubscriptionStatus(companyId, subscriptionStatus);
 
     logSubscriptionAudit({
-      action: SUBSCRIPTION_AUDIT_ACTIONS.EXPIRED,
+      action: SUBSCRIPTION_AUDIT_ACTIONS.REACTIVATED,
       companyId,
       actorUserId: auth.userId,
-      resourceType: 'subscription',
-      resourceId: active?.id,
-      metadata: { subscriptionStatus: 'EXPIRED' },
+      resourceType: 'company',
+      resourceId: companyId,
+      metadata: {
+        subscriptionStatus,
+        notes: input.notes?.trim() ?? null,
+      },
     });
 
-    return { companyId, subscriptionStatus: 'EXPIRED' };
+    return { companyId, subscriptionStatus };
   }
 }

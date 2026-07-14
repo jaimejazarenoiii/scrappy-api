@@ -1,6 +1,6 @@
 # Implementation Plan: P011 - Company Subscription Management
 
-**Branch**: `014-company-subscription` | **Date**: 2026-07-13 | **Spec**: [spec.md](./spec.md)
+**Branch**: `014-company-subscription` | **Date**: 2026-07-14 | **Spec**: [spec.md](./spec.md)
 
 **Input**: Feature specification from `/specs/014-company-subscription/spec.md`
 
@@ -181,8 +181,27 @@ Emit structured audits mapped to Activity Logs:
 
 - `subscription.created`
 - `subscription.renewed`
+- `subscription.updated`
 - `subscription.expired`
 - `subscription.suspended`
+- `subscription.reactivated`
+
+### Integration with future Billing module
+
+The subscription module is the **entitlement boundary**; a future Billing module is a **payment
+and invoice producer** that writes through the same application services:
+
+| Future Billing concern | Integration hook                                                          |
+| ---------------------- | ------------------------------------------------------------------------- |
+| Payment captured       | Calls `renew` or `create` use case with period dates                      |
+| Invoice issued         | FK from Invoice → `CompanySubscription.id`                                |
+| Failed payment         | Calls `expire` or `suspend` via shared use cases                          |
+| Webhook handlers       | Idempotent calls into subscription use cases; never bypass Company status |
+| Plan catalog           | `planId` on period row; `planName` denormalized for history               |
+
+Billing MUST NOT implement a parallel access gate. **`Company.subscriptionStatus`** remains the
+single login switch. Billing events update history rows and operational status through existing
+use cases so authentication logic never changes when payments go online.
 
 ---
 
@@ -202,13 +221,15 @@ See [data-model.md](./data-model.md) for full field tables. Highlights:
 
 ### CompanySubscription
 
-- **Fields**: id, companyId, planName, startsAt, endsAt, status
-  (`PENDING`|`ACTIVE`|`EXPIRED`|`CANCELLED`), notes, createdBy, createdAt, updatedAt
+- **Fields**: id, companyId, planName, startsAt, endsAt, activatedAt (optional), status
+  (`PENDING`|`ACTIVE`|`EXPIRED`|`CANCELLED`), notes, createdBy, updatedBy (optional), createdAt,
+  updatedAt
 - **Purpose**: Historical subscription period
-- **Relationships**: Company 1:N; createdBy logical User
+- **Relationships**: Company 1:N; createdBy / updatedBy logical User refs
 - **Indexes**: `(companyId, startsAt)`, `(companyId, status)`, partial unique ACTIVE
-- **Constraints**: startsAt ≤ endsAt; no overlapping ranges; ≤1 ACTIVE
-- **Audit**: createdBy + Activity Logs; closed periods immutable
+- **Constraints**: startsAt ≤ endsAt; no overlapping ranges; ≤1 ACTIVE; `activatedAt` set on
+  ACTIVE transition
+- **Audit**: createdBy, updatedBy + Activity Logs; closed periods immutable
 - **Extensibility**: planId, amounts, external invoice refs later
 
 Do **not** generate Prisma schema in this plan.
@@ -285,7 +306,16 @@ Invalid: mutate EXPIRED/CANCELLED rows; ACTIVE→PENDING; second ACTIVE.
 3. Cascade: Company.status → INACTIVE; all Users → INACTIVE; revoke sessions.
 4. Log `subscription.expired`.
 
-### Restore (create/renew into allowed status)
+### Manual reactivation
+
+1. Validate Company is `SUSPENDED` (or `EXPIRED` only when an ACTIVE period still exists — rare).
+2. Set Company.subscriptionStatus to `ACTIVE` | `TRIAL` | `GRACE_PERIOD` (default `ACTIVE`).
+3. Do **not** create a new period when resuming from suspend with existing ACTIVE period.
+4. Cascade: Company.status → ACTIVE; all Users → ACTIVE.
+5. Log `subscription.reactivated`.
+6. If `EXPIRED` with no ACTIVE period → reject; admin must **renew** instead.
+
+### Restore via renew (commercial)
 
 1. Set Company.subscriptionStatus to TRIAL / ACTIVE / GRACE_PERIOD.
 2. Cascade: Company.status → ACTIVE; all Users → ACTIVE.
@@ -298,11 +328,11 @@ Invalid: mutate EXPIRED/CANCELLED rows; ACTIVE→PENDING; second ACTIVE.
 ### Order
 
 1. User exists
-2. User account active
+2. User account is Active (`User.status`)
 3. Password valid
-4. Company exists + company account ACTIVE (`Company.status`)
-5. Employee linkage rules unchanged where already enforced
-6. **If role ≠ SUPER_ADMIN**: `subscriptionStatus` ∈ {TRIAL, ACTIVE, GRACE_PERIOD}
+4. Company exists and company account Active (`Company.status`)
+5. Employee is Active when employee-linked login rules apply (P003 workforce coupling)
+6. **If role ≠ SUPER_ADMIN**: `Company.subscriptionStatus` ∈ {TRIAL, ACTIVE, GRACE_PERIOD}
 
 ### Allowed / blocked
 
@@ -326,23 +356,100 @@ Invalid: mutate EXPIRED/CANCELLED rows; ACTIVE→PENDING; second ACTIVE.
 
 ## 6. API Design
 
-Aligned with [contracts/openapi.yaml](./contracts/openapi.yaml).
+Aligned with [contracts/openapi.yaml](./contracts/openapi.yaml). All admin routes require
+`SUPER_ADMIN`. Responses use standard `success(data, meta)` envelope.
 
-| Purpose                 | Method | URI                                                                  |
-| ----------------------- | ------ | -------------------------------------------------------------------- |
-| Create subscription     | POST   | `/api/v1/admin/companies/{companyId}/subscriptions`                  |
-| Renew                   | POST   | `/api/v1/admin/companies/{companyId}/subscriptions/renew`            |
-| Expire                  | POST   | `/api/v1/admin/companies/{companyId}/subscriptions/expire`           |
-| Suspend company         | POST   | `/api/v1/admin/companies/{companyId}/subscriptions/suspend`          |
-| History                 | GET    | `/api/v1/admin/companies/{companyId}/subscriptions`                  |
-| Get by id               | GET    | `/api/v1/admin/companies/{companyId}/subscriptions/{subscriptionId}` |
-| Admin current status    | GET    | `/api/v1/admin/companies/{companyId}/subscription-status`            |
-| Tenant read-only status | GET    | `/api/v1/companies/me/subscription-status`                           |
+### Create subscription
 
-**Request/response**: Zod-validated bodies; envelope `success(data, meta)`; history paginated.
+- **Purpose**: Create first or additional historical period; set Company operational status.
+- **Method**: `POST`
+- **URI**: `/api/v1/admin/companies/{companyId}/subscriptions`
+- **Request**: `planName`, `startsAt`, `endsAt`, `status` (`PENDING`|`ACTIVE`), optional
+  `companyStatus`, optional `notes`
+- **Response**: `201` — created `CompanySubscription` + updated `subscriptionStatus`
+- **Errors**: `400` overlap / dual ACTIVE / invalid dates; `401`; `403`; `404` company
 
-**Errors**: 400 validation/overlap/active conflict; 401; 403 non–Super Admin; 404 company /
-cross-company subscription; 409 subscription inactive on login.
+### Subscription history
+
+- **Purpose**: Paginated immutable history for support and audit.
+- **Method**: `GET`
+- **URI**: `/api/v1/admin/companies/{companyId}/subscriptions`
+- **Request**: query `page`, `limit`, `sortOrder`
+- **Response**: `200` — paginated list of periods (newest first default)
+- **Errors**: `401`; `403`; `404`
+
+### Current subscription (active period)
+
+- **Purpose**: Return the single ACTIVE period for a Company, if any.
+- **Method**: `GET`
+- **URI**: `/api/v1/admin/companies/{companyId}/subscriptions/current`
+- **Request**: path `companyId`
+- **Response**: `200` — ACTIVE period detail; `404` when no ACTIVE period
+- **Errors**: `401`; `403`; `404` company
+
+### Get subscription by id
+
+- **Purpose**: Retrieve one historical period.
+- **Method**: `GET`
+- **URI**: `/api/v1/admin/companies/{companyId}/subscriptions/{subscriptionId}`
+- **Response**: `200` — period detail
+- **Errors**: `401`; `403`; `404` company or subscription / cross-company
+
+### Update subscription (open period only)
+
+- **Purpose**: Edit dates, plan name, notes on PENDING or ACTIVE period before close.
+- **Method**: `PATCH`
+- **URI**: `/api/v1/admin/companies/{companyId}/subscriptions/{subscriptionId}`
+- **Request**: optional `planName`, `startsAt`, `endsAt`, `notes` (overlap re-validated)
+- **Response**: `200` — updated period; sets `updatedBy`
+- **Errors**: `400` overlap / closed period; `401`; `403`; `404`
+
+### Renew subscription
+
+- **Purpose**: Add new commercial period; close prior ACTIVE → EXPIRED.
+- **Method**: `POST`
+- **URI**: `/api/v1/admin/companies/{companyId}/subscriptions/renew`
+- **Request**: `planName`, `startsAt`, `endsAt`, optional `status`, `companyStatus`, `notes`
+- **Response**: `201` — new period + updated Company status (default ACTIVE)
+- **Errors**: `400` overlap; `401`; `403`; `404`
+
+### Expire subscription
+
+- **Purpose**: End entitlement; close ACTIVE period; set Company EXPIRED.
+- **Method**: `POST`
+- **URI**: `/api/v1/admin/companies/{companyId}/subscriptions/expire`
+- **Request**: optional `notes`
+- **Response**: `200` — `subscriptionStatus: EXPIRED`; cascade INACTIVE + session revoke
+- **Errors**: `400` invalid state; `401`; `403`; `404`
+
+### Suspend company
+
+- **Purpose**: Block tenant access without necessarily closing ACTIVE period.
+- **Method**: `POST`
+- **URI**: `/api/v1/admin/companies/{companyId}/subscriptions/suspend`
+- **Request**: optional `notes`
+- **Response**: `200` — `subscriptionStatus: SUSPENDED`; cascade INACTIVE + session revoke
+- **Errors**: `400`; `401`; `403`; `404`
+
+### Reactivate company
+
+- **Purpose**: Restore access from SUSPENDED (resume ops without new period when one exists).
+- **Method**: `POST`
+- **URI**: `/api/v1/admin/companies/{companyId}/subscriptions/reactivate`
+- **Request**: optional `companyStatus` (`ACTIVE`|`TRIAL`|`GRACE_PERIOD`, default ACTIVE),
+  optional `notes`
+- **Response**: `200` — restored operational status; cascade ACTIVE on Company/Users
+- **Errors**: `400` not suspended / expired without active period; `401`; `403`; `404`
+
+### Admin / tenant subscription status
+
+| Purpose                               | Method | URI                                                       |
+| ------------------------------------- | ------ | --------------------------------------------------------- |
+| Admin read Company operational status | GET    | `/api/v1/admin/companies/{companyId}/subscription-status` |
+| Tenant read-only status               | GET    | `/api/v1/companies/me/subscription-status`                |
+
+Both return `{ companyId, subscriptionStatus }`. Tenant route: Owner, Manager, Employee,
+Super Admin (own company context).
 
 ---
 
@@ -384,13 +491,15 @@ Reuse pagination query schemas; add `subscriptionPeriodStatusSchema`,
 
 ## 8. Authorization Matrix
 
-| Action                               | SUPER_ADMIN | OWNER | MANAGER | EMPLOYEE |
-| ------------------------------------ | ----------- | ----- | ------- | -------- |
-| Create / renew / expire / suspend    | ✅          | ❌    | ❌      | ❌       |
-| List/get history (admin)             | ✅          | ❌    | ❌      | ❌       |
-| Admin get status                     | ✅          | ❌    | ❌      | ❌       |
-| `GET .../me/subscription-status`     | ✅*         | ✅    | ✅      | ✅       |
-| Login when Company EXPIRED/SUSPENDED | ✅ (bypass) | ❌    | ❌      | ❌       |
+| Action                                         | SUPER_ADMIN | OWNER | MANAGER | EMPLOYEE |
+| ---------------------------------------------- | ----------- | ----- | ------- | -------- |
+| Create / renew / expire / suspend / reactivate | ✅          | ❌    | ❌      | ❌       |
+| Update open period (PATCH)                     | ✅          | ❌    | ❌      | ❌       |
+| List/get history (admin)                       | ✅          | ❌    | ❌      | ❌       |
+| Get current ACTIVE period (admin)              | ✅          | ❌    | ❌      | ❌       |
+| Admin get status                               | ✅          | ❌    | ❌      | ❌       |
+| `GET .../me/subscription-status`               | ✅*         | ✅    | ✅      | ✅       |
+| Login when Company EXPIRED/SUSPENDED           | ✅ (bypass) | ❌    | ❌      | ❌       |
 
 \* Super Admin may use me-status for their platform company; primary ops use admin status.
 
@@ -451,7 +560,7 @@ never pass another company’s id for mutation.
 | Layer            | Coverage                                                                                      |
 | ---------------- | --------------------------------------------------------------------------------------------- |
 | Unit             | Overlap service; period transition rules; login policy subscription gate; use cases           |
-| Integration/API  | Admin create/renew/expire/suspend/history; me status                                          |
+| Integration/API  | Admin create/renew/expire/suspend/reactivate/current/history; PATCH; me status                |
 | Auth             | Expired/Suspended deny; Trial/Active/Grace allow; SUPER_ADMIN bypass; cascade ACTIVE↔INACTIVE |
 | Lifecycle        | Renew closes prior ACTIVE; history length increases; expire/suspend inactivate accounts       |
 | Authorization    | OWNER/MANAGER/EMPLOYEE 403 on admin routes                                                    |

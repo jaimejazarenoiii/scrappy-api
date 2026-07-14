@@ -6,6 +6,7 @@ import {
 } from '../../../../shared/errors/http-exceptions.js';
 import type { CompanyRepository } from '../../../company/domain/company.repository.js';
 import type { CompanySubscriptionRepository } from '../../domain/company-subscription.repository.js';
+import { activationTimestampForStatus } from '../../domain/subscription-period-activation.js';
 import { assertNoOverlap } from '../../domain/subscription-overlap.service.js';
 import type {
   UpdateSubscriptionRequestDto,
@@ -64,6 +65,10 @@ export class UpdateSubscriptionUseCase {
       ...(input.endsAt !== undefined ? { endsAt: input.endsAt } : {}),
       ...(input.status !== undefined ? { status: input.status } : {}),
       ...(input.notes !== undefined ? { notes: input.notes?.trim() || null } : {}),
+      ...(nextStatus === 'ACTIVE'
+        ? { activatedAt: activationTimestampForStatus('ACTIVE', existing.activatedAt) }
+        : {}),
+      updatedBy: auth.userId,
     });
 
     let subscriptionStatus = company.subscriptionStatus;

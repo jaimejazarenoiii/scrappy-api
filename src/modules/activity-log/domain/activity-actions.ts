@@ -67,6 +67,7 @@ export const ACTIVITY_ACTIONS = {
   SUBSCRIPTION_UPDATED: 'subscription.updated',
   SUBSCRIPTION_EXPIRED: 'subscription.expired',
   SUBSCRIPTION_SUSPENDED: 'subscription.suspended',
+  SUBSCRIPTION_REACTIVATED: 'subscription.reactivated',
   ADMIN_COMPANY_CREATED: 'admin.company_created',
   ADMIN_ACCOUNT_CREATED: 'admin.account_created',
 } as const;

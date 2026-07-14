@@ -1041,6 +1041,8 @@ Users to `INACTIVE` and revoke refresh sessions.
 | `/admin/companies/{companyId}/subscriptions/renew`            | POST   | Renew (prior ACTIVE → EXPIRED)  |
 | `/admin/companies/{companyId}/subscriptions/expire`           | POST   | Expire entitlement              |
 | `/admin/companies/{companyId}/subscriptions/suspend`          | POST   | Suspend access                  |
+| `/admin/companies/{companyId}/subscriptions/reactivate`       | POST   | Restore access from SUSPENDED   |
+| `/admin/companies/{companyId}/subscriptions/current`          | GET    | ACTIVE period detail            |
 | `/admin/companies/{companyId}/subscriptions`                  | GET    | Paginated history               |
 | `/admin/companies/{companyId}/subscriptions/{subscriptionId}` | GET    | Period detail                   |
 | `/admin/companies/{companyId}/subscriptions/{subscriptionId}` | PATCH  | Edit period (dates, plan, etc.) |
@@ -1053,6 +1055,16 @@ target any `{companyId}` in the path.
 `startsAt`, `endsAt`, `status`, `notes`, and optional `companyStatus`. Date changes must not
 overlap other periods for that company.
 
+**Reactivate** (`POST .../subscriptions/reactivate`): restores tenant access from `SUSPENDED`
+(optional body: `companyStatus` `ACTIVE` \| `TRIAL` \| `GRACE_PERIOD`, default `ACTIVE`).
+Does not create a new period. Rejected when company is not suspended — use renew after expiry.
+
+**Current period** (`GET .../subscriptions/current`): returns the single ACTIVE subscription row,
+including `activatedAt` and `updatedBy` when set. Returns `404` when no ACTIVE period exists.
+
+Subscription period responses include `activatedAt` (set when the period becomes ACTIVE) and
+`updatedBy` (Super Admin who last applied an allowed mutation).
+
 ### Tenant read-only
 
 | Path                                | Method | Auth                           |
@@ -1061,7 +1073,7 @@ overlap other periods for that company.
 
 ### Activity Log actions
 
-`subscription.created`, `subscription.renewed`, `subscription.updated`, `subscription.expired`, `subscription.suspended`
+`subscription.created`, `subscription.renewed`, `subscription.updated`, `subscription.expired`, `subscription.suspended`, `subscription.reactivated`
 
 ---
 

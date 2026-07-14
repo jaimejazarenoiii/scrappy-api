@@ -1713,11 +1713,25 @@ export const commonSchemas = {
       planName: { type: 'string' },
       startsAt: dateTime,
       endsAt: dateTime,
+      activatedAt: { ...dateTime, nullable: true },
       status: { $ref: '#/components/schemas/SubscriptionPeriodStatus' },
       notes: { type: 'string', nullable: true },
       createdBy: uuid,
+      updatedBy: { ...uuid, nullable: true },
       createdAt: dateTime,
       updatedAt: dateTime,
+    },
+  },
+
+  ReactivateCompanyRequest: {
+    type: 'object',
+    properties: {
+      companyStatus: {
+        type: 'string',
+        enum: ['ACTIVE', 'TRIAL', 'GRACE_PERIOD'],
+        default: 'ACTIVE',
+      },
+      notes: { type: 'string', maxLength: 2000 },
     },
   },
 

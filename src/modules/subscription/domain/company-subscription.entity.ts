@@ -7,9 +7,11 @@ export interface CompanySubscriptionProps {
   planName: string;
   startsAt: Date;
   endsAt: Date;
+  activatedAt: Date | null;
   status: SubscriptionPeriodStatus;
   notes: string | null;
   createdBy: string;
+  updatedBy: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,6 +38,9 @@ export class CompanySubscriptionEntity {
   get endsAt(): Date {
     return this.props.endsAt;
   }
+  get activatedAt(): Date | null {
+    return this.props.activatedAt;
+  }
   get status(): SubscriptionPeriodStatus {
     return this.props.status;
   }
@@ -44,6 +49,9 @@ export class CompanySubscriptionEntity {
   }
   get createdBy(): string {
     return this.props.createdBy;
+  }
+  get updatedBy(): string | null {
+    return this.props.updatedBy;
   }
   get createdAt(): Date {
     return this.props.createdAt;

@@ -119,6 +119,62 @@ export const subscriptionOpenApiPaths = {
       },
     },
   },
+  '/admin/companies/{companyId}/subscriptions/reactivate': {
+    post: {
+      tags: ['Admin Subscriptions'],
+      summary: 'Reactivate company subscription access',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          in: 'path',
+          name: 'companyId',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+        },
+      ],
+      requestBody: {
+        required: false,
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/ReactivateCompanyRequest' },
+          },
+        },
+      },
+      responses: {
+        '200': { description: 'Company access restored' },
+        '400': { $ref: '#/components/responses/ValidationError' },
+        '403': { $ref: '#/components/responses/Forbidden' },
+        '404': { $ref: '#/components/responses/NotFound' },
+      },
+    },
+  },
+  '/admin/companies/{companyId}/subscriptions/current': {
+    get: {
+      tags: ['Admin Subscriptions'],
+      summary: 'Get current ACTIVE subscription period',
+      security: [{ bearerAuth: [] }],
+      parameters: [
+        {
+          in: 'path',
+          name: 'companyId',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+        },
+      ],
+      responses: {
+        '200': {
+          description: 'Active subscription period',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/CompanySubscription' },
+            },
+          },
+        },
+        '403': { $ref: '#/components/responses/Forbidden' },
+        '404': { $ref: '#/components/responses/NotFound' },
+      },
+    },
+  },
   '/admin/companies/{companyId}/subscriptions/{subscriptionId}': {
     get: {
       tags: ['Admin Subscriptions'],

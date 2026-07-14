@@ -5,6 +5,7 @@ import type {
   CreateCompanySubscriptionInput,
   ListCompanySubscriptionsQuery,
   ListCompanySubscriptionsResult,
+  SubscriptionStatusMutationInput,
   UpdateCompanySubscriptionInput,
 } from '../domain/company-subscription.repository.js';
 import type { SubscriptionPeriodStatus } from '../domain/subscription-period-status.js';
@@ -20,6 +21,7 @@ export class CompanySubscriptionPrismaRepository implements CompanySubscriptionR
           planName: input.planName,
           startsAt: input.startsAt,
           endsAt: input.endsAt,
+          activatedAt: input.activatedAt ?? null,
           status: input.status,
           notes: input.notes ?? null,
           createdBy: input.createdBy,
@@ -67,13 +69,22 @@ export class CompanySubscriptionPrismaRepository implements CompanySubscriptionR
     return record ? toCompanySubscriptionDomain(record) : null;
   }
 
-  async updateStatus(subscriptionId: string, companyId: string, status: SubscriptionPeriodStatus) {
+  async updateStatus(
+    subscriptionId: string,
+    companyId: string,
+    status: SubscriptionPeriodStatus,
+    audit?: SubscriptionStatusMutationInput,
+  ) {
     const existing = await this.findById(subscriptionId, companyId);
     if (!existing) throw new ResourceNotFoundError('Subscription not found');
     return toCompanySubscriptionDomain(
       await prisma.companySubscription.update({
         where: { id: subscriptionId },
-        data: { status },
+        data: {
+          status,
+          ...(audit?.updatedBy !== undefined ? { updatedBy: audit.updatedBy } : {}),
+          ...(audit?.activatedAt !== undefined ? { activatedAt: audit.activatedAt } : {}),
+        },
       }),
     );
   }
@@ -90,6 +101,8 @@ export class CompanySubscriptionPrismaRepository implements CompanySubscriptionR
           ...(input.endsAt !== undefined ? { endsAt: input.endsAt } : {}),
           ...(input.status !== undefined ? { status: input.status } : {}),
           ...(input.notes !== undefined ? { notes: input.notes } : {}),
+          ...(input.activatedAt !== undefined ? { activatedAt: input.activatedAt } : {}),
+          ...(input.updatedBy !== undefined ? { updatedBy: input.updatedBy } : {}),
         },
       }),
     );

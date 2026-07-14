@@ -10,9 +10,12 @@ import type { ListSubscriptionHistoryUseCase } from '../application/use-cases/li
 import type { GetSubscriptionUseCase } from '../application/use-cases/get-subscription.use-case.js';
 import type { GetCompanySubscriptionStatusUseCase } from '../application/use-cases/get-company-subscription-status.use-case.js';
 import type { GetMySubscriptionStatusUseCase } from '../application/use-cases/get-my-subscription-status.use-case.js';
+import type { ReactivateCompanySubscriptionUseCase } from '../application/use-cases/reactivate-company-subscription.use-case.js';
+import type { GetCurrentSubscriptionUseCase } from '../application/use-cases/get-current-subscription.use-case.js';
 import type {
   CreateSubscriptionRequestDto,
   ExpireSubscriptionRequestDto,
+  ReactivateCompanyRequestDto,
   RenewSubscriptionRequestDto,
   SuspendCompanyRequestDto,
   UpdateSubscriptionRequestDto,
@@ -40,6 +43,8 @@ export class SubscriptionController {
     private readonly getSubscriptionUseCase: GetSubscriptionUseCase,
     private readonly getCompanySubscriptionStatusUseCase: GetCompanySubscriptionStatusUseCase,
     private readonly getMySubscriptionStatusUseCase: GetMySubscriptionStatusUseCase,
+    private readonly reactivateCompanySubscriptionUseCase: ReactivateCompanySubscriptionUseCase,
+    private readonly getCurrentSubscriptionUseCase: GetCurrentSubscriptionUseCase,
   ) {}
 
   create: RequestHandler = async (req, res, next) => {
@@ -129,6 +134,34 @@ export class SubscriptionController {
             req.body as SuspendCompanyRequestDto,
           ),
         ),
+      );
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  reactivate: RequestHandler = async (req, res, next) => {
+    try {
+      const { companyId } = req.params as { companyId: string };
+      res.json(
+        success(
+          await this.reactivateCompanySubscriptionUseCase.execute(
+            authContext(req),
+            companyId,
+            req.body as ReactivateCompanyRequestDto,
+          ),
+        ),
+      );
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getCurrent: RequestHandler = async (req, res, next) => {
+    try {
+      const { companyId } = req.params as { companyId: string };
+      res.json(
+        success(await this.getCurrentSubscriptionUseCase.execute(authContext(req), companyId)),
       );
     } catch (error) {
       next(error);

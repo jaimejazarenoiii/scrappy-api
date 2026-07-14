@@ -171,6 +171,11 @@ const ACTION_TAXONOMY: Record<string, Taxonomy> = {
     module: 'subscription',
     description: 'Subscription suspended',
   },
+  'subscription.reactivated': {
+    eventType: 'COMPANY',
+    module: 'subscription',
+    description: 'Subscription reactivated',
+  },
   'admin.company_created': {
     eventType: 'COMPANY',
     module: 'company',

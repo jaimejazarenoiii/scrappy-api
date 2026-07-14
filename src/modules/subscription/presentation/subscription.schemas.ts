@@ -59,6 +59,13 @@ export const suspendCompanySchema = z
   })
   .default({});
 
+export const reactivateCompanySchema = z
+  .object({
+    companyStatus: z.enum(['ACTIVE', 'TRIAL', 'GRACE_PERIOD']).default('ACTIVE'),
+    notes: z.string().trim().max(2000).optional(),
+  })
+  .default({ companyStatus: 'ACTIVE' });
+
 export const updateSubscriptionSchema = z
   .object({
     planName: z.string().trim().min(1).max(120).optional(),

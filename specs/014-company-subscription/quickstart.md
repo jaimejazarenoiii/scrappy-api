@@ -1,7 +1,7 @@
 # Quickstart: P011 - Company Subscription Management
 
 **Feature**: `014-company-subscription`  
-**Date**: 2026-07-13
+**Date**: 2026-07-14
 
 Validate after `/speckit-implement`. Contracts: [contracts/openapi.yaml](./contracts/openapi.yaml).
 Data model: [data-model.md](./data-model.md).
@@ -27,12 +27,17 @@ Data model: [data-model.md](./data-model.md).
 4. Owner login → denied; no tokens.
 5. History still lists prior periods.
 
-## Scenario C — Suspend blocks login; restore reactivates accounts
+## Scenario C — Suspend blocks login; reactivate restores access
 
 1. With Active Company, `POST .../subscriptions/suspend` → subscription `SUSPENDED`.
 2. Company + Users → `INACTIVE`; Owner login denied.
-3. Super Admin renews (or creates) into allowed status → Company + Users → `ACTIVE`.
+3. Super Admin `POST .../subscriptions/reactivate` → Company + Users → `ACTIVE`.
 4. Owner login succeeds again.
+
+## Scenario C2 — Renew after expire (commercial restore)
+
+1. After expire, `POST .../subscriptions/renew` with new dates → new ACTIVE period.
+2. Company status → `ACTIVE`; Owner login succeeds.
 
 ## Scenario D — Overlap + dual Active rejected
 
@@ -57,8 +62,14 @@ Data model: [data-model.md](./data-model.md).
 pnpm test -- tests/api/subscription tests/unit/subscription tests/api/auth
 ```
 
+## Scenario G — Current subscription
+
+1. Create ACTIVE period.
+2. `GET .../subscriptions/current` → `200` with active period.
+3. After expire, `GET .../subscriptions/current` → `404`.
+
 ## Done when
 
-- Scenarios A–F pass
+- Scenarios A–G pass
 - OpenAPI + `docs/api-reference.md` document admin subscription APIs and login behavior
 - Activity Logs record subscription admin actions

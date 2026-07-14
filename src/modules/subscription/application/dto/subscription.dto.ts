@@ -28,6 +28,11 @@ export interface SuspendCompanyRequestDto {
   notes?: string;
 }
 
+export interface ReactivateCompanyRequestDto {
+  companyStatus?: Extract<CompanySubscriptionStatus, 'ACTIVE' | 'TRIAL' | 'GRACE_PERIOD'>;
+  notes?: string;
+}
+
 export interface UpdateSubscriptionRequestDto {
   planName?: string;
   startsAt?: Date;
@@ -43,9 +48,11 @@ export interface CompanySubscriptionResponseDto {
   planName: string;
   startsAt: string;
   endsAt: string;
+  activatedAt: string | null;
   status: SubscriptionPeriodStatus;
   notes: string | null;
   createdBy: string;
+  updatedBy: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -74,9 +81,11 @@ export function toCompanySubscriptionResponse(
     planName: entity.planName,
     startsAt: entity.startsAt.toISOString(),
     endsAt: entity.endsAt.toISOString(),
+    activatedAt: entity.activatedAt?.toISOString() ?? null,
     status: entity.status,
     notes: entity.notes,
     createdBy: entity.createdBy,
+    updatedBy: entity.updatedBy,
     createdAt: entity.createdAt.toISOString(),
     updatedAt: entity.updatedAt.toISOString(),
   };

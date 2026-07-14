@@ -11,6 +11,8 @@ import { ListSubscriptionHistoryUseCase } from './application/use-cases/list-sub
 import { GetSubscriptionUseCase } from './application/use-cases/get-subscription.use-case.js';
 import { GetCompanySubscriptionStatusUseCase } from './application/use-cases/get-company-subscription-status.use-case.js';
 import { GetMySubscriptionStatusUseCase } from './application/use-cases/get-my-subscription-status.use-case.js';
+import { ReactivateCompanySubscriptionUseCase } from './application/use-cases/reactivate-company-subscription.use-case.js';
+import { GetCurrentSubscriptionUseCase } from './application/use-cases/get-current-subscription.use-case.js';
 import { SubscriptionAccountCascadeService } from './application/services/subscription-account-cascade.service.js';
 import { SubscriptionController } from './presentation/subscription.controller.js';
 
@@ -61,5 +63,7 @@ export function buildSubscriptionController(
     new GetSubscriptionUseCase(deps.companySubscriptionRepository),
     new GetCompanySubscriptionStatusUseCase(deps.companyRepository),
     new GetMySubscriptionStatusUseCase(deps.companyRepository),
+    new ReactivateCompanySubscriptionUseCase(deps.companyRepository, cascadeService),
+    new GetCurrentSubscriptionUseCase(deps.companyRepository, deps.companySubscriptionRepository),
   );
 }

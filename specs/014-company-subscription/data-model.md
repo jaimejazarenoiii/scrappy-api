@@ -58,18 +58,20 @@ semantics or history table.
 
 ## CompanySubscription
 
-| Field     | Type     | Required | Notes                                              |
-| --------- | -------- | -------- | -------------------------------------------------- |
-| id        | UUID     | yes      | PK                                                 |
-| companyId | UUID     | yes      | Owning Company                                     |
-| planName  | string   | yes      | Display/commercial label (not a catalog FK in MVP) |
-| startsAt  | datetime | yes      | Period start (inclusive)                           |
-| endsAt    | datetime | yes      | Period end (inclusive)                             |
-| status    | enum     | yes      | `PENDING` \| `ACTIVE` \| `EXPIRED` \| `CANCELLED`  |
-| notes     | string   | no       | Free-text ops notes                                |
-| createdBy | UUID     | yes      | Super Admin user id (logical)                      |
-| createdAt | datetime | yes      |                                                    |
-| updatedAt | datetime | yes      | Updated only on allowed period transitions         |
+| Field       | Type     | Required | Notes                                              |
+| ----------- | -------- | -------- | -------------------------------------------------- |
+| id          | UUID     | yes      | PK                                                 |
+| companyId   | UUID     | yes      | Owning Company                                     |
+| planName    | string   | yes      | Display/commercial label (not a catalog FK in MVP) |
+| startsAt    | datetime | yes      | Period start (inclusive)                           |
+| endsAt      | datetime | yes      | Period end (inclusive)                             |
+| activatedAt | datetime | no       | Set when period transitions to `ACTIVE`            |
+| status      | enum     | yes      | `PENDING` \| `ACTIVE` \| `EXPIRED` \| `CANCELLED`  |
+| notes       | string   | no       | Free-text ops notes                                |
+| createdBy   | UUID     | yes      | Super Admin user id (logical)                      |
+| updatedBy   | UUID     | no       | Super Admin who last applied an allowed transition |
+| createdAt   | datetime | yes      |                                                    |
+| updatedAt   | datetime | yes      | Updated only on allowed period transitions         |
 
 ### Purpose
 

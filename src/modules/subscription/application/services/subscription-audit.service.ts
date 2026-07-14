@@ -7,6 +7,7 @@ export const SUBSCRIPTION_AUDIT_ACTIONS = {
   UPDATED: 'subscription.updated',
   EXPIRED: 'subscription.expired',
   SUSPENDED: 'subscription.suspended',
+  REACTIVATED: 'subscription.reactivated',
 } as const;
 
 export function logSubscriptionAudit(event: AuditEvent): void {

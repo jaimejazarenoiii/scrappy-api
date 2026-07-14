@@ -8,6 +8,7 @@ import {
   createSubscriptionSchema,
   expireSubscriptionSchema,
   renewSubscriptionSchema,
+  reactivateCompanySchema,
   subscriptionHistoryQuerySchema,
   suspendCompanySchema,
   updateSubscriptionSchema,
@@ -56,6 +57,21 @@ export function createAdminSubscriptionRoutes(controller: SubscriptionController
     validate(adminCompanyIdParamsSchema, 'params'),
     validate(suspendCompanySchema),
     controller.suspend,
+  );
+
+  router.post(
+    '/admin/companies/:companyId/subscriptions/reactivate',
+    authorize(['SUPER_ADMIN']),
+    validate(adminCompanyIdParamsSchema, 'params'),
+    validate(reactivateCompanySchema),
+    controller.reactivate,
+  );
+
+  router.get(
+    '/admin/companies/:companyId/subscriptions/current',
+    authorize(['SUPER_ADMIN']),
+    validate(adminCompanyIdParamsSchema, 'params'),
+    controller.getCurrent,
   );
 
   router.get(

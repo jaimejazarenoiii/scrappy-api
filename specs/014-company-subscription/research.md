@@ -138,7 +138,45 @@ with existing disable-company behavior, while subscription status remains the en
 **Note**: Restoring entitlement reactivates every Company user. Manually re-disable individuals
 after restore if needed.
 
-## 10. No Prisma in design docs
+## 10. Reactivate vs Renew
+
+**Decision**: Expose a dedicated **`POST .../subscriptions/reactivate`** for restoring tenant
+access from `SUSPENDED` (and optionally `EXPIRED` when a still-valid ACTIVE period exists).
+**Renew** remains the path for adding a **new** commercial period after expiry.
+
+**Rationale**: User stories distinguish suspend/resume (no new period) from commercial renewal.
+Super Admin resume after suspend should not force a new history row.
+
+**Reactivate rules (MVP)**:
+
+- From `SUSPENDED`: set Company to `ACTIVE` | `TRIAL` | `GRACE_PERIOD` (payload or default
+  `ACTIVE`); period row may remain `ACTIVE`; cascade Company/Users to `ACTIVE`.
+- From `EXPIRED` with no ACTIVE period: reject with guidance to **renew** first.
+- Activity Log: `subscription.reactivated`.
+
+**Alternatives considered**:
+
+- Only renew for all restores — conflates commercial extension with ops resume; rejected.
+
+## 11. Current subscription read model
+
+**Decision**: `GET .../subscriptions/current` returns the single period with status `ACTIVE` for
+the Company, or `404` when none. Distinct from `GET .../subscription-status` (Company operational
+enum only).
+
+**Rationale**: Support and admin UI need the active commercial window without scanning paginated
+history.
+
+## 12. activatedAt and updatedBy audit fields
+
+**Decision**: `CompanySubscription.activatedAt` is set on transition to `ACTIVE` (create-as-ACTIVE
+or PENDING→ACTIVE). `updatedBy` records the Super Admin on allowed transitions (renew closing
+prior period, expire marking period EXPIRED, PATCH on open period). Closed periods remain
+immutable — no `updatedBy` writes after `EXPIRED`/`CANCELLED`.
+
+**Rationale**: Matches spec audit requirements; supports future billing dispute resolution.
+
+## 13. No Prisma in design docs
 
 **Decision**: Data model describes fields, indexes, and constraints in prose/tables only (no
 Prisma schema blocks in plan artifacts). Implementation tasks will add schema later.

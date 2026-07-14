@@ -676,17 +676,19 @@ model ActivityLog {
 }
 
 model CompanySubscription {
-  id        String                   @id @default(uuid())
-  companyId String
-  planName  String
-  startsAt  DateTime
-  endsAt    DateTime
-  status    SubscriptionPeriodStatus
-  notes     String?
-  createdBy String
-  createdAt DateTime                 @default(now())
-  updatedAt DateTime                 @updatedAt
-  company   Company                  @relation(fields: [companyId], references: [id])
+  id          String                   @id @default(uuid())
+  companyId   String
+  planName    String
+  startsAt    DateTime
+  endsAt      DateTime
+  activatedAt DateTime?
+  status      SubscriptionPeriodStatus
+  notes       String?
+  createdBy   String
+  updatedBy   String?
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+  company     Company                  @relation(fields: [companyId], references: [id])
 
   @@index([companyId, startsAt])
   @@index([companyId, status])

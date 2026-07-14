@@ -8,6 +8,7 @@ import {
 import type { CompanyRepository } from '../../../company/domain/company.repository.js';
 import type { CompanySubscriptionStatus } from '../../../company/domain/company-subscription-status.js';
 import type { CompanySubscriptionRepository } from '../../domain/company-subscription.repository.js';
+import { activationTimestampForStatus } from '../../domain/subscription-period-activation.js';
 import { assertNoOverlap } from '../../domain/subscription-overlap.service.js';
 import type {
   CreateSubscriptionRequestDto,
@@ -69,6 +70,7 @@ export class CreateSubscriptionUseCase {
       status: input.status,
       notes: input.notes?.trim() ?? null,
       createdBy: auth.userId,
+      activatedAt: activationTimestampForStatus(input.status),
     });
 
     const subscriptionStatus = resolveCompanyStatus(input.status, input.companyStatus);

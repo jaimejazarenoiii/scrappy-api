@@ -10,6 +10,7 @@ export interface CreateCompanySubscriptionInput {
   status: SubscriptionPeriodStatus;
   notes?: string | null;
   createdBy: string;
+  activatedAt?: Date | null;
 }
 
 export interface UpdateCompanySubscriptionInput {
@@ -18,6 +19,13 @@ export interface UpdateCompanySubscriptionInput {
   endsAt?: Date;
   status?: SubscriptionPeriodStatus;
   notes?: string | null;
+  activatedAt?: Date | null;
+  updatedBy?: string;
+}
+
+export interface SubscriptionStatusMutationInput {
+  updatedBy: string;
+  activatedAt?: Date | null;
 }
 
 export interface ListCompanySubscriptionsQuery {
@@ -44,6 +52,7 @@ export interface CompanySubscriptionRepository {
     subscriptionId: string,
     companyId: string,
     status: SubscriptionPeriodStatus,
+    audit?: SubscriptionStatusMutationInput,
   ): Promise<CompanySubscriptionEntity>;
   update(
     subscriptionId: string,
