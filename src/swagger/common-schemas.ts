@@ -1169,6 +1169,7 @@ export const commonSchemas = {
     type: 'object',
     properties: {
       note: { type: 'string', maxLength: 500 },
+      startingOdometer: { type: 'number', minimum: 0 },
     },
   },
   CompleteTripRequest: {

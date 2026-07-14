@@ -8,6 +8,7 @@ import {
   tripIdParamsSchema,
   listTripTransactionsQuerySchema,
 } from './trip.schemas.js';
+import { startTripSchema } from '../application/dto/start-trip.request.js';
 
 const MANAGER_ROLES = ['OWNER', 'MANAGER'] as const;
 
@@ -50,6 +51,14 @@ export function createTripRoutes(controller: TripController): Router {
     authorize(['OWNER', 'MANAGER', 'EMPLOYEE']),
     validate(tripIdParamsSchema, 'params'),
     controller.getById,
+  );
+
+  router.post(
+    '/trips/:tripId/start',
+    authorize([...MANAGER_ROLES]),
+    validate(tripIdParamsSchema, 'params'),
+    validate(startTripSchema),
+    controller.start,
   );
 
   return router;

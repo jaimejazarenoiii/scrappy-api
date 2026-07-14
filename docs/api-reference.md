@@ -800,24 +800,24 @@ Returns a chronological list of lifecycle events derived from the trip record (`
 
 ### All endpoints (spec)
 
-| Method & path                               | Roles                    | Status / notes                              |
-| ------------------------------------------- | ------------------------ | ------------------------------------------- |
-| `GET /trips`                                | OWNER, MANAGER           | **Live** — paginated company list           |
-| `GET /trips/dashboard`                      | OWNER, MANAGER           | **Live** — status count summary             |
-| `POST /trips`                               | OWNER, MANAGER           | **Live** — create Draft trip (**201**)      |
-| `GET /trips/{tripId}`                       | OWNER, MANAGER, EMPLOYEE | **Live** — Employee restricted to assigned  |
-| `GET /trips/{tripId}/transactions`          | OWNER, MANAGER, EMPLOYEE | **Live** — transactions linked via `tripId` |
-| `GET /trips/{tripId}/history`               | OWNER, MANAGER, EMPLOYEE | **Live** — lifecycle event timeline         |
-| `PATCH /trips/{tripId}`                     | OWNER, MANAGER           | Planned — Draft-only header edits           |
-| `GET /trips/mine`                           | EMPLOYEE                 | Planned — assigned trips                    |
-| `GET /trips/by-number/{tripNumber}`         | OWNER, MANAGER, EMPLOYEE | Planned — lookup by trip number             |
-| `POST /trips/{tripId}/start`                | OWNER, MANAGER           | Planned — Draft → Started                   |
-| `POST /trips/{tripId}/complete`             | OWNER, MANAGER           | Planned — Started → Completed               |
-| `POST /trips/{tripId}/cancel`               | OWNER, MANAGER           | Planned — Draft → Cancelled                 |
-| `POST /trips/{tripId}/archive`              | OWNER, MANAGER           | Planned — archive Completed/Cancelled       |
-| `POST /trips/{tripId}/members`              | OWNER, MANAGER           | Planned — add member                        |
-| `PATCH /trips/{tripId}/members/{memberId}`  | OWNER, MANAGER           | Planned — update member role                |
-| `DELETE /trips/{tripId}/members/{memberId}` | OWNER, MANAGER           | Planned — remove member                     |
+| Method & path                               | Roles                    | Status / notes                                |
+| ------------------------------------------- | ------------------------ | --------------------------------------------- |
+| `GET /trips`                                | OWNER, MANAGER           | **Live** — paginated company list             |
+| `GET /trips/dashboard`                      | OWNER, MANAGER           | **Live** — status count summary               |
+| `POST /trips`                               | OWNER, MANAGER           | **Live** — create Draft trip (**201**)        |
+| `GET /trips/{tripId}`                       | OWNER, MANAGER, EMPLOYEE | **Live** — Employee restricted to assigned    |
+| `GET /trips/{tripId}/transactions`          | OWNER, MANAGER, EMPLOYEE | **Live** — transactions linked via `tripId`   |
+| `GET /trips/{tripId}/history`               | OWNER, MANAGER, EMPLOYEE | **Live** — lifecycle event timeline           |
+| `PATCH /trips/{tripId}`                     | OWNER, MANAGER           | Planned — Draft-only header edits             |
+| `GET /trips/mine`                           | EMPLOYEE                 | Planned — assigned trips                      |
+| `GET /trips/by-number/{tripNumber}`         | OWNER, MANAGER, EMPLOYEE | Planned — lookup by trip number               |
+| `POST /trips/{tripId}/start`                | OWNER, MANAGER           | Draft → Started (`startingOdometer` optional) |
+| `POST /trips/{tripId}/complete`             | OWNER, MANAGER           | Planned — Started → Completed                 |
+| `POST /trips/{tripId}/cancel`               | OWNER, MANAGER           | Planned — Draft → Cancelled                   |
+| `POST /trips/{tripId}/archive`              | OWNER, MANAGER           | Planned — archive Completed/Cancelled         |
+| `POST /trips/{tripId}/members`              | OWNER, MANAGER           | Planned — add member                          |
+| `PATCH /trips/{tripId}/members/{memberId}`  | OWNER, MANAGER           | Planned — update member role                  |
+| `DELETE /trips/{tripId}/members/{memberId}` | OWNER, MANAGER           | Planned — remove member                       |
 
 ---
 

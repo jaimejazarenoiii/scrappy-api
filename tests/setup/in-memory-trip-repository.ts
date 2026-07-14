@@ -18,6 +18,7 @@ import type {
   UpdateTripMemberInput,
 } from '../../src/modules/trip/domain/trip.repository.js';
 import type { TripMemberEntity } from '../../src/modules/trip/domain/trip-member.entity.js';
+import { TripMemberEntity as TripMemberEntityClass } from '../../src/modules/trip/domain/trip-member.entity.js';
 import type { InMemoryVehicleRepository } from './in-memory-repositories.js';
 import type { InMemoryEmployeeRepository } from './in-memory-repositories.js';
 
@@ -151,7 +152,18 @@ export class InMemoryTripRepository implements TripRepository {
   async listMembers(tripId: string, companyId: string): Promise<TripMemberEntity[]> {
     const trip = await this.findById(tripId, companyId);
     if (!trip) return [];
-    return [];
+    return [...this.members.values()]
+      .filter((member) => member.tripId === tripId)
+      .map((member) =>
+        TripMemberEntityClass.create({
+          id: member.id,
+          tripId: member.tripId,
+          employeeId: member.employeeId,
+          role: member.role as 'DRIVER' | 'HELPER' | 'SUPERVISOR',
+          createdAt: member.createdAt,
+          updatedAt: member.updatedAt,
+        }),
+      );
   }
 
   async listByCompany(): Promise<ListTripResult> {
@@ -251,14 +263,44 @@ export class InMemoryTripRepository implements TripRepository {
   async removeMember(): Promise<never> {
     throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
   }
-  async findStartedTripByVehicle(): Promise<never> {
-    throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
+  async findStartedTripByVehicle(vehicleId: string, companyId: string): Promise<TripEntity | null> {
+    for (const trip of this.trips.values()) {
+      if (
+        trip.companyId === companyId &&
+        trip.vehicleId === vehicleId &&
+        trip.status === 'STARTED' &&
+        !trip.deletedAt
+      ) {
+        return trip;
+      }
+    }
+    return null;
   }
-  async findStartedTripByEmployee(): Promise<never> {
-    throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
+
+  async findStartedTripByEmployee(
+    employeeId: string,
+    companyId: string,
+  ): Promise<TripEntity | null> {
+    for (const member of this.members.values()) {
+      if (member.employeeId !== employeeId) continue;
+      const trip = this.trips.get(member.tripId);
+      if (trip && trip.companyId === companyId && trip.status === 'STARTED' && !trip.deletedAt) {
+        return trip;
+      }
+    }
+    return null;
   }
-  async findStartedTripIdsByEmployeeId(): Promise<never> {
-    throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
+
+  async findStartedTripIdsByEmployeeId(employeeId: string, companyId: string): Promise<string[]> {
+    const ids: string[] = [];
+    for (const member of this.members.values()) {
+      if (member.employeeId !== employeeId) continue;
+      const trip = this.trips.get(member.tripId);
+      if (trip && trip.companyId === companyId && trip.status === 'STARTED' && !trip.deletedAt) {
+        ids.push(trip.id);
+      }
+    }
+    return ids;
   }
 }
 

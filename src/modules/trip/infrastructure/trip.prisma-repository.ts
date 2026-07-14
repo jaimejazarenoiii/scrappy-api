@@ -18,6 +18,7 @@ import type {
   UpdateTripInput,
   UpdateTripLoadFlagsInput,
   ArchiveTripInput,
+  StartTripInput,
 } from '../domain/trip.repository.js';
 import { toTripDomain } from './mappers/trip.mapper.js';
 import { mapTripMemberDetail, toTripMemberDomain } from './mappers/trip-member.mapper.js';
@@ -245,8 +246,23 @@ export class TripPrismaRepository implements TripRepository {
     const record = await prisma.trip.update({ where: { id: tripId }, data });
     return toTripDomain(record);
   }
-  async start(): Promise<never> {
-    throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
+  async start(tripId: string, companyId: string, input: StartTripInput): Promise<TripEntity> {
+    const existing = await this.findById(tripId, companyId);
+    if (!existing) throw new ResourceNotFoundError('Trip not found');
+
+    const record = await prisma.$transaction(async (tx) => {
+      return tx.trip.update({
+        where: { id: tripId },
+        data: {
+          status: 'STARTED',
+          actualStart: input.actualStart,
+          startedByUserId: input.startedByUserId,
+          updatedByUserId: input.startedByUserId,
+        },
+      });
+    });
+
+    return toTripDomain(record);
   }
   async complete(): Promise<never> {
     throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
@@ -269,13 +285,38 @@ export class TripPrismaRepository implements TripRepository {
   async removeMember(): Promise<never> {
     throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
   }
-  async findStartedTripByVehicle(): Promise<never> {
-    throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
+  async findStartedTripByVehicle(vehicleId: string, companyId: string): Promise<TripEntity | null> {
+    const record = await prisma.trip.findFirst({
+      where: { companyId, vehicleId, status: 'STARTED', deletedAt: null },
+    });
+    return record ? toTripDomain(record) : null;
   }
-  async findStartedTripByEmployee(): Promise<never> {
-    throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
+
+  async findStartedTripByEmployee(
+    employeeId: string,
+    companyId: string,
+  ): Promise<TripEntity | null> {
+    const record = await prisma.trip.findFirst({
+      where: {
+        companyId,
+        status: 'STARTED',
+        deletedAt: null,
+        members: { some: { employeeId } },
+      },
+    });
+    return record ? toTripDomain(record) : null;
   }
-  async findStartedTripIdsByEmployeeId(): Promise<never> {
-    throw new BusinessRuleViolationError(NOT_IMPLEMENTED);
+
+  async findStartedTripIdsByEmployeeId(employeeId: string, companyId: string): Promise<string[]> {
+    const records = await prisma.trip.findMany({
+      where: {
+        companyId,
+        status: 'STARTED',
+        deletedAt: null,
+        members: { some: { employeeId } },
+      },
+      select: { id: true },
+    });
+    return records.map((record) => record.id);
   }
 }

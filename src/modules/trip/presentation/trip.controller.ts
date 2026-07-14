@@ -7,7 +7,9 @@ import type { CreateTripUseCase } from '../application/use-cases/create-trip.use
 import type { GetTripUseCase } from '../application/use-cases/get-trip.use-case.js';
 import type { GetTripHistoryUseCase } from '../application/use-cases/get-trip-history.use-case.js';
 import type { ListTripTransactionsUseCase } from '../application/use-cases/list-trip-transactions.use-case.js';
+import type { StartTripUseCase } from '../application/use-cases/start-trip.use-case.js';
 import type { CreateTripRequestDto } from '../application/dto/create-trip.request.js';
+import type { StartTripRequestDto } from '../application/dto/start-trip.request.js';
 import type { ListTripsQuery, ListTripTransactionsQuery } from './trip.schemas.js';
 
 function authContext(req: {
@@ -28,6 +30,7 @@ export class TripController {
     private readonly getTripUseCase: GetTripUseCase,
     private readonly getTripHistoryUseCase: GetTripHistoryUseCase,
     private readonly listTripTransactionsUseCase: ListTripTransactionsUseCase,
+    private readonly startTripUseCase: StartTripUseCase,
   ) {}
 
   create: RequestHandler = async (req, res, next) => {
@@ -95,6 +98,22 @@ export class TripController {
       res.json(
         success(
           await this.getTripHistoryUseCase.execute(req.params.tripId as string, authContext(req)),
+        ),
+      );
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  start: RequestHandler = async (req, res, next) => {
+    try {
+      res.json(
+        success(
+          await this.startTripUseCase.execute(
+            req.params.tripId as string,
+            authContext(req),
+            req.body as StartTripRequestDto,
+          ),
         ),
       );
     } catch (error) {

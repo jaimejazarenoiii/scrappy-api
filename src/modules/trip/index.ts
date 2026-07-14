@@ -25,6 +25,7 @@ import { DisableTripLoadUseCase } from './application/use-cases/disable-trip-loa
 import { GetTripLoadSummaryUseCase } from './application/use-cases/get-trip-load-summary.use-case.js';
 import { GetCompanyTripLoadSettingsUseCase } from './application/use-cases/get-company-trip-load-settings.use-case.js';
 import { UpdateCompanyTripLoadSettingsUseCase } from './application/use-cases/update-company-trip-load-settings.use-case.js';
+import { StartTripUseCase } from './application/use-cases/start-trip.use-case.js';
 import { TripController } from './presentation/trip.controller.js';
 import { TripLoadController } from './presentation/trip-load.controller.js';
 
@@ -67,6 +68,7 @@ export function buildTripController(deps: TripModuleDependencies): TripControlle
       deps.transactionRepository,
       deps.userRepository,
     ),
+    new StartTripUseCase(deps.tripRepository, deps.vehicleRepository),
   );
 }
 
