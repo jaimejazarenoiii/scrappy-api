@@ -68,7 +68,7 @@ describe('activity log event generation api', () => {
       id: loginAsAda.body.data.user.id,
       employeeId: createdEmployeeId,
       email: 'ada@scrappy.test',
-      role: 'EMPLOYEE',
+      role: 'Employee',
     });
   });
 });

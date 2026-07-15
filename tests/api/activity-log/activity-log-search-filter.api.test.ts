@@ -32,6 +32,11 @@ describe('activity log search/filter api', () => {
     expect(filtered.status).toBe(200);
     expect(filtered.body.data).toHaveLength(1);
     expect(filtered.body.data[0].resourceNumber).toBe('TRX-777');
+    expect(filtered.body.data[0]).toMatchObject({
+      eventType: 'Transaction',
+      module: 'Transaction',
+      action: 'Transaction paid',
+    });
 
     const searched = await request(app)
       .get('/api/v1/activity-logs?q=TRX-777&searchBy=transactionNumber')

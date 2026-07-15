@@ -1241,11 +1241,17 @@ operations succeed. Clients **cannot** create, update, or delete activity logs.
 
 ### Response shape (item)
 
+Human-readable English labels are returned for display fields. Filter query parameters still
+use the stored codes (e.g. `module=transaction`, `eventType=TRANSACTION`, `action=transaction.settled`).
+
 `id`, `companyId`, `eventType`, `module`, `action`, `description`, `userId` (actor account),
 optional `employeeId` (actor’s linked employee when present), optional
 `resourceType` / `resourceId` / `resourceNumber` / `ipAddress` / `userAgent` / `metadata`,
 `createdAt`, and `performedBy` (`id`, `employeeId`, `email`, `role`). Password-related
 metadata never includes secrets.
+
+Example display values: `eventType` `"Transaction"`, `module` `"Transaction"`,
+`action` `"Transaction paid"`, `resourceType` `"Trip"`, `performedBy.role` `"Owner"`.
 
 ---
 

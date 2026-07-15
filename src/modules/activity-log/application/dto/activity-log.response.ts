@@ -1,3 +1,10 @@
+import {
+  toActivityActionLabel,
+  toActivityEventTypeLabel,
+  toActivityModuleLabel,
+  toActivityResourceTypeLabel,
+  toUserRoleLabel,
+} from '../activity-log-display-labels.js';
 import type { ActivityLogEntity } from '../../domain/activity-log.entity.js';
 
 export interface ActivityLogPerformedByDto {
@@ -35,13 +42,13 @@ export function buildActivityLogResponse(entity: ActivityLogEntity): ActivityLog
   return {
     id: props.id,
     companyId: props.companyId,
-    eventType: props.eventType,
-    module: props.module,
-    action: props.action,
+    eventType: toActivityEventTypeLabel(props.eventType),
+    module: toActivityModuleLabel(props.module),
+    action: toActivityActionLabel(props.action, props.description),
     description: props.description,
     userId: props.userId,
     employeeId: props.employeeId,
-    resourceType: props.resourceType,
+    resourceType: toActivityResourceTypeLabel(props.resourceType),
     resourceId: props.resourceId,
     resourceNumber: props.resourceNumber,
     ipAddress: props.ipAddress,
@@ -52,7 +59,7 @@ export function buildActivityLogResponse(entity: ActivityLogEntity): ActivityLog
       id: props.userId,
       employeeId: props.employeeId,
       email,
-      role,
+      role: toUserRoleLabel(role),
     },
   };
 }

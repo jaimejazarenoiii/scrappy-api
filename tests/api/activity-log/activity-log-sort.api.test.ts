@@ -27,7 +27,7 @@ describe('activity log sort api', () => {
     expect(response.status).toBe(200);
     const modules = response.body.data
       .map((row: { module: string }) => row.module)
-      .filter((module: string) => module === 'branch' || module === 'warehouse');
-    expect(modules).toEqual(['branch', 'warehouse']);
+      .filter((module: string) => module === 'Branch' || module === 'Warehouse');
+    expect(modules).toEqual(['Branch', 'Warehouse']);
   });
 });
