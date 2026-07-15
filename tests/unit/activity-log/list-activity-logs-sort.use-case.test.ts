@@ -25,6 +25,6 @@ describe('list activity log sort', () => {
       { page: 1, limit: 20, sortBy: 'module', sortOrder: 'asc' },
     );
 
-    expect(result.items.map((item) => item.module)).toEqual(['branch', 'vehicle']);
+    expect(result.items.map((item) => item.module)).toEqual(['Branch', 'Vehicle']);
   });
 });

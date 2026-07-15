@@ -53,6 +53,6 @@ describe('list activity log filters', () => {
       },
     );
     expect(searched.items).toHaveLength(1);
-    expect(searched.items[0]!.action).toBe('employee.created');
+    expect(searched.items[0]!.action).toBe('Seeded activity');
   });
 });

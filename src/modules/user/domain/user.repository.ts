@@ -22,6 +22,7 @@ export interface UserRepository {
   create(input: CreateUserInput): Promise<UserEntity>;
   findByEmail(email: string): Promise<UserEntity | null>;
   findById(userId: string, companyId: string): Promise<UserEntity | null>;
+  findByIdGlobal(userId: string): Promise<UserEntity | null>;
   listByCompanyId(companyId: string): Promise<UserEntity[]>;
   updateLastLogin(userId: string): Promise<void>;
   linkEmployee(userId: string, employeeId: string): Promise<UserEntity>;

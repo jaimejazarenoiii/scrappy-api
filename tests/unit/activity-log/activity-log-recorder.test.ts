@@ -58,6 +58,30 @@ describe('ActivityLogRecorder', () => {
     });
   });
 
+  it('skips platform-only activity logs', async () => {
+    const repo = new InMemoryActivityLogRepository();
+    const userRepository = {
+      findById: vi.fn().mockResolvedValue(null),
+      findByIdGlobal: vi.fn().mockResolvedValue({
+        employeeId: null,
+        email: 'admin@scrappy.test',
+        role: 'SUPER_ADMIN',
+      }),
+    };
+    const recorder = new ActivityLogRecorder(repo, userRepository as never);
+
+    await recorder.record({
+      companyId: 'tenant-1',
+      eventType: 'EMPLOYEE',
+      module: 'employee',
+      action: 'admin.account_created',
+      description: 'Account provisioned by platform admin',
+      userId: 'super-1',
+    });
+
+    expect(repo.items).toHaveLength(0);
+  });
+
   it('skips when companyId or userId missing', async () => {
     const repo = new InMemoryActivityLogRepository();
     const recorder = new ActivityLogRecorder(repo);

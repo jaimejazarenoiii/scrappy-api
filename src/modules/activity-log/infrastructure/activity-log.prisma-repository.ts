@@ -8,6 +8,15 @@ import type {
 } from '../domain/activity-log.repository.js';
 import type { ActivityLogEntity } from '../domain/activity-log.entity.js';
 import { toActivityLogDomain } from './mappers/activity-log.mapper.js';
+import { buildTenantActivityLogVisibilityFilter } from './activity-log-tenant-visibility.js';
+
+async function listSuperAdminUserIds(): Promise<string[]> {
+  const rows = await prisma.user.findMany({
+    where: { role: 'SUPER_ADMIN', deletedAt: null },
+    select: { id: true },
+  });
+  return rows.map((row) => row.id);
+}
 
 export class ActivityLogPrismaRepository implements ActivityLogRepository {
   async append(input: AppendActivityLogInput): Promise<ActivityLogEntity> {
@@ -34,14 +43,20 @@ export class ActivityLogPrismaRepository implements ActivityLogRepository {
   }
 
   async findById(activityLogId: string, companyId: string): Promise<ActivityLogEntity | null> {
+    const superAdminUserIds = await listSuperAdminUserIds();
     const record = await prisma.activityLog.findFirst({
-      where: { id: activityLogId, companyId },
+      where: {
+        id: activityLogId,
+        companyId,
+        ...buildTenantActivityLogVisibilityFilter(superAdminUserIds),
+      },
     });
     return record ? toActivityLogDomain(record) : null;
   }
 
   async list(companyId: string, query: ListActivityLogsQuery): Promise<ListActivityLogsResult> {
-    const where = buildWhere(companyId, query);
+    const superAdminUserIds = await listSuperAdminUserIds();
+    const where = buildWhere(companyId, query, superAdminUserIds);
     const orderBy = buildOrderBy(query);
     const [total, records] = await Promise.all([
       prisma.activityLog.count({ where }),
@@ -56,8 +71,15 @@ export class ActivityLogPrismaRepository implements ActivityLogRepository {
   }
 }
 
-function buildWhere(companyId: string, query: ListActivityLogsQuery) {
-  const where: Record<string, unknown> = { companyId };
+function buildWhere(
+  companyId: string,
+  query: ListActivityLogsQuery,
+  superAdminUserIds: readonly string[],
+) {
+  const where: Prisma.ActivityLogWhereInput = {
+    companyId,
+    ...buildTenantActivityLogVisibilityFilter(superAdminUserIds),
+  };
   if (query.module) where.module = query.module;
   if (query.action) where.action = query.action;
   if (query.userId) where.userId = query.userId;

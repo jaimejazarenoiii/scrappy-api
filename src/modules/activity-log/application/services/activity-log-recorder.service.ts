@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { getLogger } from '../../../../config/logger.js';
 import type { UserRepository } from '../../../user/domain/user.repository.js';
 import type { ActivityLogRepository } from '../../domain/activity-log.repository.js';
+import { isPlatformOnlyActivityLog } from '../../domain/platform-activity-log.policy.js';
 import type { RecordActivityLogInput } from '../../../../shared/activity-log/record-activity-log.input.js';
 
 const SECRET_KEYS = new Set([
@@ -50,6 +51,17 @@ export class ActivityLogRecorder {
         ...(employeeId ? { actorEmployeeId: employeeId } : {}),
       });
 
+      if (
+        isPlatformOnlyActivityLog({
+          action: input.action,
+          userId: input.userId,
+          metadata,
+          actorRole: actor?.role ?? null,
+        })
+      ) {
+        return;
+      }
+
       await this.activityLogRepository.append({
         id: randomUUID(),
         companyId: input.companyId,
@@ -81,7 +93,9 @@ export class ActivityLogRecorder {
   ): Promise<{ employeeId: string | null; email: string; role: string } | null> {
     if (!this.userRepository) return null;
     try {
-      const user = await this.userRepository.findById(userId, companyId);
+      const user =
+        (await this.userRepository.findById(userId, companyId)) ??
+        (await this.userRepository.findByIdGlobal(userId));
       if (!user) return null;
       return {
         employeeId: user.employeeId,

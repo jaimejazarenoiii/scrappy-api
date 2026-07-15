@@ -17,6 +17,6 @@ describe('GetActivityLogUseCase', () => {
       role: 'MANAGER',
     });
     expect(result.id).toBe(seeded.id);
-    expect(result.action).toBe('company.updated');
+    expect(result.action).toBe('Company updated');
   });
 });

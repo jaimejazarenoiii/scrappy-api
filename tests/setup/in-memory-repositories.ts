@@ -172,6 +172,9 @@ export class InMemoryUserRepository implements UserRepository {
       null
     );
   }
+  async findByIdGlobal(userId: string): Promise<UserEntity | null> {
+    return this.users.get(userId) ?? null;
+  }
   async listByCompanyId(companyId: string): Promise<UserEntity[]> {
     return [...this.users.values()].filter((user) => user.companyId === companyId);
   }

@@ -57,6 +57,13 @@ export class UserPrismaRepository implements UserRepository {
     return record ? toDomain(record) : null;
   }
 
+  async findByIdGlobal(userId: string): Promise<UserEntity | null> {
+    const record = await prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+    });
+    return record ? toDomain(record) : null;
+  }
+
   async listByCompanyId(companyId: string): Promise<UserEntity[]> {
     const records = await prisma.user.findMany({ where: { companyId, deletedAt: null } });
     return records.map(toDomain);

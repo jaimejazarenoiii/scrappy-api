@@ -6,9 +6,11 @@ import type {
   ListActivityLogsQuery,
   ListActivityLogsResult,
 } from '../../src/modules/activity-log/domain/activity-log.repository.js';
+import { isVisibleTenantActivityLog } from '../../src/modules/activity-log/infrastructure/activity-log-tenant-visibility.js';
 
 export class InMemoryActivityLogRepository implements ActivityLogRepository {
   readonly items: ActivityLogEntity[] = [];
+  readonly superAdminUserIds = new Set<string>();
 
   async append(input: AppendActivityLogInput): Promise<ActivityLogEntity> {
     const entity = ActivityLogEntity.create({
@@ -33,13 +35,17 @@ export class InMemoryActivityLogRepository implements ActivityLogRepository {
   }
 
   async findById(activityLogId: string, companyId: string): Promise<ActivityLogEntity | null> {
-    return (
-      this.items.find((item) => item.id === activityLogId && item.companyId === companyId) ?? null
-    );
+    const item =
+      this.items.find((item) => item.id === activityLogId && item.companyId === companyId) ?? null;
+    if (!item) return null;
+    const props = item.toPrimitives();
+    return isVisibleTenantActivityLog(props, this.superAdminUserIds) ? item : null;
   }
 
   async list(companyId: string, query: ListActivityLogsQuery): Promise<ListActivityLogsResult> {
-    let filtered = this.items.filter((item) => item.companyId === companyId);
+    let filtered = this.items
+      .filter((item) => item.companyId === companyId)
+      .filter((item) => isVisibleTenantActivityLog(item.toPrimitives(), this.superAdminUserIds));
 
     if (query.module) filtered = filtered.filter((item) => item.module === query.module);
     if (query.action) filtered = filtered.filter((item) => item.action === query.action);
