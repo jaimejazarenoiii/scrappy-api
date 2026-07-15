@@ -26,6 +26,16 @@ export const listTripsQuerySchema = z.object({
 
 export type ListTripsQuery = z.infer<typeof listTripsQuerySchema>;
 
+export const listMyTripsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  sortBy: sortBySchema.default('scheduledStart'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+  status: z.enum(TRIP_STATUSES).optional(),
+});
+
+export type ListMyTripsQuery = z.infer<typeof listMyTripsQuerySchema>;
+
 export const tripIdParamsSchema = z.object({
   tripId: z.string().uuid(),
 });

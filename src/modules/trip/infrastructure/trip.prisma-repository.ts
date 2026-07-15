@@ -155,8 +155,8 @@ export class TripPrismaRepository implements TripRepository {
     companyId: string,
     employeeId: string,
     query: ListTripQuery,
-  ): Promise<ListTripResult> {
-    return this.listByCompany(companyId, { ...query, employeeId });
+  ): Promise<ListTripSummariesResult> {
+    return this.listSummariesByCompany(companyId, { ...query, employeeId });
   }
 
   async create(input: CreateTripInput): Promise<TripEntity> {

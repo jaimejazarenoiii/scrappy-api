@@ -7,6 +7,7 @@ import type { TripRepository } from './domain/trip.repository.js';
 import type { TripLoadRepository } from './domain/trip-load.repository.js';
 import type { TripNumberSequenceRepository } from './domain/trip-number-sequence.repository.js';
 import { TripNumberService } from './application/services/trip-number.service.js';
+import { ListMyTripsUseCase } from './application/use-cases/list-my-trips.use-case.js';
 import { ListTripsUseCase } from './application/use-cases/list-trips.use-case.js';
 import { GetTripDashboardUseCase } from './application/use-cases/get-trip-dashboard.use-case.js';
 import { CreateTripUseCase } from './application/use-cases/create-trip.use-case.js';
@@ -58,6 +59,7 @@ export function buildTripController(deps: TripModuleDependencies): TripControlle
 
   return new TripController(
     new ListTripsUseCase(deps.tripRepository),
+    new ListMyTripsUseCase(deps.tripRepository, deps.userRepository),
     new GetTripDashboardUseCase(deps.tripRepository),
     new CreateTripUseCase(
       deps.tripRepository,

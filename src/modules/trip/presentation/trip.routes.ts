@@ -4,6 +4,7 @@ import { validate } from '../../../middleware/validation.middleware.js';
 import type { TripController } from './trip.controller.js';
 import {
   listTripsQuerySchema,
+  listMyTripsQuerySchema,
   createTripSchema,
   tripIdParamsSchema,
   listTripTransactionsQuerySchema,
@@ -17,6 +18,7 @@ import {
 } from '../application/dto/trip-member.request.js';
 
 const MANAGER_ROLES = ['OWNER', 'MANAGER'] as const;
+const ALL_TENANT_ROLES = ['OWNER', 'MANAGER', 'EMPLOYEE'] as const;
 
 export function createTripRoutes(controller: TripController): Router {
   const router = Router();
@@ -35,6 +37,13 @@ export function createTripRoutes(controller: TripController): Router {
     authorize([...MANAGER_ROLES]),
     validate(listTripsQuerySchema, 'query'),
     controller.list,
+  );
+
+  router.get(
+    '/trips/mine',
+    authorize([...ALL_TENANT_ROLES]),
+    validate(listMyTripsQuerySchema, 'query'),
+    controller.listMine,
   );
 
   router.get(

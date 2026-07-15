@@ -8,6 +8,7 @@ import type {
   CreateTripInput,
   TripDashboardCounts,
   TripRepository,
+  ListTripQuery,
   ListTripResult,
   ListTripSummariesResult,
   TripDetailProjection,
@@ -179,12 +180,100 @@ export class InMemoryTripRepository implements TripRepository {
     return { items: [], total: 0 };
   }
 
-  async listSummariesByCompany(): Promise<ListTripSummariesResult> {
-    return { items: [], total: 0 };
+  async listSummariesByCompany(
+    companyId: string,
+    query: ListTripQuery,
+  ): Promise<ListTripSummariesResult> {
+    let trips = [...this.trips.values()].filter(
+      (trip) => trip.companyId === companyId && (query.includeArchived || !trip.deletedAt),
+    );
+
+    if (query.status) {
+      trips = trips.filter((trip) => trip.status === query.status);
+    }
+    if (query.vehicleId) {
+      trips = trips.filter((trip) => trip.vehicleId === query.vehicleId);
+    }
+    if (query.employeeId) {
+      const memberTripIds = new Set(
+        [...this.members.values()]
+          .filter((member) => member.employeeId === query.employeeId)
+          .map((member) => member.tripId),
+      );
+      trips = trips.filter((trip) => memberTripIds.has(trip.id));
+    }
+    if (query.fromDate) {
+      trips = trips.filter((trip) => trip.scheduledStart >= query.fromDate!);
+    }
+    if (query.toDate) {
+      trips = trips.filter((trip) => trip.scheduledStart <= query.toDate!);
+    }
+    if (query.tripNumber) {
+      const needle = query.tripNumber.toLowerCase();
+      trips = trips.filter((trip) => trip.tripNumber.toLowerCase().includes(needle));
+    }
+
+    const sortBy = query.sortBy ?? 'scheduledStart';
+    const sortOrder = query.sortOrder ?? 'desc';
+    trips.sort((left, right) => {
+      const leftProps = left.toPrimitives();
+      const rightProps = right.toPrimitives();
+      let cmp = 0;
+      if (sortBy === 'tripNumber') {
+        cmp = leftProps.tripNumber.localeCompare(rightProps.tripNumber);
+      } else if (sortBy === 'createdAt') {
+        cmp = leftProps.createdAt.getTime() - rightProps.createdAt.getTime();
+      } else {
+        cmp = leftProps.scheduledStart.getTime() - rightProps.scheduledStart.getTime();
+      }
+      if (cmp === 0) cmp = leftProps.id.localeCompare(rightProps.id);
+      return sortOrder === 'asc' ? cmp : -cmp;
+    });
+
+    const total = trips.length;
+    const start = (query.page - 1) * query.limit;
+    const pageTrips = trips.slice(start, start + query.limit);
+
+    return {
+      total,
+      items: pageTrips.map((trip) => {
+        const props = trip.toPrimitives();
+        const vehicle = this.vehicleRepository?.vehicles.get(props.vehicleId);
+        const vehicleProps = vehicle?.toPrimitives();
+        return {
+          id: props.id,
+          companyId: props.companyId,
+          tripNumber: props.tripNumber,
+          status: props.status,
+          scheduledStart: props.scheduledStart,
+          actualStart: props.actualStart,
+          actualEnd: props.actualEnd,
+          origin: props.origin,
+          destination: props.destination,
+          notes: props.notes,
+          startingOdometer: props.startingOdometer,
+          endingOdometer: props.endingOdometer,
+          distance: computeTripDistance(props.startingOdometer, props.endingOdometer),
+          loadEnabled: props.loadEnabled,
+          strictLoadValidation: props.strictLoadValidation,
+          vehicle: {
+            id: props.vehicleId,
+            plateNumber: vehicleProps?.plateNumber ?? 'UNKNOWN',
+            description: vehicleProps?.description ?? null,
+            status: vehicleProps?.status ?? 'AVAILABLE',
+          },
+        };
+      }),
+    };
   }
 
-  async listMine(): Promise<ListTripResult> {
-    return { items: [], total: 0 };
+  async listMine(
+    companyId: string,
+    employeeId: string,
+    query: ListTripQuery,
+  ): Promise<ListTripSummariesResult> {
+    const summaries = await this.listSummariesByCompany(companyId, { ...query, employeeId });
+    return summaries;
   }
 
   async getDashboardCounts(): Promise<TripDashboardCounts> {

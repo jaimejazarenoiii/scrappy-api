@@ -641,7 +641,7 @@ Trip Management (`/api/v1/trips`) coordinates employees and vehicles for operati
 
 **Trip Number** is server-assigned and immutable: `TRIP-YYYYMMDD-000001`.
 
-**Implementation status**: `GET /trips`, `GET /trips/dashboard`, `POST /trips`, `GET /trips/{tripId}`, `GET /trips/{tripId}/transactions`, and `GET /trips/{tripId}/history` are live. All other endpoints in the table below are specified in P007 but not yet implemented — they will return **404** until that work ships.
+**Implementation status**: `GET /trips`, `GET /trips/mine`, `GET /trips/dashboard`, `POST /trips`, `GET /trips/{tripId}`, `GET /trips/{tripId}/transactions`, and `GET /trips/{tripId}/history` are live. Other endpoints in the table below may still return **404** until implemented.
 
 ### `GET /trips` — company trip list
 
@@ -674,6 +674,33 @@ GET /api/v1/trips?page=1&limit=10&sortBy=scheduledStart&sortOrder=desc
 #### Response row (`TripSummary`)
 
 Each item in `data` includes: `id`, `companyId`, `tripNumber`, `status`, `scheduledStart`, `actualStart`, `actualEnd`, `origin`, `destination`, `notes`, `startingOdometer`, `endingOdometer`, `loadEnabled`, `strictLoadValidation`, and nested `vehicle` (`id`, `plateNumber`, `description`, `status`).
+
+---
+
+### `GET /trips/mine` — assigned trips (employee)
+
+**Roles**: Owner, Manager, Employee (requires a linked employee profile).
+
+Returns paginated trip summaries where the authenticated user’s linked employee is a trip member.
+Use this for employee trip lists instead of `GET /trips`.
+
+#### Query parameters
+
+| Parameter   | Type    | Default          | Notes                                        |
+| ----------- | ------- | ---------------- | -------------------------------------------- |
+| `page`      | integer | `1`              | 1-based page number                          |
+| `limit`     | integer | `20`             | Page size (1–100)                            |
+| `sortBy`    | string  | `scheduledStart` | `scheduledStart`, `createdAt`, `tripNumber`  |
+| `sortOrder` | enum    | `desc`           | `asc` or `desc`                              |
+| `status`    | enum    | —                | `DRAFT`, `STARTED`, `COMPLETED`, `CANCELLED` |
+
+#### Example
+
+```http
+GET /api/v1/trips/mine?page=1&limit=20&status=STARTED
+```
+
+Response shape matches `TripSummary` rows from `GET /trips`.
 
 ---
 
@@ -809,7 +836,7 @@ Returns a chronological list of lifecycle events derived from the trip record (`
 | `GET /trips/{tripId}/transactions`          | OWNER, MANAGER, EMPLOYEE | **Live** — transactions linked via `tripId`                         |
 | `GET /trips/{tripId}/history`               | OWNER, MANAGER, EMPLOYEE | **Live** — lifecycle event timeline                                 |
 | `PATCH /trips/{tripId}`                     | OWNER, MANAGER           | Planned — Draft-only header edits                                   |
-| `GET /trips/mine`                           | EMPLOYEE                 | Planned — assigned trips                                            |
+| `GET /trips/mine`                           | OWNER, MANAGER, EMPLOYEE | **Live** — assigned trips for linked employee                       |
 | `GET /trips/by-number/{tripNumber}`         | OWNER, MANAGER, EMPLOYEE | Planned — lookup by trip number                                     |
 | `POST /trips/{tripId}/start`                | OWNER, MANAGER           | Draft → Started (`startingOdometer` optional)                       |
 | `POST /trips/{tripId}/complete`             | OWNER, MANAGER           | Started → Completed (`endingOdometer` optional)                     |

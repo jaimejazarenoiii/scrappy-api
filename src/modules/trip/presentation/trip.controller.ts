@@ -1,6 +1,7 @@
 import type { RequestHandler } from 'express';
 import { success } from '../../../shared/http/api-response.js';
 import type { AuthorizationContext } from '../../../shared/policy/authorization-context.js';
+import type { ListMyTripsUseCase } from '../application/use-cases/list-my-trips.use-case.js';
 import type { ListTripsUseCase } from '../application/use-cases/list-trips.use-case.js';
 import type { GetTripDashboardUseCase } from '../application/use-cases/get-trip-dashboard.use-case.js';
 import type { CreateTripUseCase } from '../application/use-cases/create-trip.use-case.js';
@@ -20,7 +21,11 @@ import type {
   TripMemberParams,
   UpdateTripMemberRequestDto,
 } from '../application/dto/trip-member.request.js';
-import type { ListTripsQuery, ListTripTransactionsQuery } from './trip.schemas.js';
+import type {
+  ListTripsQuery,
+  ListMyTripsQuery,
+  ListTripTransactionsQuery,
+} from './trip.schemas.js';
 
 function authContext(req: {
   auth?: { companyId: string; userId: string; role: AuthorizationContext['role'] };
@@ -35,6 +40,7 @@ function authContext(req: {
 export class TripController {
   constructor(
     private readonly listTripsUseCase: ListTripsUseCase,
+    private readonly listMyTripsUseCase: ListMyTripsUseCase,
     private readonly getTripDashboardUseCase: GetTripDashboardUseCase,
     private readonly createTripUseCase: CreateTripUseCase,
     private readonly getTripUseCase: GetTripUseCase,
@@ -69,6 +75,18 @@ export class TripController {
       const result = await this.listTripsUseCase.execute(
         authContext(req),
         req.validatedQuery as ListTripsQuery,
+      );
+      res.json(success(result.items, { ...result.meta }));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  listMine: RequestHandler = async (req, res, next) => {
+    try {
+      const result = await this.listMyTripsUseCase.execute(
+        authContext(req),
+        req.validatedQuery as ListMyTripsQuery,
       );
       res.json(success(result.items, { ...result.meta }));
     } catch (error) {

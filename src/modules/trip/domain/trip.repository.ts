@@ -160,7 +160,11 @@ export interface TripRepository {
 
   listByCompany(companyId: string, query: ListTripQuery): Promise<ListTripResult>;
   listSummariesByCompany(companyId: string, query: ListTripQuery): Promise<ListTripSummariesResult>;
-  listMine(companyId: string, employeeId: string, query: ListTripQuery): Promise<ListTripResult>;
+  listMine(
+    companyId: string,
+    employeeId: string,
+    query: ListTripQuery,
+  ): Promise<ListTripSummariesResult>;
   getDashboardCounts(companyId: string): Promise<TripDashboardCounts>;
 
   // Members
