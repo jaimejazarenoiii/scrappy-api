@@ -57,6 +57,7 @@ export class AnalyticsPrismaQueryRepository implements AnalyticsQueryRepository 
         inbound,
         outbound,
         amountAgg,
+        expenseAgg,
         payrollAgg,
         activeEmployees,
         activeTrips,
@@ -67,6 +68,10 @@ export class AnalyticsPrismaQueryRepository implements AnalyticsQueryRepository 
         prisma.transactionItem.aggregate({
           _sum: { total: true },
           where: { transaction: transactionWhere },
+        }),
+        prisma.expense.aggregate({
+          _sum: { amount: true },
+          where: buildExpenseWhere(filter),
         }),
         prisma.payrollRecord.aggregate({
           _sum: { netPay: true },
@@ -97,7 +102,7 @@ export class AnalyticsPrismaQueryRepository implements AnalyticsQueryRepository 
       ]);
 
       const totalTransactionAmount = roundMoney(decimalToNumber(amountAgg._sum.total));
-      const totalExpenses = 0;
+      const totalExpenses = roundMoney(decimalToNumber(expenseAgg._sum.amount));
       const totalPayroll = roundMoney(decimalToNumber(payrollAgg._sum.netPay));
       const netOperationalAmount = roundMoney(
         totalTransactionAmount - totalExpenses - totalPayroll,
