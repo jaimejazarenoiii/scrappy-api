@@ -1,22 +1,23 @@
 import { randomUUID } from 'node:crypto';
 import {
   DuplicateResourceError,
-  ResourceNotFoundError,
   ValidationAppError,
 } from '../../../../shared/errors/http-exceptions.js';
 import type { AuthorizationContext } from '../../../../shared/policy/authorization-context.js';
+import type { UserRepository } from '../../../user/domain/user.repository.js';
 import { normalizeMaterialName } from '../../domain/material-name.js';
 import type { TripLoadRepository } from '../../domain/trip-load.repository.js';
 import type { TripRepository } from '../../domain/trip.repository.js';
 import type { CreateTripLoadRequestDto } from '../dto/trip-load.request.js';
 import { toTripLoadDto, type TripLoadDto } from '../dto/trip-load.response.js';
-import { assertCanMutateTripLoad, assertDraftOnly } from '../policies/trip-load-mutation.policy.js';
+import { requireTripLoadContentMutationAccess } from '../services/trip-load-access.service.js';
 import { logTripAudit, TRIP_AUDIT_ACTIONS } from '../services/trip-audit.service.js';
 
 export class CreateTripLoadUseCase {
   constructor(
     private readonly tripRepository: TripRepository,
     private readonly tripLoadRepository: TripLoadRepository,
+    private readonly userRepository: UserRepository,
   ) {}
 
   async execute(
@@ -24,11 +25,12 @@ export class CreateTripLoadUseCase {
     auth: AuthorizationContext,
     input: CreateTripLoadRequestDto,
   ): Promise<TripLoadDto> {
-    assertCanMutateTripLoad(auth.role);
-
-    const trip = await this.tripRepository.findById(tripId, auth.companyId);
-    if (!trip) throw new ResourceNotFoundError('Trip not found');
-    assertDraftOnly(trip);
+    await requireTripLoadContentMutationAccess(
+      this.tripRepository,
+      this.userRepository,
+      tripId,
+      auth,
+    );
 
     const existing = await this.tripLoadRepository.findByTripId(tripId);
     if (existing) throw new DuplicateResourceError('Trip load already exists for this trip.');

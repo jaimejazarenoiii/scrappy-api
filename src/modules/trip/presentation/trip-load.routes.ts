@@ -14,6 +14,8 @@ import {
 } from './trip-load.schemas.js';
 
 const MANAGER_ROLES = ['OWNER', 'MANAGER'] as const;
+/** Content mutations: assigned employees may edit load items on draft trips. */
+const LOAD_CONTENT_ROLES = ['OWNER', 'MANAGER', 'EMPLOYEE'] as const;
 const READ_ROLES = ['OWNER', 'MANAGER', 'EMPLOYEE'] as const;
 
 export function createTripLoadRoutes(controller: TripLoadController): Router {
@@ -54,28 +56,28 @@ export function createTripLoadRoutes(controller: TripLoadController): Router {
 
   router.post(
     '/trips/:tripId/load/items',
-    authorize([...MANAGER_ROLES]),
+    authorize([...LOAD_CONTENT_ROLES]),
     validate(tripLoadIdParamsSchema, 'params'),
     validate(createTripLoadItemSchema),
     controller.addItem,
   );
   router.patch(
     '/trips/:tripId/load/items/:itemId',
-    authorize([...MANAGER_ROLES]),
+    authorize([...LOAD_CONTENT_ROLES]),
     validate(tripLoadItemIdParamsSchema, 'params'),
     validate(updateTripLoadItemSchema),
     controller.updateItem,
   );
   router.delete(
     '/trips/:tripId/load/items/:itemId',
-    authorize([...MANAGER_ROLES]),
+    authorize([...LOAD_CONTENT_ROLES]),
     validate(tripLoadItemIdParamsSchema, 'params'),
     controller.removeItem,
   );
 
   router.post(
     '/trips/:tripId/load',
-    authorize([...MANAGER_ROLES]),
+    authorize([...LOAD_CONTENT_ROLES]),
     validate(tripLoadIdParamsSchema, 'params'),
     validate(createTripLoadSchema),
     controller.createLoad,
@@ -88,14 +90,14 @@ export function createTripLoadRoutes(controller: TripLoadController): Router {
   );
   router.patch(
     '/trips/:tripId/load',
-    authorize([...MANAGER_ROLES]),
+    authorize([...LOAD_CONTENT_ROLES]),
     validate(tripLoadIdParamsSchema, 'params'),
     validate(updateTripLoadSchema),
     controller.updateLoad,
   );
   router.delete(
     '/trips/:tripId/load',
-    authorize([...MANAGER_ROLES]),
+    authorize([...LOAD_CONTENT_ROLES]),
     validate(tripLoadIdParamsSchema, 'params'),
     controller.deleteLoad,
   );

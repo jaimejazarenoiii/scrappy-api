@@ -3,7 +3,10 @@ import type { AuthorizationContext } from '../../../../shared/policy/authorizati
 import type { TripLoadRepository } from '../../domain/trip-load.repository.js';
 import type { TripRepository } from '../../domain/trip.repository.js';
 import { type TripLoadFlagsDto } from '../dto/trip-load.response.js';
-import { assertCanMutateTripLoad, assertDraftOnly } from '../policies/trip-load-mutation.policy.js';
+import {
+  assertCanManageTripLoadSettings,
+  assertDraftOnly,
+} from '../policies/trip-load-mutation.policy.js';
 import { logTripAudit, TRIP_AUDIT_ACTIONS } from '../services/trip-audit.service.js';
 
 export class DisableTripLoadUseCase {
@@ -13,7 +16,7 @@ export class DisableTripLoadUseCase {
   ) {}
 
   async execute(tripId: string, auth: AuthorizationContext): Promise<TripLoadFlagsDto> {
-    assertCanMutateTripLoad(auth.role);
+    assertCanManageTripLoadSettings(auth.role);
 
     const trip = await this.tripRepository.findById(tripId, auth.companyId);
     if (!trip) throw new ResourceNotFoundError('Trip not found');

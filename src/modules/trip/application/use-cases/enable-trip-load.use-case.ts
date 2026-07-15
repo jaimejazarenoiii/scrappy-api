@@ -4,7 +4,10 @@ import type { CompanyRepository } from '../../../company/domain/company.reposito
 import type { TripRepository } from '../../domain/trip.repository.js';
 import type { EnableTripLoadRequestDto } from '../dto/trip-load.request.js';
 import { type TripLoadFlagsDto } from '../dto/trip-load.response.js';
-import { assertCanMutateTripLoad, assertDraftOnly } from '../policies/trip-load-mutation.policy.js';
+import {
+  assertCanManageTripLoadSettings,
+  assertDraftOnly,
+} from '../policies/trip-load-mutation.policy.js';
 import { logTripAudit, TRIP_AUDIT_ACTIONS } from '../services/trip-audit.service.js';
 
 export class EnableTripLoadUseCase {
@@ -18,7 +21,7 @@ export class EnableTripLoadUseCase {
     auth: AuthorizationContext,
     input: EnableTripLoadRequestDto,
   ): Promise<TripLoadFlagsDto> {
-    assertCanMutateTripLoad(auth.role);
+    assertCanManageTripLoadSettings(auth.role);
 
     const trip = await this.tripRepository.findById(tripId, auth.companyId);
     if (!trip) throw new ResourceNotFoundError('Trip not found');

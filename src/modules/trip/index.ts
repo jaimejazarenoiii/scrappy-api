@@ -84,18 +84,26 @@ export function buildTripController(deps: TripModuleDependencies): TripControlle
 
 export function buildTripLoadController(deps: TripLoadModuleDependencies): TripLoadController {
   return new TripLoadController(
-    new CreateTripLoadUseCase(deps.tripRepository, deps.tripLoadRepository),
+    new CreateTripLoadUseCase(deps.tripRepository, deps.tripLoadRepository, deps.userRepository),
     new GetTripLoadUseCase(
       deps.tripRepository,
       deps.tripLoadRepository,
       deps.transactionRepository,
       deps.userRepository,
     ),
-    new UpdateTripLoadUseCase(deps.tripRepository, deps.tripLoadRepository),
-    new DeleteTripLoadUseCase(deps.tripRepository, deps.tripLoadRepository),
-    new AddTripLoadItemUseCase(deps.tripRepository, deps.tripLoadRepository),
-    new UpdateTripLoadItemUseCase(deps.tripRepository, deps.tripLoadRepository),
-    new RemoveTripLoadItemUseCase(deps.tripRepository, deps.tripLoadRepository),
+    new UpdateTripLoadUseCase(deps.tripRepository, deps.tripLoadRepository, deps.userRepository),
+    new DeleteTripLoadUseCase(deps.tripRepository, deps.tripLoadRepository, deps.userRepository),
+    new AddTripLoadItemUseCase(deps.tripRepository, deps.tripLoadRepository, deps.userRepository),
+    new UpdateTripLoadItemUseCase(
+      deps.tripRepository,
+      deps.tripLoadRepository,
+      deps.userRepository,
+    ),
+    new RemoveTripLoadItemUseCase(
+      deps.tripRepository,
+      deps.tripLoadRepository,
+      deps.userRepository,
+    ),
     new EnableTripLoadUseCase(deps.tripRepository, deps.companyRepository),
     new DisableTripLoadUseCase(deps.tripRepository, deps.tripLoadRepository),
     new GetTripLoadSummaryUseCase(

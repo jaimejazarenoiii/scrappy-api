@@ -115,7 +115,7 @@ describe('trip load draft crud api', () => {
     expect(removed.status).toBe(200);
   });
 
-  it('forbids employees from mutating a load', async () => {
+  it('allows assigned employees to mutate a load', async () => {
     const { app, userRepository, employeeRepository } = createTestContext();
     const owner = await createCompanyAndLogin(app);
     const employee = await createLinkedEmployeeUser(
@@ -127,6 +127,25 @@ describe('trip load draft crud api', () => {
     const tripId = await createTrip(app, owner.auth, {
       members: [{ employeeId: employee.employeeId, role: 'DRIVER' }],
     });
+
+    const response = await request(app)
+      .post(`/api/v1/trips/${tripId}/load`)
+      .set(employee.auth)
+      .send({ items: [{ materialName: 'Copper', quantity: 100, unit: 'KG' }] });
+    expect(response.status).toBe(201);
+    expect(response.body.data.items).toHaveLength(1);
+  });
+
+  it('forbids non-member employees from mutating a load', async () => {
+    const { app, userRepository, employeeRepository } = createTestContext();
+    const owner = await createCompanyAndLogin(app);
+    const employee = await createLinkedEmployeeUser(
+      app,
+      userRepository,
+      employeeRepository,
+      owner.companyId,
+    );
+    const tripId = await createTrip(app, owner.auth);
 
     const response = await request(app)
       .post(`/api/v1/trips/${tripId}/load`)

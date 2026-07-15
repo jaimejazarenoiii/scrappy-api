@@ -9,14 +9,25 @@ import {
   ValidationAppError,
 } from '../../../src/shared/errors/http-exceptions.js';
 import type { AuthorizationContext } from '../../../src/shared/policy/authorization-context.js';
+import { InMemoryUserRepository } from '../../setup/in-memory-repositories.js';
 import { InMemoryTripRepository } from '../../setup/in-memory-trip-repository.js';
 import { InMemoryTripLoadRepository } from '../../setup/in-memory-trip-load-repository.js';
 
-async function buildFixture() {
+async function buildFixture(opts?: { withMember?: boolean }) {
   const companyId = randomUUID();
   const userId = randomUUID();
+  const employeeId = randomUUID();
   const tripRepository = new InMemoryTripRepository();
   const tripLoadRepository = new InMemoryTripLoadRepository();
+  const userRepository = new InMemoryUserRepository();
+  await userRepository.create({
+    id: userId,
+    companyId,
+    email: `${userId}@test.local`,
+    passwordHash: 'hashed',
+    role: 'EMPLOYEE',
+    employeeId,
+  });
   const tripId = randomUUID();
   await tripRepository.create({
     id: tripId,
@@ -30,11 +41,21 @@ async function buildFixture() {
     notes: null,
     createdByUserId: userId,
     updatedByUserId: userId,
-    members: [],
+    members: opts?.withMember ? [{ employeeId, role: 'DRIVER' }] : [],
   });
-  const useCase = new CreateTripLoadUseCase(tripRepository, tripLoadRepository);
+  const useCase = new CreateTripLoadUseCase(tripRepository, tripLoadRepository, userRepository);
   const auth: AuthorizationContext = { companyId, userId, role: 'OWNER' };
-  return { companyId, userId, tripId, tripRepository, tripLoadRepository, useCase, auth };
+  return {
+    companyId,
+    userId,
+    employeeId,
+    tripId,
+    tripRepository,
+    tripLoadRepository,
+    userRepository,
+    useCase,
+    auth,
+  };
 }
 
 describe('CreateTripLoadUseCase', () => {
@@ -80,8 +101,18 @@ describe('CreateTripLoadUseCase', () => {
     ).rejects.toThrow(ValidationAppError);
   });
 
-  it('forbids employees from creating a load', async () => {
-    const f = await buildFixture();
+  it('allows assigned employees to create a load', async () => {
+    const f = await buildFixture({ withMember: true });
+    const result = await f.useCase.execute(
+      f.tripId,
+      { ...f.auth, role: 'EMPLOYEE' },
+      { items: [{ materialName: 'Copper', quantity: 1, unit: 'KG' }] },
+    );
+    expect(result.items).toHaveLength(1);
+  });
+
+  it('forbids non-member employees from creating a load', async () => {
+    const f = await buildFixture({ withMember: false });
     await expect(
       f.useCase.execute(
         f.tripId,
