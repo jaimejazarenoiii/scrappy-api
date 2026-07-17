@@ -105,13 +105,18 @@ export class InMemoryAnalyticsQueryRepository implements AnalyticsQueryRepositor
 
     const totalExpenses = 0;
     const netOperationalAmount = roundMoney(
-      transactionMetrics.totalTransactionAmount - totalExpenses - totalPayroll,
+      transactionMetrics.outboundAmount -
+        transactionMetrics.inboundAmount -
+        totalExpenses -
+        totalPayroll,
     );
 
     return {
       totalInboundTransactions: transactionMetrics.totalInbound,
       totalOutboundTransactions: transactionMetrics.totalOutbound,
       totalTransactionAmount: transactionMetrics.totalTransactionAmount,
+      inboundAmount: transactionMetrics.inboundAmount,
+      outboundAmount: transactionMetrics.outboundAmount,
       totalExpenses,
       totalPayroll,
       netOperationalAmount,
@@ -131,6 +136,19 @@ export class InMemoryAnalyticsQueryRepository implements AnalyticsQueryRepositor
     );
     const totalTransactionAmount = roundMoney(
       items.reduce((sum, item) => sum + item.toPrimitives().total, 0),
+    );
+    const directionByTransactionId = new Map(
+      transactions.map((t) => [t.id, t.toPrimitives().direction]),
+    );
+    const inboundAmount = roundMoney(
+      items
+        .filter((item) => directionByTransactionId.get(item.transactionId) === 'INBOUND')
+        .reduce((sum, item) => sum + item.toPrimitives().total, 0),
+    );
+    const outboundAmount = roundMoney(
+      items
+        .filter((item) => directionByTransactionId.get(item.transactionId) === 'OUTBOUND')
+        .reduce((sum, item) => sum + item.toPrimitives().total, 0),
     );
     const transactionCount = transactions.length;
     const averageTransactionValue =
@@ -206,6 +224,8 @@ export class InMemoryAnalyticsQueryRepository implements AnalyticsQueryRepositor
       totalInbound: inbound,
       totalOutbound: outbound,
       totalTransactionAmount,
+      inboundAmount,
+      outboundAmount,
       transactionCount,
       averageTransactionValue,
       topMaterials,

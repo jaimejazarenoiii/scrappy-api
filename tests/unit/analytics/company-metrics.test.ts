@@ -36,7 +36,7 @@ function buildRepository(
 }
 
 describe('company metrics', () => {
-  it('computes net operational amount as transactions minus payroll minus expenses', async () => {
+  it('computes net operational amount as sales minus purchases minus payroll minus expenses', async () => {
     const store = new InMemoryTransactionStore();
     const transactionRepo = new InMemoryTransactionRepository(store);
     const { analyticsRepo, payrollRepo } = buildRepository(store);
@@ -87,8 +87,11 @@ describe('company metrics', () => {
     });
 
     expect(metrics.totalTransactionAmount).toBe(1000);
+    expect(metrics.inboundAmount).toBe(1000);
+    expect(metrics.outboundAmount).toBe(0);
     expect(metrics.totalPayroll).toBe(3500);
     expect(metrics.totalExpenses).toBe(0);
-    expect(metrics.netOperationalAmount).toBe(roundMoney(1000 - 3500 - 0));
+    // INBOUND buys scrap (cash out), so net = outbound - inbound - expenses - payroll.
+    expect(metrics.netOperationalAmount).toBe(roundMoney(0 - 1000 - 0 - 3500));
   });
 });

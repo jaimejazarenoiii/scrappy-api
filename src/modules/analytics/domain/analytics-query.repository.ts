@@ -5,6 +5,10 @@ export interface CompanyMetricsProjection {
   totalInboundTransactions: number;
   totalOutboundTransactions: number;
   totalTransactionAmount: number;
+  /** Money paid out buying scrap (INBOUND transactions). */
+  inboundAmount: number;
+  /** Money received selling scrap (OUTBOUND transactions). */
+  outboundAmount: number;
   totalExpenses: number;
   totalPayroll: number;
   netOperationalAmount: number;
@@ -17,6 +21,10 @@ export interface TransactionMetricsProjection {
   totalInbound: number;
   totalOutbound: number;
   totalTransactionAmount: number;
+  /** Money paid out buying scrap (INBOUND transactions). */
+  inboundAmount: number;
+  /** Money received selling scrap (OUTBOUND transactions). */
+  outboundAmount: number;
   transactionCount: number;
   averageTransactionValue: number;
   topMaterials: RankedMetricItem[];

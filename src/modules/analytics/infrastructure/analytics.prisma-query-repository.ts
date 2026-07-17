@@ -58,6 +58,8 @@ export class AnalyticsPrismaQueryRepository implements AnalyticsQueryRepository 
         inbound,
         outbound,
         amountAgg,
+        inboundAmountAgg,
+        outboundAmountAgg,
         expenseAgg,
         payrollAgg,
         activeEmployees,
@@ -69,6 +71,14 @@ export class AnalyticsPrismaQueryRepository implements AnalyticsQueryRepository 
         prisma.transactionItem.aggregate({
           _sum: { total: true },
           where: { transaction: transactionWhere },
+        }),
+        prisma.transactionItem.aggregate({
+          _sum: { total: true },
+          where: { transaction: { ...transactionWhere, direction: 'INBOUND' } },
+        }),
+        prisma.transactionItem.aggregate({
+          _sum: { total: true },
+          where: { transaction: { ...transactionWhere, direction: 'OUTBOUND' } },
         }),
         prisma.expense.aggregate({
           _sum: { amount: true },
@@ -103,16 +113,20 @@ export class AnalyticsPrismaQueryRepository implements AnalyticsQueryRepository 
       ]);
 
       const totalTransactionAmount = roundMoney(decimalToNumber(amountAgg._sum.total));
+      const inboundAmount = roundMoney(decimalToNumber(inboundAmountAgg._sum.total));
+      const outboundAmount = roundMoney(decimalToNumber(outboundAmountAgg._sum.total));
       const totalExpenses = roundMoney(decimalToNumber(expenseAgg._sum.amount));
       const totalPayroll = roundMoney(decimalToNumber(payrollAgg._sum.netPay));
       const netOperationalAmount = roundMoney(
-        totalTransactionAmount - totalExpenses - totalPayroll,
+        outboundAmount - inboundAmount - totalExpenses - totalPayroll,
       );
 
       return {
         totalInboundTransactions: inbound,
         totalOutboundTransactions: outbound,
         totalTransactionAmount,
+        inboundAmount,
+        outboundAmount,
         totalExpenses,
         totalPayroll,
         netOperationalAmount,
@@ -131,6 +145,8 @@ export class AnalyticsPrismaQueryRepository implements AnalyticsQueryRepository 
         outbound,
         transactionCount,
         amountAgg,
+        inboundAmountAgg,
+        outboundAmountAgg,
         materials,
         employees,
         branches,
@@ -142,6 +158,14 @@ export class AnalyticsPrismaQueryRepository implements AnalyticsQueryRepository 
         prisma.transactionItem.aggregate({
           _sum: { total: true },
           where: { transaction: transactionWhere },
+        }),
+        prisma.transactionItem.aggregate({
+          _sum: { total: true },
+          where: { transaction: { ...transactionWhere, direction: 'INBOUND' } },
+        }),
+        prisma.transactionItem.aggregate({
+          _sum: { total: true },
+          where: { transaction: { ...transactionWhere, direction: 'OUTBOUND' } },
         }),
         prisma.transactionItem.groupBy({
           by: ['materialName'],
@@ -174,6 +198,8 @@ export class AnalyticsPrismaQueryRepository implements AnalyticsQueryRepository 
       ]);
 
       const totalTransactionAmount = roundMoney(decimalToNumber(amountAgg._sum.total));
+      const inboundAmount = roundMoney(decimalToNumber(inboundAmountAgg._sum.total));
+      const outboundAmount = roundMoney(decimalToNumber(outboundAmountAgg._sum.total));
       const averageTransactionValue =
         transactionCount > 0 ? roundMoney(totalTransactionAmount / transactionCount) : 0;
 
@@ -216,6 +242,8 @@ export class AnalyticsPrismaQueryRepository implements AnalyticsQueryRepository 
         totalInbound: inbound,
         totalOutbound: outbound,
         totalTransactionAmount,
+        inboundAmount,
+        outboundAmount,
         transactionCount,
         averageTransactionValue,
         topMaterials: assignRanks(
