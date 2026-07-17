@@ -4,6 +4,7 @@ import {
   formatUtcDate,
   isSameUtcDay,
   parseDateInput,
+  phWeekday,
   startOfUtcDay,
 } from '../../../../shared/datetime/day-boundaries.js';
 import type { LeaveRecordRepository } from '../../domain/leave-record.repository.js';
@@ -20,7 +21,7 @@ export class GetLeaveDashboardUseCase {
 
   async execute(companyId: string, dateInput?: string): Promise<LeaveDashboardResponseDto> {
     const day = parseDateInput(dateInput);
-    const weekStart = startOfUtcDay(addUtcDays(day, -((day.getUTCDay() + 6) % 7)));
+    const weekStart = startOfUtcDay(addUtcDays(day, -((phWeekday(day) + 6) % 7)));
     const weekEnd = endOfUtcDay(addUtcDays(weekStart, 6));
 
     const employees = await this.employeeRepository.listActiveByCompany(companyId);

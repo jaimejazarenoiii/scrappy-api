@@ -10,6 +10,8 @@ the access token carries the user's `companyId`, and every request only ever see
 - **Root `/`**: Returns API identity outside production; **404 in production**.
 - **Attachment storage**: local disk in development/test; S3 (or S3-compatible) in production.
   Upload/download APIs are unchanged — clients still use the authenticated attachment endpoints.
+- **Timezone**: Business dates and API timestamps use **Philippines time (UTC+8, `Asia/Manila`)**.
+  Datetime fields in JSON responses are serialized with a `+08:00` offset (not `Z`).
 
 ## Table of contents
 
@@ -365,10 +367,10 @@ correctionNote, adjustedTimeInAt, adjustedTimeOutAt, createdAt, updatedAt }` whe
 **Company list** adds `employeeId` filter.
 
 **Attendance dashboard** (`GET /workforce/attendance/dashboard`) returns per-employee quick details for
-the requested `date` (defaults to today UTC): `status` (`ABSENT` | `ON_TIME` | `LATE` | `TIMED_OUT`
+the requested `date` (defaults to today in PH time): `status` (`ABSENT` | `ON_TIME` | `LATE` | `TIMED_OUT`
 | `ON_LEAVE`), `isTimedIn`, `isLate`, `isAbsent`, `onLeave`, `timeInToday`, `timeOutToday`, plus a
 company `summary` (`present`, `late`, `absent`, `onLeave`, `timedIn`). Late is computed against a
-default 09:00 UTC start time.
+default **09:00 PH** start time.
 
 > **Role rules**: Owners are exempt from time-in/out and are always operationally ready for
 > transactions. Managers and employees must time in before creating transactions.

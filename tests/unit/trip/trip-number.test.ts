@@ -7,6 +7,11 @@ import {
 } from '../../../src/shared/trips/trip-number-format.js';
 
 describe('trip number formatting', () => {
+  it('formats trip numbers using PH calendar date', () => {
+    const date = new Date('2026-07-07T20:00:00.000Z');
+    expect(formatTripNumber(date, 1)).toBe('TRIP-20260708-000001');
+  });
+
   it('formats trip numbers', () => {
     const date = new Date('2026-07-08T03:00:00.000Z');
     expect(formatTripNumber(date, 1)).toBe('TRIP-20260708-000001');

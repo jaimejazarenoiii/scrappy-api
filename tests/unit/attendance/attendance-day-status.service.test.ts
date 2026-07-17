@@ -61,8 +61,8 @@ describe('AttendanceDayStatusService', () => {
         {
           employeeId: 'emp-3',
           status: 'CLOSED',
-          timeInAt: new Date('2026-07-08T10:30:00.000Z'),
-          timeOutAt: new Date('2026-07-08T18:00:00.000Z'),
+          timeInAt: new Date('2026-07-08T02:30:00.000Z'),
+          timeOutAt: new Date('2026-07-08T10:00:00.000Z'),
           adjustedTimeInAt: null,
           adjustedTimeOutAt: null,
         },

@@ -1,6 +1,7 @@
 import { prisma } from '../../../database/prisma.client.js';
 import { getLogger } from '../../../config/logger.js';
 import { assignRanks, roundMoney } from '../../../shared/analytics/analytics-ranking.js';
+import { formatPhDate } from '../../../shared/datetime/philippine-time.js';
 import type { AnalyticsFilter } from '../domain/analytics-filter.js';
 import type {
   AnalyticsQueryRepository,
@@ -478,7 +479,7 @@ export class AnalyticsPrismaQueryRepository implements AnalyticsQueryRepository 
 
       const monthlyBuckets = new Map<string, number>();
       for (const expense of expenses) {
-        const month = expense.expenseDate.toISOString().slice(0, 7);
+        const month = formatPhDate(expense.expenseDate).slice(0, 7);
         monthlyBuckets.set(
           month,
           (monthlyBuckets.get(month) ?? 0) + decimalToNumber(expense.amount),

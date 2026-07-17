@@ -3,11 +3,10 @@ export interface ParsedExpenseNumber {
   sequence: number;
 }
 
+import { toPhCompactDate } from '../datetime/philippine-time.js';
+
 function toDatePart(expenseDate: Date): string {
-  const year = expenseDate.getUTCFullYear();
-  const month = String(expenseDate.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(expenseDate.getUTCDate()).padStart(2, '0');
-  return `${year}${month}${day}`;
+  return toPhCompactDate(expenseDate);
 }
 
 export function formatExpenseNumber(expenseDate: Date, sequence: number): string {

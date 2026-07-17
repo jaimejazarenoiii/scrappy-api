@@ -8,11 +8,10 @@ export interface ParsedTripNumberPrefix {
   month?: string; // optional MM when prefix includes month
 }
 
+import { toPhCompactDate } from '../datetime/philippine-time.js';
+
 function toDatePart(tripDate: Date): string {
-  const year = tripDate.getUTCFullYear();
-  const month = String(tripDate.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(tripDate.getUTCDate()).padStart(2, '0');
-  return `${year}${month}${day}`;
+  return toPhCompactDate(tripDate);
 }
 
 export function formatTripNumber(tripDate: Date, sequence: number): string {

@@ -31,12 +31,12 @@ describe('report export helpers', () => {
     expect(artifact.contentType).toBe('text/csv; charset=utf-8');
   });
 
-  it('builds export filenames with slugged company and date segments', () => {
+  it('builds export filenames with slugged company and PH date segments', () => {
     const filename = buildExportFilename(
       'transactions',
       'Acme Scrap Co.',
-      new Date('2026-01-01T00:00:00.000Z'),
-      new Date('2026-01-31T23:59:59.999Z'),
+      new Date('2025-12-31T16:00:00.000Z'),
+      new Date('2026-01-31T15:59:59.999Z'),
       'csv',
     );
     expect(filename).toMatch(/^transactions-acme-scrap-co-20260101-20260131-\d+\.csv$/);

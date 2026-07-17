@@ -1,4 +1,5 @@
 import type { TransactionDirection } from '../../modules/transaction/domain/transaction-direction.js';
+import { toPhCompactDate } from '../datetime/philippine-time.js';
 
 export interface ParsedTransactionNumber {
   prefix: 'IN' | 'OUT';
@@ -16,10 +17,7 @@ export function formatTransactionNumber(
   sequence: number,
 ): string {
   const prefix = toPrefix(direction);
-  const year = transactionDate.getUTCFullYear();
-  const month = String(transactionDate.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(transactionDate.getUTCDate()).padStart(2, '0');
-  const datePart = `${year}${month}${day}`;
+  const datePart = toPhCompactDate(transactionDate);
   const paddedSequence = String(sequence).padStart(6, '0');
   return `${prefix}-${datePart}-${paddedSequence}`;
 }

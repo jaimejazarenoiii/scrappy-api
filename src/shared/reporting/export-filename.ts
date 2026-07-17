@@ -1,3 +1,5 @@
+import { formatPhDate } from '../datetime/philippine-time.js';
+
 export type ReportExportDomain =
   | 'transactions'
   | 'trips'
@@ -23,10 +25,7 @@ function slugifyCompanyName(name: string): string {
 
 function formatDateSegment(date: Date | undefined): string {
   if (!date) return 'all';
-  const y = date.getUTCFullYear();
-  const m = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const d = String(date.getUTCDate()).padStart(2, '0');
-  return `${y}${m}${d}`;
+  return formatPhDate(date).replaceAll('-', '');
 }
 
 export function buildExportFilename(

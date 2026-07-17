@@ -1,4 +1,4 @@
-import { roundMoney } from '../../../../shared/analytics/analytics-ranking.js';
+import { formatPhDate } from '../../../../shared/datetime/philippine-time.js';
 import type {
   AttendanceReportRowProjection,
   BranchReportRowProjection,
@@ -34,7 +34,7 @@ export function buildEmployeeDisplayName(parts: {
 }
 
 export function formatDateOnly(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  return formatPhDate(date);
 }
 
 type UserLabelSource = { email: string } | null | undefined;

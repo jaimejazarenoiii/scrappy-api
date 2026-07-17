@@ -1,4 +1,5 @@
 import { formatUtcDate, isSameUtcDay } from '../../../../shared/datetime/day-boundaries.js';
+import { phDateTime } from '../../../../shared/datetime/philippine-time.js';
 import type { AttendanceResponseDto } from '../dto/attendance.response.js';
 import type {
   AttendanceDashboardEmployeeDto,
@@ -7,7 +8,7 @@ import type {
 } from '../dto/attendance-dashboard.response.js';
 import type { LeaveResponseDto } from '../../../leave/application/dto/leave.response.js';
 
-export const DEFAULT_WORK_DAY_START_HOUR_UTC = 9;
+export const DEFAULT_WORK_DAY_START_HOUR = 9;
 export const DEFAULT_WORK_DAY_START_MINUTE = 0;
 
 interface AttendanceSessionLike {
@@ -35,9 +36,7 @@ function effectiveTimeOut(session: AttendanceSessionLike): Date | null {
 }
 
 function expectedWorkStart(day: Date): Date {
-  const expected = new Date(day);
-  expected.setUTCHours(DEFAULT_WORK_DAY_START_HOUR_UTC, DEFAULT_WORK_DAY_START_MINUTE, 0, 0);
-  return expected;
+  return phDateTime(day, DEFAULT_WORK_DAY_START_HOUR, DEFAULT_WORK_DAY_START_MINUTE);
 }
 
 export function isLateTimeIn(timeIn: Date, day: Date): boolean {

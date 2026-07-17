@@ -1,4 +1,7 @@
 import 'dotenv/config';
+
+process.env.TZ = process.env.TZ ?? 'Asia/Manila';
+
 import { createServer, type Server } from 'node:http';
 import { loadConfig } from './config/index.js';
 import { getLogger } from './config/logger.js';

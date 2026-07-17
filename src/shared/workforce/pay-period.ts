@@ -1,3 +1,4 @@
+import { phDateOrdinal } from '../datetime/philippine-time.js';
 import { ValidationAppError } from '../errors/http-exceptions.js';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -6,17 +7,9 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
  * Returns true when the inclusive date range spans exactly seven days.
  */
 export function isWeeklyPeriod(payPeriodStart: Date, payPeriodEnd: Date): boolean {
-  const start = Date.UTC(
-    payPeriodStart.getUTCFullYear(),
-    payPeriodStart.getUTCMonth(),
-    payPeriodStart.getUTCDate(),
+  const diffDays = Math.round(
+    (phDateOrdinal(payPeriodEnd) - phDateOrdinal(payPeriodStart)) / MS_PER_DAY,
   );
-  const end = Date.UTC(
-    payPeriodEnd.getUTCFullYear(),
-    payPeriodEnd.getUTCMonth(),
-    payPeriodEnd.getUTCDate(),
-  );
-  const diffDays = Math.round((end - start) / MS_PER_DAY);
   return diffDays === 6;
 }
 
