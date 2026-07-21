@@ -9,6 +9,7 @@ export const ACTIVITY_EVENT_TYPES = [
   'TRIP',
   'EXPENSE',
   'WORKFORCE',
+  'TRACKING',
 ] as const satisfies readonly ActivityEventType[];
 
 export const ACTIVITY_MODULES = [
@@ -26,6 +27,7 @@ export const ACTIVITY_MODULES = [
   'cash-advance',
   'payroll',
   'user',
+  'tracking',
 ] as const satisfies readonly ActivityModule[];
 
 export const ACTIVITY_ACTIONS = {
@@ -76,6 +78,8 @@ export const ACTIVITY_ACTIONS = {
   SUBSCRIPTION_EXPIRED: 'subscription.expired',
   SUBSCRIPTION_SUSPENDED: 'subscription.suspended',
   SUBSCRIPTION_REACTIVATED: 'subscription.reactivated',
+  TRACKING_STARTED: 'tracking.started',
+  TRACKING_STOPPED: 'tracking.stopped',
   ADMIN_COMPANY_CREATED: 'admin.company_created',
   ADMIN_ACCOUNT_CREATED: 'admin.account_created',
 } as const;

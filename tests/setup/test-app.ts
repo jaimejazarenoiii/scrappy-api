@@ -42,6 +42,7 @@ import {
 import { InMemoryExpenseCategoryRepository } from './in-memory-expense-category-repository.js';
 import { InMemoryActivityLogRepository } from './in-memory-activity-log-repository.js';
 import { InMemoryCompanySubscriptionRepository } from './subscription-helpers.js';
+import { InMemoryCurrentLocationRepository } from './in-memory-tracking-repository.js';
 
 export function setupTestEnv(): void {
   process.env.PORT = '3000';
@@ -133,6 +134,7 @@ export function createTestContext() {
   const expenseFileStorage = new InMemoryExpenseFileStorage();
   const activityLogRepository = new InMemoryActivityLogRepository();
   const companySubscriptionRepository = new InMemoryCompanySubscriptionRepository();
+  const currentLocationRepository = new InMemoryCurrentLocationRepository();
   const container = createContainer({
     companyRepository,
     userRepository,
@@ -166,10 +168,12 @@ export function createTestContext() {
     expenseFileStorage,
     activityLogRepository,
     companySubscriptionRepository,
+    currentLocationRepository,
   });
   const app = createApp(container);
   return {
     app,
+    container,
     companyRepository,
     userRepository,
     employeeRepository,
@@ -199,5 +203,6 @@ export function createTestContext() {
     tripLoadRepository,
     activityLogRepository,
     companySubscriptionRepository,
+    currentLocationRepository,
   };
 }

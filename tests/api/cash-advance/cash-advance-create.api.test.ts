@@ -33,7 +33,7 @@ describe('cash advance api', () => {
         }),
       );
     expect(backdated.status).toBe(201);
-    expect(backdated.body.data.issuedAt).toBe('2026-07-01T00:00:00.000Z');
+    expect(backdated.body.data.issuedAt).toBe('2026-07-01T08:00:00.000+08:00');
     expect(backdated.body.data.amount).toBe(250);
 
     const employeeDenied = await request(app)

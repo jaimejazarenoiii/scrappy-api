@@ -11,3 +11,20 @@ export function createRateLimitMiddleware(): RequestHandler {
     legacyHeaders: false,
   });
 }
+
+/** Tighter limit for high-frequency GPS location upserts (1 req/s per IP). */
+export function createTrackingLocationRateLimitMiddleware(): RequestHandler {
+  if (loadConfig().NODE_ENV === 'test') {
+    return (_req, _res, next) => next();
+  }
+  return rateLimit({
+    windowMs: 1000,
+    max: 1,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      success: false,
+      error: { code: 'RATE_LIMITED', message: 'Too many location updates' },
+    },
+  });
+}

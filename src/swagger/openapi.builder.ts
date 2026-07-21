@@ -20,6 +20,7 @@ import { adminAnalyticsOpenApiPaths } from '../modules/analytics/presentation/ad
 import { reportsOpenApiPaths } from '../modules/reports/presentation/reports.openapi.js';
 import { activityLogOpenApiPaths } from '../modules/activity-log/presentation/activity-log.openapi.js';
 import { subscriptionOpenApiPaths } from '../modules/subscription/presentation/subscription.openapi.js';
+import { trackingOpenApiPaths } from '../modules/tracking/presentation/tracking.openapi.js';
 import { commonSchemas } from './common-schemas.js';
 import { commonResponses } from './common-responses.js';
 
@@ -62,6 +63,7 @@ export function buildOpenApiDocument(): object {
       ...reportsOpenApiPaths,
       ...activityLogOpenApiPaths,
       ...subscriptionOpenApiPaths,
+      ...trackingOpenApiPaths,
     },
   };
 }

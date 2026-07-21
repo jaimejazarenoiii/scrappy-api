@@ -181,6 +181,7 @@ model Company {
   expenses           Expense[]
   expenseCategories  ExpenseCategory[]
   activityLogs       ActivityLog[]
+  currentLocations   CurrentLocation[]
 }
 
 model User {
@@ -228,6 +229,7 @@ model Employee {
   transactionAssignments TransactionEmployeeAssignment[]
   tripMembers           TripMember[]
   createdExpenses       Expense[]
+  currentLocation       CurrentLocation?
 
   @@unique([companyId, employeeNumber])
   @@index([companyId, lastName])
@@ -535,6 +537,7 @@ model Trip {
   transactions Transaction[]
   expenses Expense[]
   tripLoad TripLoad?
+  currentLocations CurrentLocation[]
 
   @@index([companyId, status, deletedAt])
   @@index([companyId, scheduledStart])
@@ -597,6 +600,31 @@ model TripNumberSequence {
 
   @@id([companyId, sequenceDate])
   @@index([companyId, sequenceDate])
+}
+
+model CurrentLocation {
+  id             String   @id @default(uuid())
+  companyId      String
+  employeeId     String   @unique
+  tripId         String?
+  latitude       Decimal  @db.Decimal(10, 8)
+  longitude      Decimal  @db.Decimal(11, 8)
+  speed          Decimal? @db.Decimal(8, 3)
+  heading        Decimal? @db.Decimal(6, 2)
+  accuracy       Decimal? @db.Decimal(8, 2)
+  batteryLevel   Int?
+  isMockLocation Boolean  @default(false)
+  lastSeenAt     DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  company  Company  @relation(fields: [companyId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id])
+  trip     Trip?    @relation(fields: [tripId], references: [id])
+
+  @@index([companyId, employeeId])
+  @@index([companyId, tripId])
+  @@index([companyId, lastSeenAt])
 }
 
 model Expense {

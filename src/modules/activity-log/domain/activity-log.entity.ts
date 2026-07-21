@@ -6,7 +6,8 @@ export type ActivityEventType =
   | 'TRANSACTION'
   | 'TRIP'
   | 'EXPENSE'
-  | 'WORKFORCE';
+  | 'WORKFORCE'
+  | 'TRACKING';
 
 export type ActivityModule =
   | 'auth'
@@ -22,7 +23,8 @@ export type ActivityModule =
   | 'leave'
   | 'cash-advance'
   | 'payroll'
-  | 'user';
+  | 'user'
+  | 'tracking';
 
 export interface ActivityLogProps {
   id: string;

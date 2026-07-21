@@ -24,6 +24,7 @@ import {
   createAdminSubscriptionRoutes,
   createTenantSubscriptionRoutes,
 } from './subscription/index.js';
+import { createTrackingRoutes } from './tracking/index.js';
 import { createAdminCompanyRoutes } from './company/presentation/admin-company.routes.js';
 
 export function registerModuleRoutes(app: Express, container: Container): void {
@@ -160,5 +161,12 @@ export function registerModuleRoutes(app: Express, container: Container): void {
     companyResolutionMiddleware,
     gate,
     createTenantSubscriptionRoutes(container.subscriptionController),
+  );
+  app.use(
+    '/api/v1',
+    authn,
+    companyResolutionMiddleware,
+    gate,
+    createTrackingRoutes(container.trackingController),
   );
 }

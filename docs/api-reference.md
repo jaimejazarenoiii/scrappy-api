@@ -850,6 +850,129 @@ Returns a chronological list of lifecycle events derived from the trip record (`
 
 ---
 
+### Live GPS Tracking
+
+Employees on **Started** trips transmit GPS coordinates; Owners and Managers monitor live positions via REST snapshots and WebSocket streams. One **current location** row exists per employee (upsert semantics). Tracking stops automatically when the trip is completed.
+
+**Authorization summary**
+
+| Action                          | EMPLOYEE | OWNER / MANAGER | SUPER_ADMIN |
+| ------------------------------- | -------- | --------------- | ----------- |
+| `PUT /tracking/location`        | ✓        | ✗               | ✗           |
+| `GET /tracking/session`         | ✓        | ✗               | ✗           |
+| `GET /tracking/available-trips` | ✓        | ✗               | ✗           |
+| Read employee/trip locations    | ✗        | ✓ (company)     | ✓ (admin)   |
+| WebSocket subscribe             | ✗        | ✓               | ✓ (admin)   |
+
+**Tracking status**: `ONLINE` when the last location update is within the configured staleness window (default 5 minutes); otherwise `OFFLINE`.
+
+**Mobile recovery (addendum)**: After background resume, network loss, or app restart, the Tracking Application must call `GET /tracking/session` before resuming GPS or WebSocket. See [`specs/016-live-gps-tracking/addendum-session-sync.md`](../../specs/016-live-gps-tracking/addendum-session-sync.md).
+
+#### Tracking session sync
+
+`GET /tracking/session` — **EMPLOYEE** only. Returns authoritative tracking state for the authenticated employee.
+
+| Query             | Type | Notes                                                       |
+| ----------------- | ---- | ----------------------------------------------------------- |
+| `lastKnownTripId` | uuid | Optional trip ID from local cache (detect offline trip end) |
+
+**Response (`data`)**
+
+| Field            | Type    | Notes                                                                                                                        |
+| ---------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `sessionState`   | enum    | `ACTIVE_TRIP`, `NO_ACTIVE_TRIP`, `TRIP_ENDED`, `EMPLOYEE_NOT_ASSIGNED`, `EMPLOYEE_INACTIVE`, `COMPANY_SUBSCRIPTION_INACTIVE` |
+| `canTrack`       | boolean | Resume GPS only when `true`                                                                                                  |
+| `employeeId`     | uuid    | When employee profile resolved                                                                                               |
+| `trip`           | object  | When `sessionState=ACTIVE_TRIP`                                                                                              |
+| `endedTrip`      | object  | When `sessionState=TRIP_ENDED`                                                                                               |
+| `synchronizedAt` | ISO8601 | Server evaluation time                                                                                                       |
+
+**Reconnect flow**: Authenticate → `GET /tracking/session` → if `canTrack`, resume `PUT /tracking/location` and WebSocket subscribe → otherwise stop GPS, fetch `GET /tracking/available-trips`, prompt trip selection.
+
+#### Available trips
+
+`GET /tracking/available-trips` — **EMPLOYEE** only. Returns Started trips the employee is assigned to (for selection after tracking ends).
+
+#### REST endpoints
+
+| Method & path                                                      | Roles          | Purpose                                               |
+| ------------------------------------------------------------------ | -------------- | ----------------------------------------------------- |
+| `GET /tracking/session`                                            | EMPLOYEE       | Synchronize tracking session (mobile recovery)        |
+| `GET /tracking/available-trips`                                    | EMPLOYEE       | List Started trips assigned to authenticated employee |
+| `PUT /tracking/location`                                           | EMPLOYEE       | Upsert authenticated employee GPS on active trip      |
+| `GET /tracking/employees/{employeeId}/location`                    | OWNER, MANAGER | Current coordinates for one employee                  |
+| `GET /tracking/employees/{employeeId}/status`                      | OWNER, MANAGER | Online/offline status for one employee                |
+| `GET /trips/{tripId}/tracking/locations`                           | OWNER, MANAGER | All trip members with location/status snapshot        |
+| `GET /tracking/trips/active/locations`                             | OWNER, MANAGER | Paginated active-trip locations for JWT company       |
+| `GET /admin/companies/{companyId}/tracking/trips/active/locations` | SUPER_ADMIN    | Cross-company active-trip locations (support view)    |
+
+#### Upsert location request
+
+```jsonc
+{
+  "latitude": 14.5995,
+  "longitude": 120.9842,
+  "capturedAt": "2026-07-20T15:30:00.000+08:00",
+  "accuracy": 10,
+  "speed": 45,
+  "heading": 180,
+  "batteryLevel": 85,
+  "isMockLocation": false,
+}
+```
+
+**Rules**
+
+- Employee must be on a **Started** trip (409 `BUSINESS_RULE_VIOLATION` / `NO_ACTIVE_TRIP` if not).
+- After trip **Complete**, location upserts are rejected immediately; use session sync to detect `TRIP_ENDED`.
+- `isMockLocation: true` is rejected (**403**).
+- `capturedAt` must not be older than the stored location (**400**).
+- Company and employee identity come from the JWT — never from the request body.
+
+#### Trip tracking snapshot response
+
+`GET /trips/{tripId}/tracking/locations` returns `trackingActive: true` only when the trip status is `STARTED`. Each member includes `trackingStatus`, optional coordinates, and `lastSeenAt`.
+
+#### WebSocket
+
+- **Path**: `/ws/v1/tracking` (configurable via `WS_PATH`)
+- **Auth**: JWT access token via `Authorization: Bearer` header or `?access_token=` query param on upgrade
+- **Event catalog**: [`specs/016-live-gps-tracking/contracts/websocket-events.md`](../../specs/016-live-gps-tracking/contracts/websocket-events.md)
+
+**Subscribe (client → server)**
+
+| Message                   | Roles          | Purpose                          |
+| ------------------------- | -------------- | -------------------------------- |
+| `subscribe:company`       | OWNER, MANAGER | Company-wide live tracking room  |
+| `subscribe:trip`          | OWNER, MANAGER | Trip-scoped room (`tripId` req.) |
+| `subscribe:admin-company` | SUPER_ADMIN    | Platform support room            |
+| `location:update`         | EMPLOYEE       | GPS uplink (alternative to REST) |
+
+**Broadcast (server → client)**
+
+| Event                | When                                      |
+| -------------------- | ----------------------------------------- |
+| `tracking:connected` | WebSocket session established             |
+| `location:updated`   | Employee upserts location                 |
+| `tracking:started`   | First location for a trip                 |
+| `tracking:stopped`   | Trip completed                            |
+| `employee:online`    | Employee transitions to online            |
+| `employee:offline`   | Staleness sweep detects missed heartbeats |
+
+If the WebSocket connection drops:
+
+1. Do **not** assume tracking state from the last WS message.
+2. Call `GET /tracking/session` before reconnecting or resuming GPS.
+3. Re-subscribe (`subscribe:trip` / `subscribe:company`) only after `canTrack=true`.
+4. Use REST upsert for the first location after reconnect if WS is not yet ready (REST remains
+   authoritative for persistence).
+
+Missed WS events during downtime are acceptable; session sync + REST snapshot restore correctness.
+
+See [`addendum-session-sync.md`](../../specs/016-live-gps-tracking/addendum-session-sync.md) for the full mobile recovery contract.
+
+---
+
 ### Trip Load Management
 
 Trip Load Management lets a company record the planned cargo (materials + quantities) for a trip and

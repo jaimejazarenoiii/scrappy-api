@@ -151,6 +151,11 @@ import type { ActivityLogController } from '../modules/activity-log/presentation
 import type { ActivityLogRepository } from '../modules/activity-log/domain/activity-log.repository.js';
 import { buildSubscriptionController } from '../modules/subscription/index.js';
 import type { SubscriptionController } from '../modules/subscription/presentation/subscription.controller.js';
+import { buildTrackingModule } from '../modules/tracking/index.js';
+import type { TrackingController } from '../modules/tracking/presentation/tracking.controller.js';
+import type { TrackingWebSocketGateway } from '../modules/tracking/presentation/tracking-websocket.gateway.js';
+import type { TrackingStalenessSweepService } from '../modules/tracking/application/services/tracking-staleness-sweep.service.js';
+import type { CurrentLocationRepository } from '../modules/tracking/domain/current-location.repository.js';
 import { CompanySubscriptionPrismaRepository } from '../modules/subscription/infrastructure/company-subscription.prisma-repository.js';
 import type { CompanySubscriptionRepository } from '../modules/subscription/domain/company-subscription.repository.js';
 import { registerActivityLogRecorder } from '../shared/audit/activity-log-bridge.js';
@@ -192,6 +197,9 @@ export interface Container {
   expenseController: ExpenseController;
   activityLogController: ActivityLogController;
   subscriptionController: SubscriptionController;
+  trackingController: TrackingController;
+  trackingWebSocketGateway: TrackingWebSocketGateway;
+  trackingStalenessSweepService: TrackingStalenessSweepService;
   healthIndicator?: { check: () => Promise<boolean> };
 }
 
@@ -228,6 +236,7 @@ export interface ContainerOverrides {
   expenseFileStorage?: ExpenseFileStorage;
   activityLogRepository?: ActivityLogRepository;
   companySubscriptionRepository?: CompanySubscriptionRepository;
+  currentLocationRepository?: CurrentLocationRepository;
   healthIndicator?: { check: () => Promise<boolean> };
 }
 
@@ -295,6 +304,15 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
     userRepository,
     passwordHasher,
   );
+
+  const trackingModule = buildTrackingModule({
+    tokenProvider,
+    userRepository,
+    tripRepository,
+    employeeRepository,
+    companyRepository,
+    currentLocationRepository: overrides.currentLocationRepository,
+  });
 
   return {
     tokenProvider,
@@ -475,6 +493,7 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
       employeeRepository,
       userRepository,
       transactionRepository,
+      trackingLifecyclePort: trackingModule.trackingLifecyclePort,
     }),
     tripLoadController: buildTripLoadController({
       tripRepository,
@@ -503,5 +522,8 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
       userRepository,
       sessionRepository,
     }),
+    trackingController: trackingModule.trackingController,
+    trackingWebSocketGateway: trackingModule.trackingWebSocketGateway,
+    trackingStalenessSweepService: trackingModule.trackingStalenessSweepService,
   };
 }

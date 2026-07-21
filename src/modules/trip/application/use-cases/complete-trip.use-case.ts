@@ -4,6 +4,8 @@ import {
 } from '../../../../shared/errors/http-exceptions.js';
 import type { AuthorizationContext } from '../../../../shared/policy/authorization-context.js';
 import type { VehicleRepository } from '../../../vehicle/domain/vehicle.repository.js';
+import type { TrackingLifecyclePort } from '../../../tracking/domain/ports/tracking-lifecycle.port.js';
+import { NoOpTrackingLifecyclePort } from '../../../tracking/domain/ports/tracking-lifecycle.port.js';
 import { assertCompletable } from '../../domain/trip-rules.js';
 import type { TripRepository } from '../../domain/trip.repository.js';
 import { computeTripDistance } from '../../infrastructure/mappers/trip-decimal.mapper.js';
@@ -16,6 +18,7 @@ export class CompleteTripUseCase {
   constructor(
     private readonly tripRepository: TripRepository,
     private readonly vehicleRepository: VehicleRepository,
+    private readonly trackingLifecyclePort: TrackingLifecyclePort = new NoOpTrackingLifecyclePort(),
   ) {}
 
   async execute(
@@ -71,6 +74,8 @@ export class CompleteTripUseCase {
         distance: computeTripDistance(startingOdometer, endingOdometer),
       },
     });
+
+    await this.trackingLifecyclePort.stopTrackingForTrip(tripId, auth.companyId, auth.userId);
 
     return toTripDetailDto(detail);
   }

@@ -1,0 +1,10 @@
+export const TRACKING_SESSION_STATES = [
+  'ACTIVE_TRIP',
+  'NO_ACTIVE_TRIP',
+  'TRIP_ENDED',
+  'EMPLOYEE_NOT_ASSIGNED',
+  'EMPLOYEE_INACTIVE',
+  'COMPANY_SUBSCRIPTION_INACTIVE',
+] as const;
+
+export type TrackingSessionState = (typeof TRACKING_SESSION_STATES)[number];

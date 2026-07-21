@@ -36,6 +36,9 @@ export const envSchema = z
         if (typeof value === 'boolean') return value;
         return value === 'true' || value === '1';
       }),
+    TRACKING_STALENESS_MS: z.coerce.number().int().positive().default(300_000),
+    TRACKING_SWEEP_MS: z.coerce.number().int().positive().default(60_000),
+    WS_PATH: z.string().min(1).default('/ws/v1/tracking'),
   })
   .superRefine((env, ctx) => {
     const driver = env.FILE_STORAGE_DRIVER ?? (env.NODE_ENV === 'production' ? 's3' : 'local');

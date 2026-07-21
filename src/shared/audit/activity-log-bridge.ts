@@ -196,6 +196,16 @@ const ACTION_TAXONOMY: Record<string, Taxonomy> = {
     module: 'subscription',
     description: 'Subscription reactivated',
   },
+  'tracking.started': {
+    eventType: 'TRACKING',
+    module: 'tracking',
+    description: 'Live tracking started',
+  },
+  'tracking.stopped': {
+    eventType: 'TRACKING',
+    module: 'tracking',
+    description: 'Live tracking stopped',
+  },
   'admin.company_created': {
     eventType: 'COMPANY',
     module: 'company',

@@ -2,21 +2,27 @@ import 'dotenv/config';
 
 process.env.TZ = process.env.TZ ?? 'Asia/Manila';
 
-import { createServer, type Server } from 'node:http';
 import { loadConfig } from './config/index.js';
 import { getLogger } from './config/logger.js';
+import { getTrackingWsPath } from './shared/geo/tracking-staleness.js';
 import { prisma } from './database/prisma.client.js';
 import { createContainer } from './config/container.js';
 import { createApp } from './app.js';
 
 async function bootstrap(): Promise<void> {
   const config = loadConfig();
-  const app = createApp(createContainer());
+  const container = createContainer();
+  const app = createApp(container);
   const logger = getLogger();
-  const server: Server = createServer(app);
+  const server = (await import('node:http')).createServer(app);
+
+  container.trackingWebSocketGateway.attach(server, getTrackingWsPath());
+  container.trackingStalenessSweepService.start();
+
   server.listen(config.PORT, () => logger.info({ port: config.PORT }, 'Scrappy API started'));
   const shutdown = async (signal: string): Promise<void> => {
     logger.info({ signal }, 'Shutting down');
+    container.trackingStalenessSweepService.stop();
     server.close(async () => {
       await prisma.$disconnect();
       process.exit(0);

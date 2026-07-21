@@ -1,0 +1,549 @@
+openapi: 3.0.3
+info:
+  title: Scrappy API - Live GPS Tracking (P012)
+  version: 1.0.0
+  description: |
+    P012 Live GPS Tracking contracts. Employees transmit current GPS during Started Trips.
+    Owners and Managers monitor via REST (initial state) and WebSocket (real-time — see websocket-events.md).
+
+servers:
+  - url: /api/v1
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    TrackingStatus:
+      type: string
+      enum: [ONLINE, OFFLINE]
+
+    GeoCoordinates:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+          example: 14.5995
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+          example: 120.9842
+
+    UpsertCurrentLocationRequest:
+      type: object
+      required: [latitude, longitude, capturedAt]
+      properties:
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+        capturedAt:
+          type: string
+          format: date-time
+          description: Device capture time (PH +08:00 in API responses)
+        accuracy:
+          type: number
+          format: double
+          minimum: 0
+          description: Horizontal accuracy in meters
+        speed:
+          type: number
+          format: double
+          minimum: 0
+          description: Speed in km/h
+        heading:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 360
+          description: Bearing in degrees
+        batteryLevel:
+          type: integer
+          minimum: 0
+          maximum: 100
+        isMockLocation:
+          type: boolean
+          default: false
+
+    CurrentLocationSummary:
+      type: object
+      required: [employeeId, trackingStatus]
+      properties:
+        employeeId:
+          type: string
+          format: uuid
+        tripId:
+          type: string
+          format: uuid
+          nullable: true
+        tripNumber:
+          type: string
+          nullable: true
+        coordinates:
+          allOf:
+            - $ref: '#/components/schemas/GeoCoordinates'
+          nullable: true
+          description: Null when employee has not yet transmitted on active trip
+        accuracy:
+          type: number
+          nullable: true
+        speed:
+          type: number
+          nullable: true
+        heading:
+          type: number
+          nullable: true
+        batteryLevel:
+          type: integer
+          nullable: true
+        trackingStatus:
+          $ref: '#/components/schemas/TrackingStatus'
+        lastSeenAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    TripTrackingLocationsResponse:
+      type: object
+      required: [tripId, tripStatus, trackingActive, employees]
+      properties:
+        tripId:
+          type: string
+          format: uuid
+        tripNumber:
+          type: string
+        tripStatus:
+          type: string
+          enum: [DRAFT, STARTED, COMPLETED, CANCELLED]
+        trackingActive:
+          type: boolean
+          description: True only when tripStatus is STARTED
+        employees:
+          type: array
+          items:
+            type: object
+            required: [employeeId, firstName, lastName, trackingStatus]
+            properties:
+              employeeId:
+                type: string
+                format: uuid
+              firstName:
+                type: string
+              lastName:
+                type: string
+              role:
+                type: string
+                nullable: true
+              location:
+                $ref: '#/components/schemas/CurrentLocationSummary'
+
+    ActiveTripTrackingSummary:
+      type: object
+      required: [tripId, tripNumber, tripStatus, employees]
+      properties:
+        tripId:
+          type: string
+          format: uuid
+        tripNumber:
+          type: string
+        tripStatus:
+          type: string
+        origin:
+          type: string
+        destination:
+          type: string
+        employees:
+          type: array
+          items:
+            $ref: '#/components/schemas/CurrentLocationSummary'
+
+    TrackingStatusResponse:
+      type: object
+      required: [employeeId, trackingStatus]
+      properties:
+        employeeId:
+          type: string
+          format: uuid
+        tripId:
+          type: string
+          format: uuid
+          nullable: true
+        trackingStatus:
+          $ref: '#/components/schemas/TrackingStatus'
+        lastSeenAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    TrackingSessionState:
+      type: string
+      enum:
+        - ACTIVE_TRIP
+        - NO_ACTIVE_TRIP
+        - TRIP_ENDED
+        - EMPLOYEE_NOT_ASSIGNED
+        - EMPLOYEE_INACTIVE
+        - COMPANY_SUBSCRIPTION_INACTIVE
+
+    TrackingSessionTrip:
+      type: object
+      required: [id, tripNumber, status, origin, destination, scheduledStart]
+      properties:
+        id:
+          type: string
+          format: uuid
+        tripNumber:
+          type: string
+        status:
+          type: string
+          enum: [DRAFT, STARTED, COMPLETED, CANCELLED]
+        origin:
+          type: string
+        destination:
+          type: string
+        scheduledStart:
+          type: string
+          format: date-time
+        actualStart:
+          type: string
+          format: date-time
+          nullable: true
+
+    TrackingSessionResponse:
+      type: object
+      required: [sessionState, canTrack, synchronizedAt]
+      properties:
+        sessionState:
+          $ref: '#/components/schemas/TrackingSessionState'
+        canTrack:
+          type: boolean
+        employeeId:
+          type: string
+          format: uuid
+        trip:
+          $ref: '#/components/schemas/TrackingSessionTrip'
+        endedTrip:
+          $ref: '#/components/schemas/TrackingSessionTrip'
+        synchronizedAt:
+          type: string
+          format: date-time
+
+    ApiSuccessEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data: {}
+        meta:
+          type: object
+        error:
+          nullable: true
+
+    ApiErrorEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        data:
+          nullable: true
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+
+security:
+  - bearerAuth: []
+
+paths:
+  /tracking/session:
+    get:
+      tags: [Tracking]
+      summary: Synchronize employee tracking session
+      description: |
+        Mobile recovery endpoint. Returns whether the authenticated Employee may transmit GPS.
+        Optional lastKnownTripId detects trip completion while the device was offline.
+      parameters:
+        - name: lastKnownTripId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Session state
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TrackingSessionResponse'
+        '403':
+          description: Not an employee account
+
+  /tracking/available-trips:
+    get:
+      tags: [Tracking]
+      summary: List Started trips assigned to authenticated employee
+      responses:
+        '200':
+          description: Available trips for tracking selection
+        '403':
+          description: Not an employee account
+
+  /tracking/location:
+    put:
+      tags: [Tracking]
+      summary: Upsert authenticated Employee current location
+      description: |
+        Tracking Application submits GPS for the authenticated Employee on their active Started Trip.
+        Company and Employee are derived from JWT — never trusted from request body.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertCurrentLocationRequest'
+            example:
+              latitude: 14.5995
+              longitude: 120.9842
+              capturedAt: '2026-07-20T08:30:00+08:00'
+              accuracy: 12.5
+              speed: 35
+              heading: 180
+              batteryLevel: 78
+              isMockLocation: false
+      responses:
+        '200':
+          description: Location accepted and stored
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CurrentLocationSummary'
+        '401':
+          description: Unauthenticated or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorEnvelope'
+        '403':
+          description: Forbidden — not Employee, inactive account, mock location, or subscription blocked
+        '404':
+          description: No linked Employee profile
+        '409':
+          description: No active Started Trip or Employee not assigned to trip
+        '422':
+          description: Validation error (coordinates, timestamp, stale update)
+
+  /tracking/employees/{employeeId}/location:
+    get:
+      tags: [Tracking]
+      summary: Get Employee current location
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Current location snapshot
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CurrentLocationSummary'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden — Employee viewing another Employee or cross-company
+        '404':
+          description: Employee not found
+
+  /tracking/employees/{employeeId}/status:
+    get:
+      tags: [Tracking]
+      summary: Get Employee tracking status (lightweight)
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Online/Offline status
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TrackingStatusResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+        '404':
+          description: Employee not found
+
+  /trips/{tripId}/tracking/locations:
+    get:
+      tags: [Tracking, Trips]
+      summary: Get current locations for all assigned Employees on a Trip
+      description: REST snapshot before WebSocket subscription. trackingActive false when trip not STARTED.
+      parameters:
+        - name: tripId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Trip tracking snapshot
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TripTrackingLocationsResponse'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden
+        '404':
+          description: Trip not found
+
+  /tracking/trips/active/locations:
+    get:
+      tags: [Tracking]
+      summary: List current locations for all Started Trips in Company
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: tripId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: employeeId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Paginated active trip tracking summaries
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ActiveTripTrackingSummary'
+                      meta:
+                        type: object
+                        properties:
+                          page:
+                            type: integer
+                          limit:
+                            type: integer
+                          total:
+                            type: integer
+                          totalPages:
+                            type: integer
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden — Employee role
+        '422':
+          description: Invalid query filters
+
+  /admin/companies/{companyId}/tracking/trips/active/locations:
+    get:
+      tags: [Tracking, Admin]
+      summary: Super Admin — active trip locations for a Company
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: tripId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Same shape as tenant active locations list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiSuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ActiveTripTrackingSummary'
+        '401':
+          description: Unauthenticated
+        '403':
+          description: Forbidden — not Super Admin
+        '404':
+          description: Company not found

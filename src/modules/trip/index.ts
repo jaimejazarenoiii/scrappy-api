@@ -3,6 +3,8 @@ import type { EmployeeRepository } from '../employee/domain/employee.repository.
 import type { UserRepository } from '../user/domain/user.repository.js';
 import type { VehicleRepository } from '../vehicle/domain/vehicle.repository.js';
 import type { TransactionRepository } from '../transaction/domain/transaction.repository.js';
+import type { TrackingLifecyclePort } from '../tracking/domain/ports/tracking-lifecycle.port.js';
+import { NoOpTrackingLifecyclePort } from '../tracking/domain/ports/tracking-lifecycle.port.js';
 import type { TripRepository } from './domain/trip.repository.js';
 import type { TripLoadRepository } from './domain/trip-load.repository.js';
 import type { TripNumberSequenceRepository } from './domain/trip-number-sequence.repository.js';
@@ -44,6 +46,7 @@ export interface TripModuleDependencies {
   employeeRepository: EmployeeRepository;
   userRepository: UserRepository;
   transactionRepository: TransactionRepository;
+  trackingLifecyclePort?: TrackingLifecyclePort;
 }
 
 export interface TripLoadModuleDependencies {
@@ -78,7 +81,11 @@ export function buildTripController(deps: TripModuleDependencies): TripControlle
     new AddTripMembersUseCase(deps.tripRepository, deps.employeeRepository),
     new UpdateTripMemberUseCase(deps.tripRepository),
     new RemoveTripMemberUseCase(deps.tripRepository),
-    new CompleteTripUseCase(deps.tripRepository, deps.vehicleRepository),
+    new CompleteTripUseCase(
+      deps.tripRepository,
+      deps.vehicleRepository,
+      deps.trackingLifecyclePort ?? new NoOpTrackingLifecyclePort(),
+    ),
   );
 }
 
