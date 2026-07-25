@@ -1,10 +1,13 @@
 import type { RequestHandler } from 'express';
+import { AppError } from '../../../shared/errors/app-error.js';
 import { success } from '../../../shared/http/api-response.js';
 import type { AuthorizationContext } from '../../../shared/policy/authorization-context.js';
+import { logTrackingLocationRejected } from '../application/services/tracking-audit.service.js';
 import type { UpsertCurrentLocationUseCase } from '../application/use-cases/upsert-current-location.use-case.js';
 import type { GetEmployeeLocationUseCase } from '../application/use-cases/get-employee-location.use-case.js';
 import type { GetEmployeeTrackingStatusUseCase } from '../application/use-cases/get-employee-tracking-status.use-case.js';
 import type { GetTripTrackingLocationsUseCase } from '../application/use-cases/get-trip-tracking-locations.use-case.js';
+import type { GetTripTrackingRouteUseCase } from '../application/use-cases/get-trip-tracking-route.use-case.js';
 import type { ListActiveTripLocationsUseCase } from '../application/use-cases/list-active-trip-locations.use-case.js';
 import type { AdminListCompanyTripLocationsUseCase } from '../application/use-cases/admin-list-company-trip-locations.use-case.js';
 import type { GetTrackingSessionUseCase } from '../application/use-cases/get-tracking-session.use-case.js';
@@ -12,6 +15,7 @@ import type { ListAvailableTrackingTripsUseCase } from '../application/use-cases
 import type {
   ListActiveLocationsQuery,
   TrackingSessionQuery,
+  TripRouteQuery,
   UpsertLocationBody,
 } from './tracking.schemas.js';
 
@@ -31,6 +35,7 @@ export class TrackingController {
     private readonly getEmployeeLocationUseCase: GetEmployeeLocationUseCase,
     private readonly getEmployeeTrackingStatusUseCase: GetEmployeeTrackingStatusUseCase,
     private readonly getTripTrackingLocationsUseCase: GetTripTrackingLocationsUseCase,
+    private readonly getTripTrackingRouteUseCase: GetTripTrackingRouteUseCase,
     private readonly listActiveTripLocationsUseCase: ListActiveTripLocationsUseCase,
     private readonly adminListCompanyTripLocationsUseCase: AdminListCompanyTripLocationsUseCase,
     private readonly getTrackingSessionUseCase: GetTrackingSessionUseCase,
@@ -38,13 +43,24 @@ export class TrackingController {
   ) {}
 
   upsertLocation: RequestHandler = async (req, res, next) => {
+    const auth = authContext(req);
     try {
       const data = await this.upsertCurrentLocationUseCase.execute(
-        authContext(req),
+        auth,
         req.body as UpsertLocationBody,
+        { channel: 'rest' },
       );
       res.json(success(data));
     } catch (error) {
+      if (error instanceof AppError) {
+        logTrackingLocationRejected({
+          companyId: auth.companyId,
+          userId: auth.userId,
+          channel: 'rest',
+          code: error.code,
+          message: error.message,
+        });
+      }
       next(error);
     }
   };
@@ -78,6 +94,20 @@ export class TrackingController {
       const data = await this.getTripTrackingLocationsUseCase.execute(
         authContext(req),
         String(req.params.tripId),
+      );
+      res.json(success(data));
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getTripRoute: RequestHandler = async (req, res, next) => {
+    try {
+      const query = req.validatedQuery as TripRouteQuery;
+      const data = await this.getTripTrackingRouteUseCase.execute(
+        authContext(req),
+        String(req.params.tripId),
+        query,
       );
       res.json(success(data));
     } catch (error) {

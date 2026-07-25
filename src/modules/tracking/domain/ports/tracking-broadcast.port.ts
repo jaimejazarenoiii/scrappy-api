@@ -16,6 +16,16 @@ export interface TrackingLocationBroadcast {
   batteryLevel: number | null;
   lastSeenAt: string;
   trackingStatus: 'ONLINE' | 'OFFLINE';
+  /** Ordered route trail for map polyline; grows on each accepted update. */
+  points: Array<{
+    latitude: number;
+    longitude: number;
+    capturedAt: string;
+    accuracy: number | null;
+    speed: number | null;
+    heading: number | null;
+    batteryLevel: number | null;
+  }>;
 }
 
 export interface TrackingBroadcastPayload {

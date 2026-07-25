@@ -55,6 +55,15 @@ export function toLocationBroadcast(location: CurrentLocationEntity) {
     batteryLevel: props.batteryLevel,
     lastSeenAt: props.lastSeenAt.toISOString(),
     trackingStatus: summary.trackingStatus,
+    points: [] as Array<{
+      latitude: number;
+      longitude: number;
+      capturedAt: string;
+      accuracy: number | null;
+      speed: number | null;
+      heading: number | null;
+      batteryLevel: number | null;
+    }>,
   };
 }
 

@@ -19,13 +19,16 @@ function waitForWsMessage(
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error(`Timed out waiting for ${type}`)), timeoutMs);
 
-    ws.on('message', (raw) => {
+    const onMessage = (raw: WebSocket.RawData) => {
       const message = JSON.parse(raw.toString()) as { type: string; payload: unknown };
       if (message.type === type) {
         clearTimeout(timeout);
+        ws.off('message', onMessage);
         resolve(message as Record<string, unknown>);
       }
-    });
+    };
+
+    ws.on('message', onMessage);
   });
 }
 
@@ -117,11 +120,31 @@ describe('tracking websocket api', () => {
 
     const event = await updatePromise;
     expect(event.type).toBe('location:updated');
-    const payload = event.payload as { location?: { latitude?: number } };
+    const payload = event.payload as {
+      location?: { latitude?: number; points?: Array<{ latitude: number }> };
+    };
     expect(payload.location?.latitude).toBe(14.5995);
+    expect(payload.location?.points).toHaveLength(1);
+    expect(payload.location?.points?.[0]?.latitude).toBe(14.5995);
+
+    const secondUpdate = waitForWsMessage(ws, 'location:updated');
+    const secondPut = await request(app)
+      .put('/api/v1/tracking/location')
+      .set(employee.auth)
+      .send({
+        latitude: 14.6001,
+        longitude: 120.985,
+        capturedAt: new Date(Date.now() + 20_000).toISOString(),
+      });
+    expect(secondPut.status).toBe(200);
+    const secondEvent = await secondUpdate;
+    const secondPayload = secondEvent.payload as {
+      location?: { points?: Array<{ latitude: number }> };
+    };
+    expect(secondPayload.location?.points?.length).toBeGreaterThanOrEqual(2);
 
     ws.close();
-  });
+  }, 15_000);
 
   it('rejects websocket connection without token', async () => {
     const { wsUrl } = await startWsServer();

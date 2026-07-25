@@ -39,6 +39,10 @@ export const envSchema = z
     TRACKING_STALENESS_MS: z.coerce.number().int().positive().default(300_000),
     TRACKING_SWEEP_MS: z.coerce.number().int().positive().default(60_000),
     WS_PATH: z.string().min(1).default('/ws/v1/tracking'),
+    /** 0 = store every accepted GPS point; set e.g. 15000 to reduce storage. */
+    LOCATION_HISTORY_SAMPLE_MS: z.coerce.number().int().min(0).default(0),
+    LOCATION_HISTORY_RETENTION_DAYS: z.coerce.number().int().positive().default(90),
+    LOCATION_HISTORY_RETENTION_SWEEP_MS: z.coerce.number().int().positive().default(86_400_000),
   })
   .superRefine((env, ctx) => {
     const driver = env.FILE_STORAGE_DRIVER ?? (env.NODE_ENV === 'production' ? 's3' : 'local');

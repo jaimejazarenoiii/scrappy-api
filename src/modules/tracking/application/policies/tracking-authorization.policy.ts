@@ -15,6 +15,13 @@ export function assertCanViewTracking(auth: AuthorizationContext): void {
   }
 }
 
+export function assertCanReadRouteHistory(auth: AuthorizationContext): void {
+  if (auth.role === 'EMPLOYEE') {
+    throw new ForbiddenError('Employees may not view route history.');
+  }
+  assertCanViewTracking(auth);
+}
+
 export function assertCanViewEmployeeLocation(
   auth: AuthorizationContext,
   targetEmployeeId: string,

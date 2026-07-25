@@ -5,15 +5,20 @@ import type { UserRepository } from '../user/domain/user.repository.js';
 import type { TokenProvider } from '../../shared/auth/token-provider.interface.js';
 import type { TrackingLifecyclePort } from './domain/ports/tracking-lifecycle.port.js';
 import type { CurrentLocationRepository } from './domain/current-location.repository.js';
+import type { LocationHistoryRepository } from './domain/location-history.repository.js';
 import { CurrentLocationPrismaRepository } from './infrastructure/current-location.prisma-repository.js';
+import { LocationHistoryPrismaRepository } from './infrastructure/location-history.prisma-repository.js';
 import { TrackingBroadcastService } from './application/services/tracking-broadcast.service.js';
 import { TrackingContextService } from './application/services/tracking-context.service.js';
 import { TrackingStatusService } from './application/services/tracking-status.service.js';
 import { TrackingStalenessSweepService } from './application/services/tracking-staleness-sweep.service.js';
+import { LocationHistoryRetentionService } from './application/services/location-history-retention.service.js';
 import { UpsertCurrentLocationUseCase } from './application/use-cases/upsert-current-location.use-case.js';
+import { AppendLocationHistoryUseCase } from './application/use-cases/append-location-history.use-case.js';
 import { GetEmployeeLocationUseCase } from './application/use-cases/get-employee-location.use-case.js';
 import { GetEmployeeTrackingStatusUseCase } from './application/use-cases/get-employee-tracking-status.use-case.js';
 import { GetTripTrackingLocationsUseCase } from './application/use-cases/get-trip-tracking-locations.use-case.js';
+import { GetTripTrackingRouteUseCase } from './application/use-cases/get-trip-tracking-route.use-case.js';
 import { ListActiveTripLocationsUseCase } from './application/use-cases/list-active-trip-locations.use-case.js';
 import { AdminListCompanyTripLocationsUseCase } from './application/use-cases/admin-list-company-trip-locations.use-case.js';
 import { GetTrackingSessionUseCase } from './application/use-cases/get-tracking-session.use-case.js';
@@ -35,6 +40,7 @@ export interface TrackingModuleDependencies {
   employeeRepository: EmployeeRepository;
   companyRepository: CompanyRepository;
   currentLocationRepository?: CurrentLocationRepository;
+  locationHistoryRepository?: LocationHistoryRepository;
 }
 
 export interface TrackingModule {
@@ -42,22 +48,28 @@ export interface TrackingModule {
   trackingWebSocketGateway: TrackingWebSocketGateway;
   trackingLifecyclePort: TrackingLifecyclePort;
   trackingStalenessSweepService: TrackingStalenessSweepService;
+  locationHistoryRetentionService: LocationHistoryRetentionService;
 }
 
 export function buildTrackingModule(deps: TrackingModuleDependencies): TrackingModule {
   const currentLocationRepository =
     deps.currentLocationRepository ?? new CurrentLocationPrismaRepository();
+  const locationHistoryRepository =
+    deps.locationHistoryRepository ?? new LocationHistoryPrismaRepository();
   const broadcastService = new TrackingBroadcastService();
   const trackingContextService = new TrackingContextService(
     deps.userRepository,
     deps.tripRepository,
   );
   const trackingStatusService = new TrackingStatusService();
+  const appendLocationHistoryUseCase = new AppendLocationHistoryUseCase(locationHistoryRepository);
 
   const upsertCurrentLocationUseCase = new UpsertCurrentLocationUseCase(
     currentLocationRepository,
     trackingContextService,
     broadcastService,
+    appendLocationHistoryUseCase,
+    locationHistoryRepository,
   );
 
   const listActiveTripLocationsUseCase = new ListActiveTripLocationsUseCase(
@@ -94,6 +106,7 @@ export function buildTrackingModule(deps: TrackingModuleDependencies): TrackingM
       trackingStatusService,
     ),
     new GetTripTrackingLocationsUseCase(deps.tripRepository, currentLocationRepository),
+    new GetTripTrackingRouteUseCase(deps.tripRepository, locationHistoryRepository),
     listActiveTripLocationsUseCase,
     new AdminListCompanyTripLocationsUseCase(
       deps.companyRepository,
@@ -115,10 +128,15 @@ export function buildTrackingModule(deps: TrackingModuleDependencies): TrackingM
     trackingStatusService,
   );
 
+  const locationHistoryRetentionService = new LocationHistoryRetentionService(
+    locationHistoryRepository,
+  );
+
   return {
     trackingController,
     trackingWebSocketGateway,
     trackingLifecyclePort,
     trackingStalenessSweepService,
+    locationHistoryRetentionService,
   };
 }

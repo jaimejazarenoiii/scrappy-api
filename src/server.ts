@@ -18,11 +18,13 @@ async function bootstrap(): Promise<void> {
 
   container.trackingWebSocketGateway.attach(server, getTrackingWsPath());
   container.trackingStalenessSweepService.start();
+  container.locationHistoryRetentionService.start();
 
   server.listen(config.PORT, () => logger.info({ port: config.PORT }, 'Scrappy API started'));
   const shutdown = async (signal: string): Promise<void> => {
     logger.info({ signal }, 'Shutting down');
     container.trackingStalenessSweepService.stop();
+    container.locationHistoryRetentionService.stop();
     server.close(async () => {
       await prisma.$disconnect();
       process.exit(0);

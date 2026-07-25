@@ -155,7 +155,9 @@ import { buildTrackingModule } from '../modules/tracking/index.js';
 import type { TrackingController } from '../modules/tracking/presentation/tracking.controller.js';
 import type { TrackingWebSocketGateway } from '../modules/tracking/presentation/tracking-websocket.gateway.js';
 import type { TrackingStalenessSweepService } from '../modules/tracking/application/services/tracking-staleness-sweep.service.js';
+import type { LocationHistoryRetentionService } from '../modules/tracking/application/services/location-history-retention.service.js';
 import type { CurrentLocationRepository } from '../modules/tracking/domain/current-location.repository.js';
+import type { LocationHistoryRepository } from '../modules/tracking/domain/location-history.repository.js';
 import { CompanySubscriptionPrismaRepository } from '../modules/subscription/infrastructure/company-subscription.prisma-repository.js';
 import type { CompanySubscriptionRepository } from '../modules/subscription/domain/company-subscription.repository.js';
 import { registerActivityLogRecorder } from '../shared/audit/activity-log-bridge.js';
@@ -200,6 +202,7 @@ export interface Container {
   trackingController: TrackingController;
   trackingWebSocketGateway: TrackingWebSocketGateway;
   trackingStalenessSweepService: TrackingStalenessSweepService;
+  locationHistoryRetentionService: LocationHistoryRetentionService;
   healthIndicator?: { check: () => Promise<boolean> };
 }
 
@@ -237,6 +240,7 @@ export interface ContainerOverrides {
   activityLogRepository?: ActivityLogRepository;
   companySubscriptionRepository?: CompanySubscriptionRepository;
   currentLocationRepository?: CurrentLocationRepository;
+  locationHistoryRepository?: LocationHistoryRepository;
   healthIndicator?: { check: () => Promise<boolean> };
 }
 
@@ -312,6 +316,7 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
     employeeRepository,
     companyRepository,
     currentLocationRepository: overrides.currentLocationRepository,
+    locationHistoryRepository: overrides.locationHistoryRepository,
   });
 
   return {
@@ -525,5 +530,6 @@ export function createContainer(overrides: ContainerOverrides = {}): Container {
     trackingController: trackingModule.trackingController,
     trackingWebSocketGateway: trackingModule.trackingWebSocketGateway,
     trackingStalenessSweepService: trackingModule.trackingStalenessSweepService,
+    locationHistoryRetentionService: trackingModule.locationHistoryRetentionService,
   };
 }

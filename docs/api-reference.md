@@ -903,6 +903,7 @@ Employees on **Started** trips transmit GPS coordinates; Owners and Managers mon
 | `GET /tracking/employees/{employeeId}/location`                    | OWNER, MANAGER | Current coordinates for one employee                  |
 | `GET /tracking/employees/{employeeId}/status`                      | OWNER, MANAGER | Online/offline status for one employee                |
 | `GET /trips/{tripId}/tracking/locations`                           | OWNER, MANAGER | All trip members with location/status snapshot        |
+| `GET /trips/{tripId}/tracking/route`                               | OWNER, MANAGER | Ordered GPS route history (map polyline points)       |
 | `GET /tracking/trips/active/locations`                             | OWNER, MANAGER | Paginated active-trip locations for JWT company       |
 | `GET /admin/companies/{companyId}/tracking/trips/active/locations` | SUPER_ADMIN    | Cross-company active-trip locations (support view)    |
 
@@ -933,6 +934,29 @@ Employees on **Started** trips transmit GPS coordinates; Owners and Managers mon
 
 `GET /trips/{tripId}/tracking/locations` returns `trackingActive: true` only when the trip status is `STARTED`. Each member includes `trackingStatus`, optional coordinates, and `lastSeenAt`.
 
+#### Trip route history (P013)
+
+`GET /trips/{tripId}/tracking/route` returns ordered GPS points per assigned employee for map polylines. History is appended on **every** successful location upsert during a **Started** trip by default (`LOCATION_HISTORY_SAMPLE_MS=0`). Set `LOCATION_HISTORY_SAMPLE_MS=15000` in production if you need to reduce storage.
+
+| Query        | Type | Default | Notes                           |
+| ------------ | ---- | ------- | ------------------------------- |
+| `employeeId` | uuid | —       | Filter to one trip member       |
+| `page`       | int  | 1       | Page per employee's points      |
+| `limit`      | int  | 500     | Max 1000 points per page        |
+| `sortOrder`  | enum | `asc`   | `asc` or `desc` by `capturedAt` |
+
+**Response (`data`)**: `tripId`, `tripNumber`, `tripStatus`, and `employees[]` each with `points[]` (`latitude`, `longitude`, `capturedAt`, optional `accuracy`/`speed`/`heading`/`batteryLevel`) plus pagination `meta`.
+
+**Authorization**: EMPLOYEE role is denied (**403**). Partial routes are returned for **STARTED** trips; **COMPLETED** and **CANCELLED** trips return history recorded before completion/cancellation.
+
+**Environment**
+
+| Variable                              | Default    | Purpose                                                                               |
+| ------------------------------------- | ---------- | ------------------------------------------------------------------------------------- |
+| `LOCATION_HISTORY_SAMPLE_MS`          | `0`        | Min ms between stored points; `0` = save every upsert (set `15000` to reduce storage) |
+| `LOCATION_HISTORY_RETENTION_DAYS`     | `90`       | Purge history after trip completion age                                               |
+| `LOCATION_HISTORY_RETENTION_SWEEP_MS` | `86400000` | Retention job interval (daily)                                                        |
+
 #### WebSocket
 
 - **Path**: `/ws/v1/tracking` (configurable via `WS_PATH`)
@@ -950,14 +974,24 @@ Employees on **Started** trips transmit GPS coordinates; Owners and Managers mon
 
 **Broadcast (server → client)**
 
-| Event                | When                                      |
-| -------------------- | ----------------------------------------- |
-| `tracking:connected` | WebSocket session established             |
-| `location:updated`   | Employee upserts location                 |
-| `tracking:started`   | First location for a trip                 |
-| `tracking:stopped`   | Trip completed                            |
-| `employee:online`    | Employee transitions to online            |
-| `employee:offline`   | Staleness sweep detects missed heartbeats |
+| Event                | When                                                                  |
+| -------------------- | --------------------------------------------------------------------- |
+| `tracking:connected` | WebSocket session established                                         |
+| `location:updated`   | Employee upserts location; includes growing `location.points[]` trail |
+| `tracking:started`   | First location for a trip                                             |
+| `tracking:stopped`   | Trip completed                                                        |
+| `employee:online`    | Employee transitions to online                                        |
+| `employee:offline`   | Staleness sweep detects missed heartbeats                             |
+
+**`location:updated` payload (`payload.location`)**
+
+| Field            | Type    | Notes                                                                                     |
+| ---------------- | ------- | ----------------------------------------------------------------------------------------- |
+| `latitude`       | number  | Latest coordinate                                                                         |
+| `longitude`      | number  | Latest coordinate                                                                         |
+| `lastSeenAt`     | ISO8601 | Latest capture time                                                                       |
+| `trackingStatus` | enum    | `ONLINE`                                                                                  |
+| `points`         | array   | **Full route trail** ordered by `capturedAt` asc — replace local polyline on each message |
 
 If the WebSocket connection drops:
 
@@ -968,6 +1002,16 @@ If the WebSocket connection drops:
    authoritative for persistence).
 
 Missed WS events during downtime are acceptable; session sync + REST snapshot restore correctness.
+
+**Development logging** (Pino):
+
+| `LOG_LEVEL` | What you see                                                                                                         |
+| ----------- | -------------------------------------------------------------------------------------------------------------------- |
+| `info`      | `tracking location accepted` — `employeeId`, `tripId`, `routePointCount`, `historyAppended`, `channel` (no lat/lng)  |
+| `warn`      | `tracking location rejected` — error code when upsert fails                                                          |
+| `debug`     | `tracking location coordinates` — lat/lng; `tracking route broadcast`; `tracking history append skipped by sampling` |
+
+Set `LOG_LEVEL=debug` in `.env` or Railway for full coordinate traces during Android testing.
 
 See [`addendum-session-sync.md`](../../specs/016-live-gps-tracking/addendum-session-sync.md) for the full mobile recovery contract.
 

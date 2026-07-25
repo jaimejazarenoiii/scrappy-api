@@ -47,6 +47,14 @@ export const trackingOpenApiPaths = {
       responses: { '200': { description: 'Trip tracking snapshot' } },
     },
   },
+  '/trips/{tripId}/tracking/route': {
+    get: {
+      tags: ['Tracking', 'Trips'],
+      summary: 'Get GPS route history for trip members',
+      security: [{ bearerAuth: [] }],
+      responses: { '200': { description: 'Ordered route points for map polylines' } },
+    },
+  },
   '/tracking/trips/active/locations': {
     get: {
       tags: ['Tracking'],

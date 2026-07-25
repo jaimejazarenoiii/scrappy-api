@@ -2,6 +2,7 @@ import type { IncomingMessage } from 'node:http';
 import type { Server } from 'node:http';
 import type { Duplex } from 'node:stream';
 import { WebSocket, WebSocketServer } from 'ws';
+import { AppError } from '../../../shared/errors/app-error.js';
 import type { TokenProvider } from '../../../shared/auth/token-provider.interface.js';
 import type { AuthorizationContext } from '../../../shared/policy/authorization-context.js';
 import type {
@@ -10,6 +11,7 @@ import type {
 } from '../domain/ports/tracking-broadcast.port.js';
 import type { TrackingBroadcastService } from '../application/services/tracking-broadcast.service.js';
 import type { UpsertCurrentLocationUseCase } from '../application/use-cases/upsert-current-location.use-case.js';
+import { logTrackingLocationRejected } from '../application/services/tracking-audit.service.js';
 import { wsClientMessageSchema } from './tracking.schemas.js';
 
 interface TrackedSocket extends WebSocket {
@@ -155,6 +157,13 @@ export class TrackingWebSocketGateway {
         return;
       case 'location:update': {
         if (ws.auth.role !== 'EMPLOYEE') {
+          logTrackingLocationRejected({
+            companyId: ws.auth.companyId,
+            userId: ws.auth.userId,
+            channel: 'websocket',
+            code: 'FORBIDDEN',
+            message: 'Employees only',
+          });
           this.send(ws, 'error', { code: 'FORBIDDEN', message: 'Employees only' });
           return;
         }
@@ -163,11 +172,33 @@ export class TrackingWebSocketGateway {
           ws.lastLocationUpdateAt != null &&
           now - ws.lastLocationUpdateAt < WS_LOCATION_MIN_INTERVAL_MS
         ) {
+          logTrackingLocationRejected({
+            companyId: ws.auth.companyId,
+            userId: ws.auth.userId,
+            channel: 'websocket',
+            code: 'RATE_LIMITED',
+            message: 'Too many location updates',
+          });
           this.send(ws, 'error', { code: 'RATE_LIMITED', message: 'Too many location updates' });
           return;
         }
         ws.lastLocationUpdateAt = now;
-        await this.upsertCurrentLocationUseCase.execute(ws.auth, message.payload);
+        try {
+          await this.upsertCurrentLocationUseCase.execute(ws.auth, message.payload, {
+            channel: 'websocket',
+          });
+        } catch (error: unknown) {
+          const rejection = resolveTrackingRejection(error);
+          logTrackingLocationRejected({
+            companyId: ws.auth.companyId,
+            userId: ws.auth.userId,
+            channel: 'websocket',
+            code: rejection.code,
+            message: rejection.message,
+          });
+          this.send(ws, 'error', { code: rejection.code, message: rejection.message });
+          return;
+        }
         this.send(ws, 'location:ack', { success: true });
         return;
       }
@@ -197,4 +228,11 @@ export class TrackingWebSocketGateway {
     if (ws.readyState !== WebSocket.OPEN) return;
     ws.send(JSON.stringify({ type, payload, occurredAt: new Date().toISOString() }));
   }
+}
+
+function resolveTrackingRejection(error: unknown): { code: string; message: string } {
+  if (error instanceof AppError) {
+    return { code: error.code, message: error.message };
+  }
+  return { code: 'INTERNAL_ERROR', message: 'Location update failed' };
 }

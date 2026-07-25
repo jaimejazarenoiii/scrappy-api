@@ -37,6 +37,13 @@ export const listActiveLocationsQuerySchema = z.object({
   employeeId: z.string().uuid().optional(),
 });
 
+export const tripRouteQuerySchema = z.object({
+  employeeId: z.string().uuid().optional(),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(1000).default(500),
+  sortOrder: z.enum(['asc', 'desc']).default('asc'),
+});
+
 export const wsSubscribeTripSchema = z.object({
   type: z.literal('subscribe:trip'),
   payload: z.object({ tripId: z.string().uuid() }),
@@ -74,4 +81,5 @@ export const trackingSessionQuerySchema = z.object({
 
 export type UpsertLocationBody = z.infer<typeof upsertLocationBodySchema>;
 export type ListActiveLocationsQuery = z.infer<typeof listActiveLocationsQuerySchema>;
+export type TripRouteQuery = z.infer<typeof tripRouteQuerySchema>;
 export type TrackingSessionQuery = z.infer<typeof trackingSessionQuerySchema>;

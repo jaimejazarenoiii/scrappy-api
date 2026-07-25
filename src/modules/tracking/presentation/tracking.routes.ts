@@ -9,6 +9,7 @@ import {
   listActiveLocationsQuerySchema,
   trackingSessionQuerySchema,
   tripIdParamsSchema,
+  tripRouteQuerySchema,
   upsertLocationBodySchema,
 } from './tracking.schemas.js';
 
@@ -53,6 +54,14 @@ export function createTrackingRoutes(controller: TrackingController): Router {
     authorize([...MANAGER_ROLES]),
     validate(tripIdParamsSchema, 'params'),
     controller.getTripLocations,
+  );
+
+  router.get(
+    '/trips/:tripId/tracking/route',
+    authorize([...MANAGER_ROLES]),
+    validate(tripIdParamsSchema, 'params'),
+    validate(tripRouteQuerySchema, 'query'),
+    controller.getTripRoute,
   );
 
   router.get(
